@@ -167,6 +167,49 @@ const UI_TO_DB: Record<Stage, string> = {
   'Perdu': 'perdu',
 }
 
+// --- TYPES SÉQUENCES ---
+type SeqChannel = 'whatsapp' | 'email' | 'sms' | 'call_reminder' | 'linkedin'
+type SeqStepStatus = 'pending' | 'sent' | 'failed' | 'skipped'
+type SeqStatus = 'active' | 'paused' | 'completed' | 'cancelled'
+
+type SeqStep = {
+  id: string
+  step_order: number
+  channel: SeqChannel
+  scheduled_at: string
+  executed_at: string | null
+  status: SeqStepStatus
+  error_message: string | null
+}
+
+type SeqInstance = {
+  id: string
+  status: SeqStatus
+  started_at: string
+  template_name: string | null
+  steps: SeqStep[]
+}
+
+type SeqTemplate = {
+  id: string
+  name: string
+}
+
+function stepStatusColor(s: SeqStepStatus): string {
+  if (s === 'sent') return C.green
+  if (s === 'failed') return C.warn
+  if (s === 'pending') return C.gold
+  return C.textLo  // skipped
+}
+
+const CHANNEL_LABEL: Record<SeqChannel, string> = {
+  whatsapp: 'WhatsApp',
+  email: 'Email',
+  sms: 'SMS',
+  call_reminder: 'Appel',
+  linkedin: 'LinkedIn',
+}
+
 // --- HELPERS ---
 function scoreColor(s: number) {
   return s >= 80 ? C.green : s >= 60 ? C.gold : C.cyan
