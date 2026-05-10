@@ -3,6 +3,37 @@
 import { useState, useEffect, useRef } from 'react'
 import { C } from '@/lib/theme'
 
+// ─── Types Weekly Signal ────────────────────────────────────────────────────
+type RelanceRow = {
+  id: string
+  full_name: string
+  profession: string | null
+  pipeline_stage: string | null
+  next_action_date: string
+  lead_score: number | null
+  phone: string | null
+  email: string | null
+  days_until: number
+}
+
+type RdvRow = {
+  id: string
+  type: string
+  occurred_at: string
+  notes: string | null
+  prospect_id: string
+  prospect_name: string
+  profession: string | null
+  day_label: string
+}
+
+type SignalResp = {
+  relances: RelanceRow[]
+  rdvSemaine: RdvRow[]
+  todayCount: number
+  weekRdvCount: number
+}
+
 type TodayTab = 'prospection' | 'relances'
 
 // ─── Relances column types ─────────────────────────────────────────────────
@@ -183,6 +214,22 @@ export default function TodayPage() {
   const [tab, setTab] = useState<TodayTab>('prospection')
   const [clock, setClock] = useState('--:--')
 
+  // ─── Weekly Signal state ──────────────────────────────────────────────────
+  const [signal, setSignal] = useState<SignalResp | null>(null)
+  const [signalLoading, setSignalLoading] = useState(true)
+  const [signalError, setSignalError] = useState<string | null>(null)
+
+  useEffect(() => {
+    fetch('/api/today/signal')
+      .then(r => r.json())
+      .then((j: { data?: SignalResp; error?: string }) => {
+        if (j.error) setSignalError(j.error)
+        else if (j.data) setSignal(j.data)
+      })
+      .catch(e => setSignalError((e as Error).message))
+      .finally(() => setSignalLoading(false))
+  }, [])
+
   // Live clock
   useEffect(() => {
     const tick = () => {
@@ -327,6 +374,112 @@ export default function TodayPage() {
           <div style={{ fontSize: 9, color: C.textLo, marginTop: 2 }}>Vue du jour · Productivité &amp; Actions</div>
         </div>
         <div style={{ fontSize: 24, color: C.gold, fontWeight: 300 }}>{clock}</div>
+      </div>
+
+      {/* ─── WEEKLY SIGNAL ─────────────────────────────────────────────── */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+
+        {/* Section 1 — Relances 7 jours (DATA-06) */}
+        <div style={{ background: C.surface1, border: `0.5px solid ${C.line}`, borderRadius: 10, padding: '14px 16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+            <div style={{ fontFamily: 'Oswald, sans-serif', fontSize: 11, fontWeight: 600, color: C.gold, textTransform: 'uppercase', letterSpacing: 1 }}>
+              Relances prioritaires
+            </div>
+            {!signalLoading && !signalError && (
+              <div style={{ fontSize: 9, color: C.textMid }}>
+                <span style={{ color: signal?.todayCount ? C.warn : C.textLo, fontWeight: signal?.todayCount ? 600 : 400 }}>{signal?.todayCount ?? 0} aujourd&apos;hui</span>
+                <span style={{ color: C.textVlo }}> · </span>
+                <span>{signal?.relances.length ?? 0} cette semaine</span>
+              </div>
+            )}
+          </div>
+
+          {signalLoading && <div style={{ fontSize: 11, color: C.textLo }}>Chargement signal...</div>}
+          {signalError && <div style={{ fontSize: 11, color: C.warn }}>Erreur : {signalError}</div>}
+
+          {!signalLoading && !signalError && (
+            <>
+              {(signal?.relances.length ?? 0) === 0 ? (
+                <div style={{ fontSize: 9, color: C.textLo, fontStyle: 'italic' }}>Aucune relance planifiee dans les 7 prochains jours.</div>
+              ) : (
+                <>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                    {(signal?.relances ?? []).slice(0, 10).map(r => (
+                      <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 8, background: C.bgMid, border: `0.5px solid ${C.lineSoft}`, borderRadius: 5, padding: '5px 8px' }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 11, fontWeight: 600, color: C.textHi, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.full_name}</div>
+                          {r.profession && <div style={{ fontSize: 9, color: C.textLo }}>{r.profession}</div>}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                          {r.pipeline_stage && (
+                            <span style={{ fontSize: 7, padding: '2px 5px', borderRadius: 3, background: C.surface2, color: C.textMid, border: `0.5px solid ${C.line}`, textTransform: 'uppercase' }}>
+                              {r.pipeline_stage}
+                            </span>
+                          )}
+                          <span style={{ fontSize: 8, padding: '2px 6px', borderRadius: 3, fontWeight: 600, background: r.days_until === 0 ? `${C.warn}20` : '#1a1400', color: r.days_until === 0 ? C.warn : C.gold, border: `0.5px solid ${r.days_until === 0 ? C.warn : C.gold}40` }}>
+                            {r.days_until === 0 ? 'AUJOURD\'HUI' : `J+${r.days_until}`}
+                          </span>
+                          {r.lead_score !== null && (
+                            <span style={{ fontSize: 9, fontWeight: 700, color: r.lead_score >= 70 ? C.green : r.lead_score >= 40 ? C.gold : C.textLo }}>
+                              {r.lead_score}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {(signal?.relances.length ?? 0) > 10 && (
+                    <div style={{ fontSize: 8, color: C.textLo, marginTop: 6, fontStyle: 'italic' }}>+ {(signal?.relances.length ?? 0) - 10} autres</div>
+                  )}
+                </>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* Section 2 — RDV de la semaine (DATA-07) */}
+        <div style={{ background: C.surface1, border: `0.5px solid ${C.line}`, borderRadius: 10, padding: '14px 16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+            <div style={{ fontFamily: 'Oswald, sans-serif', fontSize: 11, fontWeight: 600, color: C.gold, textTransform: 'uppercase', letterSpacing: 1 }}>
+              RDV de la semaine
+            </div>
+            {!signalLoading && !signalError && (
+              <div style={{ fontSize: 9, color: C.textMid }}>{signal?.weekRdvCount ?? 0} RDV cette semaine</div>
+            )}
+          </div>
+
+          {signalLoading && <div style={{ fontSize: 11, color: C.textLo }}>Chargement signal...</div>}
+          {signalError && <div style={{ fontSize: 11, color: C.warn }}>Erreur : {signalError}</div>}
+
+          {!signalLoading && !signalError && (
+            <>
+              {(signal?.rdvSemaine.length ?? 0) === 0 ? (
+                <div style={{ fontSize: 9, color: C.textLo, fontStyle: 'italic' }}>Aucun RDV planifie cette semaine. Cree des interactions de type rdv1/rdv2/rdv3.</div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                  {(signal?.rdvSemaine ?? []).map(rdv => {
+                    const rdvColor = rdv.type === 'rdv1' ? C.indigo : rdv.type === 'rdv2' ? C.green : C.gold
+                    return (
+                      <div key={rdv.id} style={{ display: 'flex', alignItems: 'center', gap: 8, background: C.bgMid, border: `0.5px solid ${C.lineSoft}`, borderRadius: 5, padding: '5px 8px' }}>
+                        <div style={{ flexShrink: 0 }}>
+                          <div style={{ fontSize: 9, color: C.gold, fontWeight: 600 }}>{rdv.day_label}</div>
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 11, fontWeight: 600, color: C.textHi, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{rdv.prospect_name}</div>
+                          {rdv.profession && <div style={{ fontSize: 9, color: C.textLo }}>{rdv.profession}</div>}
+                        </div>
+                        <span style={{ fontSize: 7, padding: '2px 5px', borderRadius: 3, fontWeight: 700, background: `${rdvColor}15`, color: rdvColor, border: `0.5px solid ${rdvColor}40`, textTransform: 'uppercase', flexShrink: 0 }}>
+                          {rdv.type.toUpperCase()}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
       </div>
 
       {/* Tab bar */}
