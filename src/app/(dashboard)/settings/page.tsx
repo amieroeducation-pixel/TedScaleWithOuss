@@ -1,0 +1,804 @@
+'use client'
+
+import { useState } from 'react'
+import { C } from '@/lib/theme'
+
+type Tab = 'general' | 'kpi' | 'notifications' | 'integrations' | 'sections' | 'mobile'
+
+const TABS: { id: Tab; label: string }[] = [
+  { id: 'general', label: 'Général' },
+  { id: 'kpi', label: '📊 KPI' },
+  { id: 'notifications', label: '🔔 Notif' },
+  { id: 'integrations', label: '🔗 API' },
+  { id: 'sections', label: '👁️ Sections' },
+  { id: 'mobile', label: '📱 Mobile' },
+]
+
+const MONTHS_SHORT = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc']
+const MONTHS_ID = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
+const MONTHS_WEEKS = [4, 4, 4, 4, 4, 4, 4, 4, 5, 4, 4, 5]
+
+const SECTIONS_LIST = [
+  { id: 'today', label: '🏠 Vue du jour', desc: 'Dashboard principal quotidien' },
+  { id: 'global', label: '🌍 Global', desc: "Vue d'ensemble et planning annuel" },
+  { id: 'tns', label: '📊 TNS', desc: 'Travailleurs Non Salariés' },
+  { id: 'chefs', label: "💼 Chefs d'entreprise", desc: 'Gestion dirigeants' },
+  { id: 'particuliers', label: '👤 Particuliers', desc: 'Gestion clients particuliers' },
+  { id: 'interpro', label: '🤝 Cercle Interpro', desc: 'Réseau professionnel' },
+  { id: 'agenda', label: '📅 Agenda', desc: 'Calendrier et rendez-vous' },
+  { id: 'sequences', label: '📧 Séquences', desc: 'Campagnes automatisées' },
+  { id: 'commerce', label: '💰 Commerce', desc: 'Suivi commercial' },
+  { id: 'chrono', label: '⏱️ Chronomètre', desc: 'Blocs de production' },
+  { id: 'champions', label: '🏆 Champions', desc: 'Classement collecte' },
+  { id: 'revenue', label: '💰 Revenue', desc: 'CA et commissions' },
+  { id: 'pipeline', label: '📊 Pipeline', desc: 'Suivi des deals' },
+  { id: 'tasks', label: '✅ Tâches', desc: 'Gestion des tâches' },
+  { id: 'crm', label: '📋 CRM Kanban', desc: 'Pipeline visuel' },
+  { id: 'clients', label: '⭐ Premium', desc: 'Clients premium' },
+  { id: 'map', label: '🗺️ Carte TNS', desc: 'Cartographie prospects' },
+  { id: 'simulator', label: '🎯 Simulateur', desc: 'Simulations collecte' },
+  { id: 'auto', label: '⚙️ Automatisations', desc: 'Workflows auto' },
+  { id: 'analytics', label: '📊 Analytics', desc: 'Statistiques avancées' },
+  { id: 'assistant', label: '🤖 Assistant', desc: 'IA assistant' },
+]
+
+const MOBILE_SECTIONS = [
+  { id: 'today', label: '🏠 Vue du jour', defaultOn: true },
+  { id: 'global', label: '🌍 Global', defaultOn: true },
+  { id: 'champions', label: '🏆 Champions', defaultOn: true },
+  { id: 'tns', label: '📊 TNS', defaultOn: true },
+  { id: 'chefs', label: '💼 Chefs entreprise', defaultOn: false },
+  { id: 'particuliers', label: '👤 Particuliers', defaultOn: false },
+  { id: 'agenda', label: '📅 Agenda', defaultOn: true },
+  { id: 'sequences', label: '📧 Séquences', defaultOn: false },
+  { id: 'commerce', label: '💰 Commerce', defaultOn: true },
+  { id: 'crm', label: '📋 CRM', defaultOn: false },
+  { id: 'settings', label: '⚙️ Paramètres', defaultOn: true },
+]
+
+function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <label style={{ position: 'relative', display: 'inline-block', width: 48, height: 24, flexShrink: 0, cursor: 'pointer' }}>
+      <input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)} style={{ opacity: 0, width: 0, height: 0 }} />
+      <span style={{
+        position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+        background: checked ? C.green : C.textVlo,
+        borderRadius: 24, transition: '0.3s',
+      }} />
+      <span style={{
+        position: 'absolute',
+        height: 18, width: 18,
+        left: checked ? 27 : 3,
+        bottom: 3,
+        background: 'white', borderRadius: '50%', transition: '0.3s',
+      }} />
+    </label>
+  )
+}
+
+function SetRow({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{
+      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+      padding: '10px 12px', background: C.surface1, borderRadius: 6,
+      border: `1px solid ${C.lineSoft}`, marginBottom: 8,
+    }}>
+      {children}
+    </div>
+  )
+}
+
+function SetLabel({ label, desc }: { label: string; desc?: string }) {
+  return (
+    <div>
+      <div style={{ fontSize: 10, fontWeight: 500, color: C.textHi, fontFamily: 'Inter,sans-serif' }}>{label}</div>
+      {desc && <div style={{ fontSize: 8, color: C.textLo, marginTop: 2, fontFamily: 'JetBrains Mono,monospace' }}>{desc}</div>}
+    </div>
+  )
+}
+
+function NumInput({ id, value, min, max, step }: { id?: string; value: number; min: number; max: number; step?: number }) {
+  const [val, setVal] = useState(value)
+  return (
+    <input
+      id={id}
+      type="number"
+      value={val}
+      onChange={e => setVal(Number(e.target.value))}
+      min={min} max={max} step={step || 1}
+      style={{
+        width: 70, padding: '6px 8px', background: C.surface2,
+        border: `1px solid ${C.line}`, borderRadius: 5,
+        color: C.gold, fontSize: 13, fontWeight: 600,
+        textAlign: 'center', fontFamily: 'JetBrains Mono,monospace',
+      }}
+    />
+  )
+}
+
+function SectionPanel({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div style={{
+      background: `linear-gradient(180deg,${C.surface1},${C.bgMid})`,
+      border: `1px solid ${C.line}`, borderRadius: 10,
+      padding: 14, marginBottom: 12, position: 'relative', overflow: 'hidden',
+    }}>
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 1, background: 'linear-gradient(90deg,transparent,#ff647066,transparent)' }} />
+      <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 11, fontWeight: 600, color: C.gold, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 12 }}>
+        {title}
+      </div>
+      {children}
+    </div>
+  )
+}
+
+function SetBtn({ onClick, color, bg, children }: { onClick?: () => void; color: string; bg: string; children: React.ReactNode }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        padding: '6px 12px', background: bg,
+        border: `1px solid ${color}`, color,
+        borderRadius: 6, fontSize: 9, fontWeight: 600,
+        cursor: 'pointer', fontFamily: 'Oswald,sans-serif', letterSpacing: '0.05em',
+        flexShrink: 0,
+      }}
+    >
+      {children}
+    </button>
+  )
+}
+
+// ─── ONGLET GÉNÉRAL ──────────────────────────────────────────────────────────
+function TabGeneral() {
+  const [objCount, setObjCount] = useState(4)
+
+  return (
+    <>
+      <SectionPanel title="🎯 Coach Champions — Personnalisation">
+        <div style={{ fontSize: 9, color: C.textLo, marginBottom: 12, lineHeight: 1.6, fontFamily: 'Inter,sans-serif' }}>
+          Personnalise les recommandations du coach dans la section Champions. Donne des instructions spécifiques sur le ton, les priorités, ou le type de conseils que tu veux recevoir.
+        </div>
+        <div style={{ marginBottom: 12 }}>
+          <label style={{ fontSize: 8, color: C.textLo, display: 'block', marginBottom: 6, fontFamily: 'JetBrains Mono,monospace' }}>Instructions pour le coach</label>
+          <textarea
+            placeholder="Ex: Sois direct et cash, focus sur les actions concrètes. Rappelle-moi mes objectifs financiers personnels. Motive-moi avec des comparaisons sportives..."
+            style={{
+              width: '100%', minHeight: 120, padding: 10,
+              background: C.surface2, border: `1px solid ${C.line}`,
+              borderRadius: 6, color: C.text, fontSize: 10,
+              lineHeight: 1.6, resize: 'vertical', fontFamily: 'Inter,sans-serif',
+              boxSizing: 'border-box',
+            }}
+          />
+          <div style={{ fontSize: 8, color: C.textLo, marginTop: 6, fontFamily: 'JetBrains Mono,monospace' }}>
+            💡 Le coach utilisera ces instructions pour adapter son analyse et ses recommandations
+          </div>
+        </div>
+        <SetBtn color={C.green} bg="#0d1a0d">💾 Enregistrer les instructions</SetBtn>
+      </SectionPanel>
+
+      <SectionPanel title="🎯 Objectifs quotidiens">
+        <div style={{ background: C.surface1, border: `1px solid ${C.lineSoft}`, borderRadius: 8, padding: 12, marginBottom: 14 }}>
+          <div style={{ fontSize: 9, fontWeight: 600, color: C.gold, marginBottom: 6, fontFamily: 'Oswald,sans-serif' }}>Nombre d'objectifs affichés</div>
+          <div style={{ fontSize: 8, color: C.textLo, marginBottom: 10, fontFamily: 'JetBrains Mono,monospace' }}>Choisis combien d'objectifs afficher dans la section "Aujourd'hui"</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8 }}>
+            {[2, 3, 4, 6].map(n => (
+              <label
+                key={n}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 6, padding: 8,
+                  background: objCount === n ? '#1a1400' : C.surface2,
+                  border: `1px solid ${objCount === n ? C.gold : C.line}`,
+                  borderRadius: 6, cursor: 'pointer',
+                }}
+              >
+                <input type="radio" name="objectives-count" value={n} checked={objCount === n} onChange={() => setObjCount(n)} style={{ cursor: 'pointer' }} />
+                <span style={{ fontSize: 9, color: objCount === n ? C.gold : C.text, fontWeight: objCount === n ? 600 : 400, fontFamily: 'Inter,sans-serif' }}>{n} objectifs</span>
+              </label>
+            ))}
+          </div>
+          <div style={{ fontSize: 8, color: C.textLo, marginTop: 10, fontFamily: 'JetBrains Mono,monospace' }}>
+            💡 Objectifs disponibles : Contacts, Appels, RDV R1, RDV R2, Signatures, Relances
+          </div>
+        </div>
+
+        {[
+          { label: 'Nouveaux contacts / jour', desc: 'Prospects ajoutés quotidiennement', val: 10 },
+          { label: 'Appels / jour', desc: "Nombre d'appels quotidien visé", val: 20 },
+          { label: 'RDV R1 / jour', desc: 'Premiers rendez-vous à poser', val: 5 },
+          { label: 'RDV R2 / jour', desc: 'Deuxièmes rendez-vous à poser', val: 3 },
+        ].map((row, i) => (
+          <SetRow key={i}>
+            <SetLabel label={row.label} desc={row.desc} />
+            <NumInput value={row.val} min={1} max={100} />
+          </SetRow>
+        ))}
+      </SectionPanel>
+
+      <SectionPanel title="⏱️ Chronomètre production">
+        {[
+          { label: "Durée d'un bloc (minutes)", desc: 'Deep work / Pomodoro — défaut 45 min', val: 45, min: 15, max: 120 },
+          { label: 'Blocs / jour (normal)', desc: 'Objectif standard de blocs quotidiens', val: 4, min: 2, max: 10 },
+          { label: 'Blocs / jour (grosse prod)', desc: 'Objectif max de blocs quotidiens', val: 6, min: 3, max: 12 },
+        ].map((row, i) => (
+          <SetRow key={i}>
+            <SetLabel label={row.label} desc={row.desc} />
+            <NumInput value={row.val} min={row.min} max={row.max} />
+          </SetRow>
+        ))}
+      </SectionPanel>
+
+      <SectionPanel title="📊 Objectifs hebdomadaires">
+        {[
+          { label: 'Appels / semaine', desc: "Total d'appels visé sur la semaine", val: 40, min: 10, max: 200 },
+          { label: 'Blocs / semaine', desc: 'Total de blocs production', val: 15, min: 5, max: 50 },
+          { label: 'Relances / semaine', desc: 'Total de relances prospects', val: 12, min: 3, max: 50 },
+          { label: 'Taux closing objectif (%)', desc: 'Pourcentage de conversion visé', val: 40, min: 10, max: 80 },
+        ].map((row, i) => (
+          <SetRow key={i}>
+            <SetLabel label={row.label} desc={row.desc} />
+            <NumInput value={row.val} min={row.min} max={row.max} />
+          </SetRow>
+        ))}
+      </SectionPanel>
+
+      <SectionPanel title="🎯 Planification annuelle intelligente">
+        <div style={{ fontSize: 9, color: C.textLo, marginBottom: 14, lineHeight: 1.6, fontFamily: 'Inter,sans-serif' }}>
+          Définis tes objectifs annuels. Le dashboard calculera automatiquement les objectifs mensuels et hebdomadaires selon l'intensité de chaque mois.
+        </div>
+
+        <div style={{ background: C.surface1, border: `1px solid ${C.lineSoft}`, borderRadius: 8, padding: 14, marginBottom: 12 }}>
+          <div style={{ fontSize: 10, fontWeight: 600, color: C.gold, marginBottom: 12, fontFamily: 'Oswald,sans-serif' }}>📊 Objectifs annuels 2026</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12 }}>
+            {[
+              { label: 'RDV R1 annuel', val: 240, color: C.indigo },
+              { label: 'RDV R2 annuel', val: 144, color: C.green },
+              { label: 'Collecte annuelle (€)', val: 600000, color: C.gold },
+            ].map((f, i) => (
+              <div key={i}>
+                <label style={{ fontSize: 8, color: C.textLo, display: 'block', marginBottom: 4, fontFamily: 'JetBrains Mono,monospace' }}>{f.label}</label>
+                <input
+                  type="number"
+                  defaultValue={f.val}
+                  style={{ width: '100%', padding: 8, background: C.surface2, border: `1px solid ${C.line}`, borderRadius: 6, color: f.color, fontSize: 14, fontWeight: 600, textAlign: 'center', boxSizing: 'border-box', fontFamily: 'JetBrains Mono,monospace' }}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ background: C.surface1, border: `1px solid ${C.lineSoft}`, borderRadius: 8, padding: 14, marginBottom: 12 }}>
+          <div style={{ fontSize: 10, fontWeight: 600, color: C.gold, marginBottom: 6, fontFamily: 'Oswald,sans-serif' }}>📅 Intensité par mois</div>
+          <div style={{ fontSize: 8, color: C.textLo, marginBottom: 12, fontFamily: 'JetBrains Mono,monospace' }}>↘↘ -30% · ↘ -10% · - Normal · ↗ +10% · ↗↗ +30%</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: 8, marginBottom: 8 }}>
+            {MONTHS_ID.slice(0, 6).map((id, i) => (
+              <div key={id} style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 8, color: C.textLo, marginBottom: 4, fontFamily: 'JetBrains Mono,monospace' }}>{MONTHS_SHORT[i]} ({MONTHS_WEEKS[i]}s)</div>
+                <select defaultValue="1.0" style={{ width: '100%', padding: 4, background: C.surface2, border: `1px solid ${C.line}`, borderRadius: 4, color: C.text, fontSize: 11, textAlign: 'center' }}>
+                  <option value="0.7">↘↘</option>
+                  <option value="0.9">↘</option>
+                  <option value="1.0">-</option>
+                  <option value="1.1">↗</option>
+                  <option value="1.3">↗↗</option>
+                </select>
+              </div>
+            ))}
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: 8 }}>
+            {MONTHS_ID.slice(6).map((id, i) => (
+              <div key={id} style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 8, color: C.textLo, marginBottom: 4, fontFamily: 'JetBrains Mono,monospace' }}>{MONTHS_SHORT[i + 6]} ({MONTHS_WEEKS[i + 6]}s)</div>
+                <select defaultValue="1.0" style={{ width: '100%', padding: 4, background: C.surface2, border: `1px solid ${C.line}`, borderRadius: 4, color: C.text, fontSize: 11, textAlign: 'center' }}>
+                  <option value="0.7">↘↘</option>
+                  <option value="0.9">↘</option>
+                  <option value="1.0">-</option>
+                  <option value="1.1">↗</option>
+                  <option value="1.3">↗↗</option>
+                </select>
+              </div>
+            ))}
+          </div>
+        </div>
+      </SectionPanel>
+
+      <SectionPanel title="📧 Séquences — Délais par défaut">
+        {[
+          { label: 'Délai entre emails (jours)', desc: 'Espacement entre 2 emails dans une séquence', val: 3, min: 1, max: 30 },
+          { label: 'Délai entre SMS (jours)', desc: 'Espacement entre 2 SMS', val: 5, min: 1, max: 30 },
+          { label: 'Délai entre WhatsApp (jours)', desc: 'Espacement entre 2 messages WA', val: 2, min: 1, max: 30 },
+          { label: 'Étapes max par séquence', desc: "Nombre maximum d'étapes", val: 6, min: 3, max: 20 },
+          { label: 'Arrêt automatique si pas de réponse (jours)', desc: 'Stop séquence après X jours sans réponse', val: 21, min: 7, max: 60 },
+        ].map((row, i) => (
+          <SetRow key={i}>
+            <SetLabel label={row.label} desc={row.desc} />
+            <NumInput value={row.val} min={row.min} max={row.max} />
+          </SetRow>
+        ))}
+      </SectionPanel>
+
+      <SectionPanel title="🎉 Célébrations">
+        {[
+          { label: '🎊 Tester confettis', desc: 'Objectif quotidien atteint', btnLabel: 'Tester', color: C.gold, bg: '#1a1400' },
+          { label: '🚀 Tester fusée', desc: 'Record personnel battu', btnLabel: 'Tester', color: C.green, bg: '#0d1f0f' },
+          { label: "🎆 Tester feux d'artifice", desc: 'Objectif global / mensuel atteint', btnLabel: 'Tester', color: '#b07aee', bg: '#180d2e' },
+          { label: '🔔 Tester gong RDV', desc: 'Son de gong quand un RDV est posé', btnLabel: 'Tester', color: C.indigo, bg: '#0d1a2e' },
+          { label: '🔔 Tester gong contrat', desc: 'Son de gong quand un contrat est signé', btnLabel: 'Tester', color: C.gold, bg: '#1a1400' },
+        ].map((row, i) => (
+          <SetRow key={i}>
+            <SetLabel label={row.label} desc={row.desc} />
+            <SetBtn color={row.color} bg={row.bg}>{row.btnLabel}</SetBtn>
+          </SetRow>
+        ))}
+      </SectionPanel>
+
+      <SectionPanel title="⚠️ Zone dangereuse">
+        <SetRow>
+          <SetLabel label="Réinitialiser les compteurs du jour" desc="Remet à 0 les contacts, appels, RDV" />
+          <SetBtn color={C.cyan} bg="#1f0d0d">🗑️ Reset jour</SetBtn>
+        </SetRow>
+        <SetRow>
+          <SetLabel label="Restaurer tous les paramètres par défaut" desc="Remet toutes les valeurs d'origine" />
+          <SetBtn color={C.cyan} bg="#1f0d0d">🔄 Reset tout</SetBtn>
+        </SetRow>
+      </SectionPanel>
+    </>
+  )
+}
+
+// ─── ONGLET KPI ───────────────────────────────────────────────────────────────
+function TabKPI() {
+  return (
+    <>
+      <SectionPanel title="📅 Rendez-vous (R1 & R2)">
+        <div style={{ fontSize: 9, color: C.textLo, marginBottom: 12, fontFamily: 'JetBrains Mono,monospace' }}>Configure tes objectifs annuels, le dashboard calculera la planification mensuelle et hebdomadaire</div>
+
+        <SetRow>
+          <SetLabel label="🎯 Objectif annuel R1" desc="Total de RDV R1 pour 2026" />
+          <NumInput value={64} min={1} max={500} />
+        </SetRow>
+        <SetRow>
+          <SetLabel label="🎯 Objectif annuel R2" desc="Total de RDV R2 pour 2026" />
+          <NumInput value={24} min={1} max={500} />
+        </SetRow>
+
+        <div style={{ background: '#1a1400', border: `1px solid ${C.gold}`, borderRadius: 6, padding: 12, marginBottom: 14 }}>
+          <div style={{ fontSize: 10, color: C.gold, fontWeight: 600, marginBottom: 8, fontFamily: 'Oswald,sans-serif' }}>📊 Planification automatique</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 9, color: C.text, fontFamily: 'JetBrains Mono,monospace' }}>
+            <div><strong>R1 par mois :</strong> 5.3</div>
+            <div><strong>R2 par mois :</strong> 2</div>
+            <div><strong>R1 par semaine :</strong> 1.2</div>
+            <div><strong>R2 par semaine :</strong> 0.5</div>
+          </div>
+        </div>
+
+        <div style={{ fontSize: 10, fontWeight: 600, color: C.textHi, marginBottom: 8, fontFamily: 'Oswald,sans-serif' }}>Répartition mensuelle personnalisée (optionnel)</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 6, maxHeight: 200, overflowY: 'auto' }}>
+          {MONTHS_SHORT.map((m, i) => (
+            <div key={m} style={{ background: C.surface2, padding: 6, borderRadius: 4, border: `1px solid ${C.lineSoft}` }}>
+              <div style={{ fontSize: 8, color: C.textLo, marginBottom: 4, fontFamily: 'JetBrains Mono,monospace' }}>{m}</div>
+              <div style={{ display: 'flex', gap: 4 }}>
+                <input type="number" placeholder="R1" style={{ width: 40, padding: 3, background: '#1a1a1a', border: `1px solid ${C.line}`, borderRadius: 3, color: C.green, fontSize: 8 }} min={0} />
+                <input type="number" placeholder="R2" style={{ width: 40, padding: 3, background: '#1a1a1a', border: `1px solid ${C.line}`, borderRadius: 3, color: C.indigo, fontSize: 8 }} min={0} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </SectionPanel>
+
+      <SectionPanel title="💰 Collecte (Euros)">
+        <div style={{ fontSize: 9, color: C.textLo, marginBottom: 12, fontFamily: 'JetBrains Mono,monospace' }}>Objectif de collecte annuel réparti automatiquement</div>
+        <SetRow>
+          <SetLabel label="🎯 Objectif collecte annuel" desc="Montant total à collecter en 2026" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <NumInput value={500000} min={1000} max={10000000} step={1000} />
+            <span style={{ fontSize: 9, color: C.textLo, fontFamily: 'JetBrains Mono,monospace' }}>€</span>
+          </div>
+        </SetRow>
+        <div style={{ background: '#0d1a2e', border: `1px solid ${C.indigo}`, borderRadius: 6, padding: 12, marginBottom: 14 }}>
+          <div style={{ fontSize: 10, color: C.indigo, fontWeight: 600, marginBottom: 8, fontFamily: 'Oswald,sans-serif' }}>📊 Planification automatique</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 9, color: C.text, fontFamily: 'JetBrains Mono,monospace' }}>
+            <div><strong>Par mois :</strong> 41 667 €</div>
+            <div><strong>Par semaine :</strong> 9 615 €</div>
+            <div><strong>Par jour :</strong> 1 923 €</div>
+          </div>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 6, maxHeight: 200, overflowY: 'auto' }}>
+          {MONTHS_SHORT.map(m => (
+            <div key={m} style={{ background: C.surface2, padding: 6, borderRadius: 4, border: `1px solid ${C.lineSoft}` }}>
+              <div style={{ fontSize: 8, color: C.textLo, marginBottom: 4, fontFamily: 'JetBrains Mono,monospace' }}>{m}</div>
+              <input type="number" placeholder="Montant €" style={{ width: '100%', padding: 4, background: '#1a1a1a', border: `1px solid ${C.line}`, borderRadius: 3, color: C.gold, fontSize: 8, boxSizing: 'border-box' }} min={0} step={1000} />
+            </div>
+          ))}
+        </div>
+      </SectionPanel>
+
+      <SectionPanel title="🤝 Interpro">
+        <div style={{ fontSize: 9, color: C.textLo, marginBottom: 12, fontFamily: 'JetBrains Mono,monospace' }}>Actions/contacts avec partenaires ID</div>
+        <SetRow>
+          <SetLabel label="🎯 Objectif quotidien" desc="Contacts ID par jour" />
+          <NumInput value={3} min={1} max={20} />
+        </SetRow>
+        <div style={{ background: '#0d1a0d', border: `1px solid ${C.green}`, borderRadius: 6, padding: 12, marginTop: 12 }}>
+          <div style={{ fontSize: 10, color: C.green, fontWeight: 600, marginBottom: 8, fontFamily: 'Oswald,sans-serif' }}>📊 Planification automatique</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 9, color: C.text, fontFamily: 'JetBrains Mono,monospace' }}>
+            <div><strong>Par semaine :</strong> 15 contacts</div>
+            <div><strong>Par mois :</strong> 65 contacts</div>
+            <div><strong>Par an :</strong> 780 contacts</div>
+          </div>
+        </div>
+      </SectionPanel>
+
+      <SectionPanel title="📚 Commerce (Formation)">
+        <div style={{ fontSize: 9, color: C.textLo, marginBottom: 12, fontFamily: 'JetBrains Mono,monospace' }}>Temps de formation commerciale quotidien</div>
+        <SetRow>
+          <SetLabel label="🎯 Objectif quotidien" desc="Minutes de formation par jour" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <NumInput value={30} min={5} max={120} step={5} />
+            <span style={{ fontSize: 9, color: C.textLo, fontFamily: 'JetBrains Mono,monospace' }}>min</span>
+          </div>
+        </SetRow>
+        <div style={{ background: '#0d1a2e', border: `1px solid ${C.indigo}`, borderRadius: 6, padding: 12, marginTop: 12 }}>
+          <div style={{ fontSize: 10, color: C.indigo, fontWeight: 600, marginBottom: 8, fontFamily: 'Oswald,sans-serif' }}>📊 Planification automatique</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 9, color: C.text, fontFamily: 'JetBrains Mono,monospace' }}>
+            <div><strong>Par semaine :</strong> 2.5 heures</div>
+            <div><strong>Par mois :</strong> 10 heures</div>
+            <div><strong>Par an :</strong> 120 heures</div>
+          </div>
+        </div>
+      </SectionPanel>
+
+      <SectionPanel title="💪 Sport">
+        <div style={{ fontSize: 9, color: C.textLo, marginBottom: 12, fontFamily: 'JetBrains Mono,monospace' }}>Séances de sport hebdomadaires</div>
+        <SetRow>
+          <SetLabel label="🎯 Objectif hebdomadaire" desc="Séances par semaine" />
+          <NumInput value={3} min={1} max={7} />
+        </SetRow>
+        <div style={{ background: '#1a1400', border: `1px solid ${C.gold}`, borderRadius: 6, padding: 12, marginTop: 12 }}>
+          <div style={{ fontSize: 10, color: C.gold, fontWeight: 600, marginBottom: 8, fontFamily: 'Oswald,sans-serif' }}>📊 Planification automatique</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 9, color: C.text, fontFamily: 'JetBrains Mono,monospace' }}>
+            <div><strong>Par mois :</strong> 13 séances</div>
+            <div><strong>Par an :</strong> 156 séances</div>
+          </div>
+        </div>
+      </SectionPanel>
+    </>
+  )
+}
+
+// ─── ONGLET NOTIFICATIONS ────────────────────────────────────────────────────
+function TabNotifications() {
+  const [pushOn, setPushOn] = useState(true)
+  const [emailOn, setEmailOn] = useState(false)
+  const [smsOn, setSmsOn] = useState(false)
+  const [telegramOn, setTelegramOn] = useState(false)
+
+  return (
+    <>
+      <SectionPanel title="🔔 Canaux de notification">
+        <div style={{ fontSize: 9, color: C.textLo, marginBottom: 12, fontFamily: 'JetBrains Mono,monospace' }}>Active les canaux de notification pour recevoir les alertes workflow et urgences</div>
+
+        <SetRow>
+          <SetLabel label="🌐 Notifications navigateur (Push)" desc="Alertes instantanées dans le navigateur • Gratuit" />
+          <Toggle checked={pushOn} onChange={setPushOn} />
+        </SetRow>
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: '#1a1400', borderRadius: 6, border: `1px solid ${C.gold}40`, marginBottom: 8 }}>
+          <div style={{ flex: 1 }}>
+            <SetLabel label="📧 Email" desc="Récapitulatif workflows + alertes urgence" />
+            <input type="email" placeholder="ton-email@exemple.fr" style={{ width: '100%', marginTop: 6, padding: 6, background: C.surface2, border: `1px solid ${C.line}`, borderRadius: 4, color: C.text, fontSize: 10, fontFamily: 'Inter,sans-serif', boxSizing: 'border-box' }} />
+          </div>
+          <div style={{ marginLeft: 12 }}><Toggle checked={emailOn} onChange={setEmailOn} /></div>
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: '#0d1a0d', borderRadius: 6, border: `1px solid ${C.green}40`, marginBottom: 8 }}>
+          <div style={{ flex: 1 }}>
+            <SetLabel label="📱 SMS (Mobile)" desc="Alertes urgence 48h uniquement • Via Twilio" />
+            <input type="tel" placeholder="+33 6 12 34 56 78" style={{ width: '100%', marginTop: 6, padding: 6, background: C.surface2, border: `1px solid ${C.line}`, borderRadius: 4, color: C.text, fontSize: 10, fontFamily: 'Inter,sans-serif', boxSizing: 'border-box' }} />
+          </div>
+          <div style={{ marginLeft: 12 }}><Toggle checked={smsOn} onChange={setSmsOn} /></div>
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: '#0d1a2e', borderRadius: 6, border: `1px solid ${C.indigo}40`, marginBottom: 8 }}>
+          <div style={{ flex: 1 }}>
+            <SetLabel label="💬 Telegram" desc="Notifications via bot Telegram • Gratuit" />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginTop: 6 }}>
+              <input type="text" placeholder="Bot Token" style={{ padding: 6, background: C.surface2, border: `1px solid ${C.line}`, borderRadius: 4, color: C.text, fontSize: 10, fontFamily: 'Inter,sans-serif' }} />
+              <input type="text" placeholder="Chat ID" style={{ padding: 6, background: C.surface2, border: `1px solid ${C.line}`, borderRadius: 4, color: C.text, fontSize: 10, fontFamily: 'Inter,sans-serif' }} />
+            </div>
+            <div style={{ fontSize: 8, color: C.textLo, marginTop: 4, fontFamily: 'JetBrains Mono,monospace' }}>
+              📘{' '}
+              <a href="https://core.telegram.org/bots#creating-a-new-bot" target="_blank" rel="noreferrer" style={{ color: C.indigo }}>Comment créer un bot Telegram</a>
+            </div>
+          </div>
+          <div style={{ marginLeft: 12 }}><Toggle checked={telegramOn} onChange={setTelegramOn} /></div>
+        </div>
+      </SectionPanel>
+
+      <SectionPanel title="⚡ Événements à notifier">
+        <div style={{ fontSize: 9, color: C.textLo, marginBottom: 12, fontFamily: 'JetBrains Mono,monospace' }}>Choisis quels événements déclenchent des notifications</div>
+        {[
+          { label: '🚀 Prospection hebdo prête (Lundi 8h)', desc: 'Rappel pour lancer le workflow hebdomadaire', defaultOn: true },
+          { label: '📅 Prospection mensuelle prête (1er lundi 8h)', desc: 'Rappel pour lancer le workflow mensuel', defaultOn: true },
+          { label: '⚡ Leads urgence 48h détectés', desc: 'Alerte immédiate pour cessions BODACC et holdings', defaultOn: true },
+          { label: '📊 Workflow terminé (résultats)', desc: 'Notification quand prospection est terminée + nombre de leads', defaultOn: true },
+          { label: '⚠️ Échec workflow (erreur API)', desc: 'Alerte si un workflow échoue', defaultOn: true },
+        ].map((ev, i) => (
+          <SetRow key={i}>
+            <SetLabel label={ev.label} desc={ev.desc} />
+            <input type="checkbox" defaultChecked={ev.defaultOn} style={{ width: 20, height: 20, cursor: 'pointer' }} />
+          </SetRow>
+        ))}
+        <SetRow>
+          <SetLabel label="🔔 Rappel RDV (heures avant)" desc="Notification avant rendez-vous" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <input type="number" defaultValue={24} min={1} max={72} style={{ width: 60, padding: 6, background: C.surface2, border: `1px solid ${C.line}`, borderRadius: 4, color: C.text, fontSize: 10, fontFamily: 'JetBrains Mono,monospace' }} />
+            <span style={{ fontSize: 9, color: C.textLo, fontFamily: 'JetBrains Mono,monospace' }}>h avant</span>
+          </div>
+        </SetRow>
+      </SectionPanel>
+
+      <SectionPanel title="🧪 Tester les notifications">
+        <div style={{ fontSize: 9, color: C.textLo, marginBottom: 12, fontFamily: 'JetBrains Mono,monospace' }}>Envoie une notification test sur chaque canal activé</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 8 }}>
+          <SetBtn color={C.indigo} bg="#0d1a2e">🌐 Test Push</SetBtn>
+          <SetBtn color={C.gold} bg="#1a1400">📧 Test Email</SetBtn>
+          <SetBtn color={C.green} bg="#0d1a0d">📱 Test SMS</SetBtn>
+          <SetBtn color={C.indigo} bg="#0d1a2e">💬 Test Telegram</SetBtn>
+        </div>
+      </SectionPanel>
+    </>
+  )
+}
+
+// ─── ONGLET INTÉGRATIONS ─────────────────────────────────────────────────────
+function TabIntegrations() {
+  return (
+    <>
+      <SectionPanel title="🔄 Workflows & Automatisations">
+        <div style={{ fontSize: 9, color: C.textLo, marginBottom: 12, fontFamily: 'JetBrains Mono,monospace' }}>
+          Configure tes workflows automatisés avec clés API et serveurs MCP. Choisis dans quelle base de données les prospects arrivent.
+        </div>
+
+        <div style={{ background: C.surface1, border: `1px solid ${C.lineSoft}`, borderRadius: 6, padding: 12, marginBottom: 12 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 600, color: C.textHi, fontFamily: 'Oswald,sans-serif' }}>Workflow #1</div>
+              <div style={{ fontSize: 8, color: C.textLo, marginTop: 2, fontFamily: 'JetBrains Mono,monospace' }}>Import automatique Pappers</div>
+            </div>
+            <SetBtn color={C.cyan} bg="#1f0d0d">🗑️ Supprimer</SetBtn>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+            <div>
+              <label style={{ fontSize: 8, color: C.textLo, display: 'block', marginBottom: 4, fontFamily: 'JetBrains Mono,monospace' }}>Nom du workflow</label>
+              <input type="text" defaultValue="Import Pappers → TNS" style={{ width: '100%', padding: 6, background: C.surface2, border: `1px solid ${C.line}`, borderRadius: 4, color: C.text, fontSize: 9, fontFamily: 'Inter,sans-serif', boxSizing: 'border-box' }} />
+            </div>
+            <div>
+              <label style={{ fontSize: 8, color: C.textLo, display: 'block', marginBottom: 4, fontFamily: 'JetBrains Mono,monospace' }}>Base de données cible</label>
+              <select style={{ width: '100%', padding: 6, background: C.surface2, border: `1px solid ${C.line}`, borderRadius: 4, color: C.text, fontSize: 9, fontFamily: 'Inter,sans-serif' }}>
+                <option value="tns">📊 TNS (Travailleurs Non Salariés)</option>
+                <option value="chef">💼 Chef d'entreprise</option>
+                <option value="particulier">👤 Particulier</option>
+              </select>
+            </div>
+          </div>
+
+          <div style={{ marginBottom: 10 }}>
+            <label style={{ fontSize: 8, color: C.textLo, display: 'block', marginBottom: 4, fontFamily: 'JetBrains Mono,monospace' }}>{"Type d'intégration"}</label>
+            <select style={{ width: '100%', padding: 6, background: C.surface2, border: `1px solid ${C.line}`, borderRadius: 4, color: C.text, fontSize: 9, fontFamily: 'Inter,sans-serif' }}>
+              <option value="api">🔑 Clé API</option>
+              <option value="mcp">🔗 Serveur MCP</option>
+              <option value="webhook">📡 Webhook</option>
+            </select>
+          </div>
+
+          <div>
+            <label style={{ fontSize: 8, color: C.textLo, display: 'block', marginBottom: 4, fontFamily: 'JetBrains Mono,monospace' }}>Clé API / URL MCP</label>
+            <input type="password" placeholder="sk-xxxxxxxxxxxxxxxxxxxx" style={{ width: '100%', padding: 6, background: C.surface2, border: `1px solid ${C.line}`, borderRadius: 4, color: C.text, fontSize: 9, fontFamily: 'monospace', boxSizing: 'border-box' }} />
+          </div>
+        </div>
+
+        <button style={{ width: '100%', padding: 10, background: '#0d1a2e', border: `1px solid ${C.indigo}`, color: C.indigo, borderRadius: 6, fontSize: 10, fontWeight: 600, cursor: 'pointer', fontFamily: 'Oswald,sans-serif', letterSpacing: '0.05em' }}>
+          ➕ Ajouter un nouveau workflow
+        </button>
+      </SectionPanel>
+
+      <SectionPanel title="🔗 API Pappers">
+        <div style={{ fontSize: 9, color: C.textLo, marginBottom: 12, fontFamily: 'JetBrains Mono,monospace' }}>
+          Clé API pour les workflows d'acquisition •{' '}
+          <a href="https://www.pappers.fr" target="_blank" rel="noreferrer" style={{ color: C.indigo }}>Créer un compte gratuit</a>
+        </div>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end' }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 10, fontWeight: 500, color: C.textHi, marginBottom: 6, fontFamily: 'Inter,sans-serif' }}>🔑 Clé API Pappers</div>
+            <input type="password" placeholder="Colle ta clé API ici" style={{ width: '100%', padding: 8, background: C.surface2, border: `1px solid ${C.line}`, borderRadius: 4, color: C.gold, fontSize: 10, fontFamily: 'monospace', boxSizing: 'border-box' }} />
+            <div style={{ fontSize: 8, color: C.textLo, marginTop: 4, fontFamily: 'JetBrains Mono,monospace' }}>✅ Essai gratuit 2 semaines • Aucune CB requise</div>
+          </div>
+          <SetBtn color={C.green} bg="#0d1a0d">🧪 Tester</SetBtn>
+        </div>
+      </SectionPanel>
+
+      <SectionPanel title="🔗 Data.gouv MCP">
+        <div style={{ fontSize: 9, color: C.textLo, marginBottom: 12, fontFamily: 'JetBrains Mono,monospace' }}>Serveur MCP pour accès SIRENE et BODACC • Gratuit</div>
+        <div style={{ background: '#1a0d0d', border: `1px solid ${C.cyan}`, borderRadius: 6, padding: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+            <span style={{ fontSize: 18 }}>⚠️</span>
+            <div style={{ fontSize: 10, fontWeight: 600, color: C.cyan, fontFamily: 'Oswald,sans-serif' }}>Serveur Data.gouv temporairement indisponible</div>
+          </div>
+          <div style={{ fontSize: 9, color: C.textMid, lineHeight: 1.5, fontFamily: 'Inter,sans-serif' }}>
+            Le serveur MCP officiel Data.gouv n'est pas encore déployé publiquement. En attendant, les workflows utilisent <strong>UNIQUEMENT Pappers</strong> qui a également accès au SIRENE et BODACC.<br /><br />
+            <strong>Aucun impact :</strong> Les 5 signaux patrimoniaux fonctionnent normalement via Pappers seul.
+          </div>
+        </div>
+      </SectionPanel>
+
+      <SectionPanel title="📤 Export & Backup">
+        <SetRow>
+          <SetLabel label="💾 Export CSV automatique" desc="Télécharge un CSV après chaque workflow terminé" />
+          <input type="checkbox" defaultChecked style={{ width: 20, height: 20, cursor: 'pointer' }} />
+        </SetRow>
+        <SetRow>
+          <SetLabel label="☁️ Backup LocalStorage hebdomadaire" desc="Sauvegarde auto des leads en JSON chaque lundi" />
+          <input type="checkbox" defaultChecked style={{ width: 20, height: 20, cursor: 'pointer' }} />
+        </SetRow>
+      </SectionPanel>
+    </>
+  )
+}
+
+// ─── ONGLET SECTIONS ─────────────────────────────────────────────────────────
+function TabSections() {
+  const [checked, setChecked] = useState<Record<string, boolean>>(
+    Object.fromEntries(SECTIONS_LIST.map(s => [s.id, true]))
+  )
+
+  return (
+    <SectionPanel title="👁️ Visibilité des sections">
+      <div style={{ fontSize: 9, color: C.textLo, marginBottom: 12, fontFamily: 'JetBrains Mono,monospace' }}>
+        Active ou désactive les sections du dashboard. Les sections masquées n'apparaîtront plus dans le menu latéral.
+      </div>
+      <div style={{ display: 'grid', gap: 8 }}>
+        {SECTIONS_LIST.map(s => (
+          <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 10, background: C.surface1, border: `1px solid ${C.lineSoft}`, borderRadius: 6 }}>
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 600, color: C.textHi, fontFamily: 'Inter,sans-serif' }}>{s.label}</div>
+              <div style={{ fontSize: 8, color: C.textLo, fontFamily: 'JetBrains Mono,monospace' }}>{s.desc}</div>
+            </div>
+            <input
+              type="checkbox"
+              checked={checked[s.id]}
+              onChange={e => setChecked(prev => ({ ...prev, [s.id]: e.target.checked }))}
+              style={{ width: 20, height: 20, cursor: 'pointer' }}
+            />
+          </div>
+        ))}
+      </div>
+    </SectionPanel>
+  )
+}
+
+// ─── ONGLET MOBILE ────────────────────────────────────────────────────────────
+function TabMobile() {
+  const [checked, setChecked] = useState<Record<string, boolean>>(
+    Object.fromEntries(MOBILE_SECTIONS.map(s => [s.id, s.defaultOn]))
+  )
+
+  return (
+    <SectionPanel title="📱 Affichage mobile">
+      <div style={{ fontSize: 9, color: C.textLo, marginBottom: 12, fontFamily: 'JetBrains Mono,monospace' }}>Personnalise l'affichage pour smartphone et tablette</div>
+
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ fontSize: 9, fontWeight: 600, color: C.gold, marginBottom: 8, fontFamily: 'Oswald,sans-serif' }}>Sections à afficher sur mobile</div>
+        <div style={{ display: 'grid', gap: 6 }}>
+          {MOBILE_SECTIONS.map(s => (
+            <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 8, background: C.surface1, borderRadius: 4 }}>
+              <span style={{ fontSize: 9, color: C.text, fontFamily: 'Inter,sans-serif' }}>{s.label}</span>
+              <input
+                type="checkbox"
+                checked={checked[s.id]}
+                onChange={e => setChecked(prev => ({ ...prev, [s.id]: e.target.checked }))}
+                style={{ width: 18, height: 18, cursor: 'pointer' }}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ fontSize: 9, fontWeight: 600, color: C.gold, marginBottom: 8, fontFamily: 'Oswald,sans-serif' }}>Taille de police</div>
+        <select defaultValue="medium" style={{ width: '100%', padding: 8, background: C.surface2, border: `1px solid ${C.line}`, borderRadius: 6, color: C.text, fontSize: 9, fontFamily: 'Inter,sans-serif' }}>
+          <option value="small">Petit (lisible sur petit écran)</option>
+          <option value="medium">Moyen (équilibré)</option>
+          <option value="large">Grand (confort de lecture)</option>
+        </select>
+      </div>
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 10, background: C.surface1, border: `1px solid ${C.lineSoft}`, borderRadius: 6, marginBottom: 8 }}>
+        <div>
+          <div style={{ fontSize: 10, fontWeight: 600, color: C.textHi, fontFamily: 'Inter,sans-serif' }}>Mode compact</div>
+          <div style={{ fontSize: 8, color: C.textLo, fontFamily: 'JetBrains Mono,monospace' }}>{"Réduit l'espacement pour voir plus d'infos"}</div>
+        </div>
+        <input type="checkbox" style={{ width: 20, height: 20, cursor: 'pointer' }} />
+      </div>
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 10, background: C.surface1, border: `1px solid ${C.lineSoft}`, borderRadius: 6, marginBottom: 16 }}>
+        <div>
+          <div style={{ fontSize: 10, fontWeight: 600, color: C.textHi, fontFamily: 'Inter,sans-serif' }}>Menu en bas</div>
+          <div style={{ fontSize: 8, color: C.textLo, fontFamily: 'JetBrains Mono,monospace' }}>{"Barre de navigation fixée en bas d'écran"}</div>
+        </div>
+        <input type="checkbox" defaultChecked style={{ width: 20, height: 20, cursor: 'pointer' }} />
+      </div>
+
+      <div style={{ padding: 12, background: C.surface1, border: `1px solid ${C.indigo}40`, borderRadius: 6 }}>
+        <div style={{ fontSize: 9, fontWeight: 600, color: C.indigo, marginBottom: 8, fontFamily: 'Oswald,sans-serif' }}>📱 Prévisualisation</div>
+        <div style={{ fontSize: 8, color: C.textLo, fontFamily: 'JetBrains Mono,monospace' }}>
+          Pour voir le rendu mobile, ouvre le dashboard sur ton smartphone ou utilise le mode responsive de ton navigateur (F12 → Toggle device toolbar)
+        </div>
+      </div>
+    </SectionPanel>
+  )
+}
+
+// ─── PAGE ─────────────────────────────────────────────────────────────────────
+export default function SettingsPage() {
+  const [activeTab, setActiveTab] = useState<Tab>('general')
+
+  return (
+    <>
+      <style>{'@import url(\'https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap\')'}</style>
+
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+            <div style={{ width: 3, height: 22, background: C.ribbon, borderRadius: 2 }} />
+            <h1 style={{ fontFamily: 'Oswald,sans-serif', fontSize: 20, fontWeight: 600, color: C.textHi, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+              ⚙️ Paramètres
+            </h1>
+          </div>
+          <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.textLo, paddingLeft: 11 }}>
+            Configure tes objectifs, séquences, célébrations et notifications
+          </div>
+        </div>
+        <button
+          style={{
+            fontSize: 10, padding: '7px 14px', borderRadius: 6, cursor: 'pointer',
+            border: `0.5px solid ${C.green}`, background: '#0d1f0f',
+            color: C.green, fontFamily: 'Oswald,sans-serif', letterSpacing: '0.05em', fontWeight: 500,
+          }}
+        >
+          💾 Enregistrer
+        </button>
+      </div>
+
+      {/* Tabs */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: 6, borderBottom: `0.5px solid ${C.lineSoft}`, marginBottom: 16, paddingBottom: 6 }}>
+        {TABS.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            style={{
+              padding: 8, borderRadius: '6px 6px 0 0', border: 'none', cursor: 'pointer',
+              background: activeTab === tab.id ? '#1a1400' : C.surface1,
+              color: activeTab === tab.id ? C.gold : C.textLo,
+              fontSize: 9, fontWeight: activeTab === tab.id ? 600 : 500,
+              borderBottom: activeTab === tab.id ? `2px solid ${C.gold}` : '2px solid transparent',
+              textAlign: 'center', fontFamily: 'Oswald,sans-serif', letterSpacing: '0.05em',
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Tab content */}
+      {activeTab === 'general' && <TabGeneral />}
+      {activeTab === 'kpi' && <TabKPI />}
+      {activeTab === 'notifications' && <TabNotifications />}
+      {activeTab === 'integrations' && <TabIntegrations />}
+      {activeTab === 'sections' && <TabSections />}
+      {activeTab === 'mobile' && <TabMobile />}
+    </>
+  )
+}

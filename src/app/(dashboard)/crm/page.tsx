@@ -1,0 +1,638 @@
+'use client'
+
+import { useState, useEffect, useCallback } from 'react'
+import { toast } from 'sonner'
+import {
+  DndContext,
+  DragOverlay,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragStartEvent,
+  type DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+import { C } from '@/lib/theme'
+
+// --- TYPES ---
+type Stage = 'À contacter' | 'RDV1' | 'RDV2' | 'RDV3' | 'Converti' | 'Perdu'
+type PressureLevel = 'low' | 'medium' | 'high' | 'max'
+
+interface Prospect {
+  id: string
+  nom: string
+  initials: string
+  profession: string
+  ville: string
+  telephone: string
+  email: string
+  stage: Stage
+  leadScore: number
+  nextAction: string
+  notes: string
+  tags: string[]
+  source: string
+  lastContact: string
+  pressure: PressureLevel
+}
+
+// --- DATA ---
+const STAGES: Stage[] = ['À contacter', 'RDV1', 'RDV2', 'RDV3', 'Converti', 'Perdu']
+
+const STAGE_COLORS: Record<Stage, string> = {
+  'À contacter': C.indigo,
+  'RDV1':        C.gold,
+  'RDV2':        '#9a7acc',
+  'RDV3':        C.warn,
+  'Converti':    C.green,
+  'Perdu':       C.textLo,
+}
+
+const PRESSURE_COLORS: Record<PressureLevel, string> = {
+  low:    C.green,
+  medium: C.gold,
+  high:   C.warn,
+  max:    C.cyan,
+}
+
+// HTML-sourced prospects merged with existing rich data
+const INITIAL_PROSPECTS: Prospect[] = [
+  // À contacter — from HTML
+  {
+    id: 'p1', nom: 'P. Rousseau', initials: 'PR', profession: 'Médecin gén.', ville: 'Paris 16e',
+    telephone: '01 45 00 XX XX', email: 'p.rousseau@cabinet.fr', stage: 'À contacter',
+    leadScore: 90, nextAction: 'Appel découverte', notes: 'Jamais contacté. Cabinet solo.',
+    tags: ['TNS', 'Médecin'], source: 'Google Places', lastContact: '—', pressure: 'low',
+  },
+  {
+    id: 'p2', nom: 'S. Moreau', initials: 'SM', profession: 'Sophrologue', ville: 'Neuilly-s-S.',
+    telephone: '01 47 22 XX XX', email: 's.moreau@cabinet.fr', stage: 'À contacter',
+    leadScore: 82, nextAction: 'Email intro', notes: 'Il y a 3j. Revenu estimé 90k+.',
+    tags: ['TNS', 'Santé'], source: 'Google Places', lastContact: 'il y a 3j', pressure: 'low',
+  },
+  {
+    id: 'p3', nom: 'B. Girard', initials: 'BG', profession: 'Ostéopathe', ville: 'Aulnay-s-Bois',
+    telephone: '01 48 66 XX XX', email: 'b.girard@cabinet.fr', stage: 'À contacter',
+    leadScore: 68, nextAction: 'Premier contact', notes: 'Il y a 1j. Nouveau cabinet.',
+    tags: ['TNS', 'Kiné'], source: 'Google Places', lastContact: 'il y a 1j', pressure: 'low',
+  },
+  // RDV1
+  {
+    id: 'p4', nom: 'F. Dubois', initials: 'FD', profession: 'Kinésithérapeute', ville: 'Boulogne-B.',
+    telephone: '01 46 05 XX XX', email: 'f.dubois@cabinet.fr', stage: 'RDV1',
+    leadScore: 78, nextAction: 'RDV jeudi 15h', notes: 'RDV jeu. 15h confirmé.',
+    tags: ['TNS', 'Kiné'], source: 'Google Places', lastContact: 'RDV jeu. 15h', pressure: 'medium',
+  },
+  {
+    id: 'p5', nom: 'A. Petit', initials: 'AP', profession: "Chef d'entreprise", ville: 'Paris 8e',
+    telephone: '01 53 34 XX XX', email: 'a.petit@holding.fr', stage: 'RDV1',
+    leadScore: 88, nextAction: 'Étude patrimoniale', notes: 'Il y a 4j. CA 2M. Très motivé.',
+    tags: ['Chef entreprise', 'VIP'], source: 'Import manuel', lastContact: 'il y a 4j', pressure: 'medium',
+  },
+  {
+    id: 'p6', nom: 'M. Lefort', initials: 'ML', profession: 'Infirmière lib.', ville: 'Aulnay-s-Bois',
+    telephone: '01 48 77 XX XX', email: 'm.lefort@soin.fr', stage: 'RDV1',
+    leadScore: 62, nextAction: 'Relance WA', notes: '5j sans réponse. Urgence relance.',
+    tags: ['TNS', 'Infirmière'], source: 'Google Places', lastContact: '5j sans rép.', pressure: 'high',
+  },
+  // RDV2
+  {
+    id: 'p7', nom: 'Dr. Martin', initials: 'DM', profession: 'Chirurgien', ville: 'Vincennes',
+    telephone: '01 43 28 XX XX', email: 'dr.martin@chir.fr', stage: 'RDV2',
+    leadScore: 94, nextAction: 'Proposition', notes: '5j sans réponse. Dossier prêt.',
+    tags: ['TNS', 'Médecin', 'VIP'], source: 'Google Places', lastContact: '5j sans rép.', pressure: 'max',
+  },
+  {
+    id: 'p8', nom: 'C. Blanc', initials: 'CB', profession: 'Infirmière lib.', ville: 'Montreuil',
+    telephone: '01 48 59 XX XX', email: 'c.blanc@soin.fr', stage: 'RDV2',
+    leadScore: 70, nextAction: 'Dossier à envoyer', notes: 'Il y a 2j. Dossier AV en cours.',
+    tags: ['TNS', 'Infirmière'], source: 'Google Places', lastContact: 'il y a 2j', pressure: 'high',
+  },
+  // RDV3
+  {
+    id: 'p9', nom: 'L. Chen', initials: 'LC', profession: 'Pharmacienne', ville: 'Paris 6e',
+    telephone: '01 43 26 XX XX', email: 'l.chen@pharma.fr', stage: 'RDV3',
+    leadScore: 92, nextAction: 'Proposition finale', notes: 'RDV mer. 16h. Accord de principe.',
+    tags: ['TNS', 'Pharma', 'VIP'], source: 'Import manuel', lastContact: 'RDV mer. 16h', pressure: 'high',
+  },
+  {
+    id: 'p10', nom: 'J. Barré', initials: 'JB', profession: 'Radiologue', ville: 'Vincennes',
+    telephone: '01 43 74 XX XX', email: 'j.barre@radio.fr', stage: 'RDV3',
+    leadScore: 85, nextAction: 'Closing RDV 3', notes: 'Il y a 1j. Très motivé.',
+    tags: ['TNS', 'Médecin'], source: 'Google Places', lastContact: 'il y a 1j', pressure: 'max',
+  },
+  // Convertis
+  {
+    id: 'p11', nom: 'M. Bernard', initials: 'MB', profession: 'Dentiste', ville: 'Paris 15e',
+    telephone: '01 45 78 XX XX', email: 'm.bernard@dental.fr', stage: 'Converti',
+    leadScore: 96, nextAction: 'Ass. vie + PER', notes: '4 200 €/an. Client satisfait.',
+    tags: ['TNS', 'Dentiste', 'VIP'], source: 'Import manuel', lastContact: '4 200 €/an', pressure: 'low',
+  },
+  {
+    id: 'p12', nom: 'T. Nguyen', initials: 'TN', profession: 'Infirmière lib.', ville: 'Saint-Denis',
+    telephone: '01 48 22 XX XX', email: 't.nguyen@soin.fr', stage: 'Converti',
+    leadScore: 78, nextAction: 'Prévoyance', notes: '2 800 €/an. Suivi portefeuille.',
+    tags: ['TNS', 'Infirmière'], source: 'Import CSV', lastContact: '2 800 €/an', pressure: 'low',
+  },
+  // Perdu
+  {
+    id: 'p13', nom: 'J. Lambert', initials: 'JL', profession: 'Ostéopathe', ville: 'Versailles',
+    telephone: '01 39 50 XX XX', email: 'j.lambert@osteo.fr', stage: 'Perdu',
+    leadScore: 55, nextAction: 'Relance 3 mois', notes: 'A choisi un concurrent. Relance dans 3 mois.',
+    tags: ['TNS', 'Kiné'], source: 'Google Places', lastContact: 'Concurrent', pressure: 'low',
+  },
+]
+
+// --- DB ↔ UI STAGE MAPPING ---
+const DB_TO_UI: Record<string, Stage> = {
+  a_contacter: 'À contacter',
+  rdv1: 'RDV1',
+  rdv2: 'RDV2',
+  rdv3: 'RDV3',
+  converti: 'Converti',
+  perdu: 'Perdu',
+}
+const UI_TO_DB: Record<Stage, string> = {
+  'À contacter': 'a_contacter',
+  'RDV1': 'rdv1',
+  'RDV2': 'rdv2',
+  'RDV3': 'rdv3',
+  'Converti': 'converti',
+  'Perdu': 'perdu',
+}
+
+// --- HELPERS ---
+function scoreColor(s: number) {
+  return s >= 80 ? C.green : s >= 60 ? C.gold : C.cyan
+}
+
+// --- PROSPECT CARD (draggable) ---
+function ProspectCard({
+  prospect, onClick,
+}: {
+  prospect: Prospect
+  onClick: () => void
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging: sortDragging } = useSortable({ id: prospect.id })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: sortDragging ? 0.3 : 1,
+  }
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners} onClick={onClick}>
+      <CardContent prospect={prospect} />
+    </div>
+  )
+}
+
+function CardContent({ prospect, isDragging }: { prospect: Prospect; isDragging?: boolean }) {
+  const pressureColor = PRESSURE_COLORS[prospect.pressure]
+  return (
+    <div style={{
+      background: C.surface2,
+      border: `1px solid ${isDragging ? C.gold : C.line}`,
+      borderLeft: `3px solid ${STAGE_COLORS[prospect.stage]}`,
+      borderRadius: 8, padding: '10px 12px', cursor: 'grab',
+      marginBottom: 8, userSelect: 'none',
+      boxShadow: isDragging ? '0 8px 24px rgba(0,0,0,0.5)' : 'none',
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+          {/* Avatar */}
+          <div style={{
+            width: 24, height: 24, borderRadius: '50%', flexShrink: 0,
+            background: STAGE_COLORS[prospect.stage] + '30',
+            border: `1px solid ${STAGE_COLORS[prospect.stage]}60`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 8, fontWeight: 700, color: STAGE_COLORS[prospect.stage],
+          }}>{prospect.initials}</div>
+          <div style={{ fontSize: 12, fontWeight: 600, color: C.text }}>{prospect.nom}</div>
+        </div>
+        <div style={{
+          fontSize: 10, fontWeight: 700, color: scoreColor(prospect.leadScore),
+          background: scoreColor(prospect.leadScore) + '22',
+          borderRadius: 4, padding: '1px 5px',
+        }}>{prospect.leadScore}</div>
+      </div>
+      <div style={{ fontSize: 10, color: C.textLo, marginBottom: 5 }}>
+        {prospect.profession} — {prospect.ville}
+      </div>
+      <div style={{ fontSize: 10, color: C.gold, marginBottom: 5 }}>⚡ {prospect.nextAction}</div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+          {prospect.tags.slice(0, 2).map(t => (
+            <span key={t} style={{
+              fontSize: 8, padding: '1px 5px', borderRadius: 3,
+              background: C.surface3, color: C.green, border: `1px solid ${C.green}33`,
+            }}>{t}</span>
+          ))}
+        </div>
+        {/* Pressure dot */}
+        <div style={{ width: 7, height: 7, borderRadius: '50%', background: pressureColor, flexShrink: 0 }} />
+      </div>
+    </div>
+  )
+}
+
+// --- DRAWER ---
+function ProspectDrawer({ prospect, onClose, onStageChange }: {
+  prospect: Prospect
+  onClose: () => void
+  onStageChange: (id: string, stage: Stage) => void
+}) {
+  const [localNotes, setLocalNotes] = useState(prospect.notes)
+  const waMsg = encodeURIComponent(
+    `Bonjour ${prospect.nom.split(' ').pop()}, je suis Ted, conseiller en gestion de patrimoine. Seriez-vous disponible pour un échange de 15 minutes cette semaine ?`
+  )
+
+  return (
+    <div style={{
+      position: 'fixed', top: 0, right: 0, width: 400, height: '100vh',
+      background: C.bgMid, borderLeft: `1px solid ${C.line}`, zIndex: 1000,
+      overflowY: 'auto', display: 'flex', flexDirection: 'column',
+    }}>
+      {/* Header */}
+      <div style={{ padding: '20px 20px 16px', borderBottom: `1px solid ${C.line}` }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{
+              width: 40, height: 40, borderRadius: '50%',
+              background: STAGE_COLORS[prospect.stage] + '30',
+              border: `2px solid ${STAGE_COLORS[prospect.stage]}`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 13, fontWeight: 700, color: STAGE_COLORS[prospect.stage],
+            }}>{prospect.initials}</div>
+            <div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: C.textHi }}>{prospect.nom}</div>
+              <div style={{ fontSize: 11, color: C.textLo }}>{prospect.profession} — {prospect.ville}</div>
+            </div>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: C.textLo, fontSize: 18, cursor: 'pointer', padding: 4 }}>✕</button>
+        </div>
+        <div style={{ marginTop: 12, display: 'flex', gap: 10, alignItems: 'center' }}>
+          <div style={{
+            fontSize: 13, fontWeight: 800, color: scoreColor(prospect.leadScore),
+            background: scoreColor(prospect.leadScore) + '22', borderRadius: 6, padding: '3px 10px',
+          }}>Score {prospect.leadScore}</div>
+          <div style={{ fontSize: 11, color: C.textLo }}>Source: {prospect.source}</div>
+        </div>
+      </div>
+
+      {/* Contact */}
+      <div style={{ padding: '16px 20px', borderBottom: `1px solid ${C.line}` }}>
+        <div style={{ fontSize: 9, color: C.textLo, marginBottom: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1 }}>Contact</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div style={{ fontSize: 12, color: C.textMid }}>📞 {prospect.telephone}</div>
+          <div style={{ fontSize: 12, color: C.textMid }}>✉️ {prospect.email}</div>
+          <div style={{ fontSize: 11, color: C.textLo }}>Dernier contact : {prospect.lastContact}</div>
+        </div>
+      </div>
+
+      {/* Stage */}
+      <div style={{ padding: '16px 20px', borderBottom: `1px solid ${C.line}` }}>
+        <div style={{ fontSize: 9, color: C.textLo, marginBottom: 8, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1 }}>Étape pipeline</div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          {STAGES.map(s => (
+            <button key={s} onClick={() => onStageChange(prospect.id, s)} style={{
+              fontSize: 10, padding: '4px 10px', borderRadius: 5, cursor: 'pointer',
+              border: `1px solid ${prospect.stage === s ? STAGE_COLORS[s] : C.line}`,
+              background: prospect.stage === s ? STAGE_COLORS[s] + '22' : C.surface2,
+              color: prospect.stage === s ? STAGE_COLORS[s] : C.textLo,
+              fontWeight: prospect.stage === s ? 700 : 400,
+            }}>{s}</button>
+          ))}
+        </div>
+      </div>
+
+      {/* Next action */}
+      <div style={{ padding: '16px 20px', borderBottom: `1px solid ${C.line}` }}>
+        <div style={{ fontSize: 9, color: C.textLo, marginBottom: 6, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1 }}>Prochaine action</div>
+        <div style={{ fontSize: 12, color: C.gold }}>⚡ {prospect.nextAction}</div>
+      </div>
+
+      {/* Tags */}
+      <div style={{ padding: '14px 20px', borderBottom: `1px solid ${C.line}` }}>
+        <div style={{ fontSize: 9, color: C.textLo, marginBottom: 8, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1 }}>Tags</div>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {prospect.tags.map(t => (
+            <span key={t} style={{
+              fontSize: 9, padding: '2px 8px', borderRadius: 4,
+              background: C.surface3, color: C.green, border: `1px solid ${C.green}33`,
+            }}>{t}</span>
+          ))}
+        </div>
+      </div>
+
+      {/* Notes */}
+      <div style={{ padding: '16px 20px', borderBottom: `1px solid ${C.line}`, flex: 1 }}>
+        <div style={{ fontSize: 9, color: C.textLo, marginBottom: 8, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1 }}>Notes</div>
+        <textarea
+          value={localNotes}
+          onChange={e => setLocalNotes(e.target.value)}
+          style={{
+            width: '100%', minHeight: 90, background: C.surface1,
+            border: `1px solid ${C.line}`, borderRadius: 6,
+            color: C.textMid, fontSize: 11, padding: '8px 10px',
+            resize: 'vertical', outline: 'none', boxSizing: 'border-box',
+          }}
+        />
+      </div>
+
+      {/* Actions rapides */}
+      <div style={{ padding: '16px 20px', borderTop: `1px solid ${C.line}` }}>
+        <div style={{ fontSize: 9, color: C.textLo, marginBottom: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1 }}>Actions rapides</div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+          <button
+            onClick={() => window.open(`https://wa.me/33${prospect.telephone.replace(/\s/g,'').replace(/^0/,'').replace(/[^0-9]/g,'')}?text=${waMsg}`, '_blank')}
+            style={{ padding: '9px 0', borderRadius: 7, border: '1px solid #25D366', background: 'rgba(37,211,102,0.1)', color: '#25D366', fontWeight: 600, fontSize: 11, cursor: 'pointer' }}
+          >💬 WhatsApp</button>
+          <button
+            onClick={() => window.open(`https://linkedin.com/search/results/people/?keywords=${encodeURIComponent(prospect.nom)}`, '_blank')}
+            style={{ padding: '9px 0', borderRadius: 7, border: '1px solid #0A66C2', background: 'rgba(10,102,194,0.1)', color: '#0A66C2', fontWeight: 600, fontSize: 11, cursor: 'pointer' }}
+          >🔗 LinkedIn</button>
+          <button style={{ padding: '9px 0', borderRadius: 7, border: `1px solid ${C.indigo}`, background: C.indigo + '1a', color: C.indigo, fontWeight: 600, fontSize: 11, cursor: 'pointer' }}>
+            ✉️ Email Brevo
+          </button>
+          <button
+            onClick={() => window.open(`tel:${prospect.telephone}`, '_self')}
+            style={{ padding: '9px 0', borderRadius: 7, border: `1px solid ${C.green}`, background: C.green + '1a', color: C.green, fontWeight: 600, fontSize: 11, cursor: 'pointer' }}
+          >📞 Appeler</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// --- KANBAN COLUMN ---
+function KanbanColumn({ stage, prospects, onCardClick }: {
+  stage: Stage
+  prospects: Prospect[]
+  onCardClick: (p: Prospect) => void
+}) {
+  const color = STAGE_COLORS[stage]
+  return (
+    <div style={{
+      minWidth: 190, flex: 1,
+      background: C.surface1, borderRadius: 10,
+      border: `1px solid ${C.line}`,
+      display: 'flex', flexDirection: 'column',
+      maxHeight: 'calc(100vh - 240px)',
+    }}>
+      {/* Header */}
+      <div style={{
+        padding: '10px 12px', borderBottom: `1px solid ${C.line}`,
+        borderTop: `3px solid ${color}`, borderRadius: '10px 10px 0 0',
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color }}>{stage}</div>
+          <div style={{
+            fontSize: 10, fontWeight: 700, background: color + '22', color,
+            borderRadius: '50%', width: 20, height: 20,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>{prospects.length}</div>
+        </div>
+      </div>
+
+      {/* Cards */}
+      <div style={{ padding: '10px 10px', overflowY: 'auto', flex: 1 }}>
+        <SortableContext items={prospects.map(p => p.id)} strategy={verticalListSortingStrategy}>
+          {prospects.map(p => (
+            <ProspectCard key={p.id} prospect={p} onClick={() => onCardClick(p)} />
+          ))}
+        </SortableContext>
+        {prospects.length === 0 && (
+          <div style={{ fontSize: 10, color: C.textVlo, textAlign: 'center', padding: '20px 0' }}>
+            Glissez ici
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// --- PAGE ---
+export default function CrmPage() {
+  const [prospects, setProspects] = useState<Prospect[]>(INITIAL_PROSPECTS)
+  const [activeId, setActiveId] = useState<string | null>(null)
+  const [selectedProspect, setSelectedProspect] = useState<Prospect | null>(null)
+  const [filter, setFilter] = useState<'Tous' | 'TNS' | 'Chefs' | '★★★★★'>('Tous')
+  const [isLoading, setIsLoading] = useState(true)
+
+  // Fetch real prospects from DB
+  const fetchProspects = useCallback(async () => {
+    try {
+      const res = await fetch('/api/prospects?limit=200')
+      const json = await res.json()
+      if (res.ok && json.data && json.data.length > 0) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const mapped: Prospect[] = json.data.map((p: any) => ({
+          id: p.id,
+          nom: p.full_name,
+          initials: p.full_name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase(),
+          profession: p.profession || '',
+          ville: p.city || '',
+          telephone: p.phone_normalized || '',
+          email: p.email || '',
+          stage: DB_TO_UI[p.pipeline_stage] || 'À contacter',
+          leadScore: p.lead_score || 50,
+          nextAction: p.notes || '',
+          notes: p.notes || '',
+          tags: Array.isArray(p.tags) ? p.tags : [],
+          source: p.source || '',
+          lastContact: p.last_contact_at ? new Date(p.last_contact_at).toLocaleDateString('fr-FR') : '—',
+          pressure: 'low' as PressureLevel,
+        }))
+        setProspects(mapped)
+      }
+    } catch {
+      // Network error — keep mock data, show nothing
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  useEffect(() => { fetchProspects() }, [fetchProspects])
+
+  // Persist stage move to DB
+  async function persistMove(prospectId: string, toStage: Stage) {
+    try {
+      const res = await fetch('/api/pipeline/move', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prospect_id: prospectId, to_stage: UI_TO_DB[toStage] }),
+      })
+      if (!res.ok) {
+        const json = await res.json()
+        toast.error(json.error || 'Erreur lors du déplacement')
+      } else {
+        toast.success(`Déplacé vers ${toStage}`)
+      }
+    } catch {
+      toast.error('Connexion impossible')
+    }
+  }
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
+  const activeProspect = activeId ? prospects.find(p => p.id === activeId) : null
+
+  const filteredProspects = prospects.filter(p => {
+    if (filter === 'TNS') return p.tags.includes('TNS')
+    if (filter === 'Chefs') return p.tags.includes('Chef entreprise')
+    if (filter === '★★★★★') return p.leadScore >= 85
+    return true
+  })
+
+  function findStageForProspect(id: string): Stage {
+    return prospects.find(p => p.id === id)?.stage || 'À contacter'
+  }
+
+  function handleDragStart(event: DragStartEvent) {
+    setActiveId(event.active.id as string)
+  }
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event
+    setActiveId(null)
+    if (!over) return
+    const activeProspectId = active.id as string
+    const overId = over.id as string
+    const overStage = STAGES.find(s => s === overId)
+    const overProspect = prospects.find(p => p.id === overId)
+    const targetStage: Stage = overStage || overProspect?.stage || findStageForProspect(activeProspectId)
+    const currentStage = findStageForProspect(activeProspectId)
+    if (targetStage === currentStage) return
+    setProspects(prev => prev.map(p => p.id === activeProspectId ? { ...p, stage: targetStage } : p))
+    persistMove(activeProspectId, targetStage)
+  }
+
+  function handleStageChange(id: string, stage: Stage) {
+    const currentStage = findStageForProspect(id)
+    setProspects(prev => prev.map(p => p.id === id ? { ...p, stage } : p))
+    if (selectedProspect?.id === id) {
+      setSelectedProspect(prev => prev ? { ...prev, stage } : null)
+    }
+    if (stage !== currentStage) persistMove(id, stage)
+  }
+
+  void isLoading // used for future loading skeleton
+
+  const totalPipeline = filteredProspects.filter(p => !['Converti', 'Perdu'].includes(p.stage)).length
+  const totalConverti = filteredProspects.filter(p => p.stage === 'Converti').length
+  const totalPerdu    = filteredProspects.filter(p => p.stage === 'Perdu').length
+  const scoreMoyen    = Math.round(filteredProspects.reduce((s, p) => s + p.leadScore, 0) / (filteredProspects.length || 1))
+
+  return (
+    <>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap')`}</style>
+
+      {/* Header */}
+      <div style={{ marginBottom: 12 }}>
+        <div style={{ fontSize: 18, fontWeight: 700, color: C.textHi, fontFamily: 'Oswald, sans-serif', letterSpacing: 1, textTransform: 'uppercase' }}>
+          🗂️ CRM Kanban
+        </div>
+        <div style={{ fontSize: 11, color: C.textLo, marginTop: 4 }}>
+          Pipeline commercial — glissez les fiches entre les étapes
+        </div>
+      </div>
+
+      {/* Toolbar — from HTML */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+        <div style={{ fontSize: 9, color: C.textVlo }}>
+          {filteredProspects.length} prospects · Cliquer sur une carte pour le profil complet
+        </div>
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          <button style={{
+            padding: '4px 10px', background: C.surface2,
+            border: `1px solid ${C.green}`, color: C.green,
+            borderRadius: 6, fontSize: 8, fontWeight: 600, cursor: 'pointer',
+          }}>➕ Nouveau prospect</button>
+          <div style={{ display: 'flex', gap: 4 }}>
+            {(['Tous', '★★★★★', 'TNS', 'Chefs'] as const).map(f => (
+              <span key={f} onClick={() => setFilter(f)} style={{
+                fontSize: 8, padding: '2px 7px', borderRadius: 10, cursor: 'pointer',
+                background: filter === f ? `${C.gold}20` : C.surface2,
+                color: filter === f ? C.gold : C.textLo,
+                border: `0.5px solid ${filter === f ? C.gold + '60' : C.line}`,
+              }}>{f}</span>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Pressure legend */}
+      <div style={{ display: 'flex', gap: 14, marginBottom: 12, flexWrap: 'wrap' }}>
+        {([['low', 'Faible pression'], ['medium', 'Pression moyenne'], ['high', 'Pression haute'], ['max', 'Pression max']] as [PressureLevel, string][]).map(([level, label]) => (
+          <div key={level} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <div style={{ width: 7, height: 7, borderRadius: '50%', background: PRESSURE_COLORS[level] }} />
+            <span style={{ fontSize: 8, color: C.textLo }}>{label}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* KPIs */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 14 }}>
+        {[
+          { label: 'En pipeline',  value: totalPipeline, color: C.indigo },
+          { label: 'Convertis',    value: totalConverti,  color: C.green },
+          { label: 'Perdus',       value: totalPerdu,     color: C.cyan },
+          { label: 'Score moyen',  value: scoreMoyen,     color: C.gold },
+        ].map(k => (
+          <div key={k.label} style={{
+            background: C.surface1, border: `1px solid ${C.line}`, borderRadius: 10,
+            padding: '12px 14px', textAlign: 'center',
+          }}>
+            <div style={{ fontSize: 22, fontWeight: 800, color: k.color, fontFamily: 'Oswald, sans-serif' }}>{k.value}</div>
+            <div style={{ fontSize: 9, color: C.textLo, marginTop: 4, textTransform: 'uppercase', letterSpacing: 1 }}>{k.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Board */}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
+        <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 8, minHeight: 400 }}>
+          {STAGES.map(stage => (
+            <KanbanColumn
+              key={stage}
+              stage={stage}
+              prospects={filteredProspects.filter(p => p.stage === stage)}
+              onCardClick={p => setSelectedProspect(p)}
+            />
+          ))}
+        </div>
+
+        <DragOverlay>
+          {activeProspect && <CardContent prospect={activeProspect} isDragging />}
+        </DragOverlay>
+      </DndContext>
+
+      {/* Drawer */}
+      {selectedProspect && (
+        <>
+          <div
+            onClick={() => setSelectedProspect(null)}
+            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 999 }}
+          />
+          <ProspectDrawer
+            prospect={selectedProspect}
+            onClose={() => setSelectedProspect(null)}
+            onStageChange={handleStageChange}
+          />
+        </>
+      )}
+    </>
+  )
+}

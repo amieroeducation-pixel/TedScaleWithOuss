@@ -1,0 +1,351 @@
+'use client'
+
+import { useState } from 'react'
+import { C } from '@/lib/theme'
+
+type StepType = 'mail' | 'wa' | 'sms' | 'li'
+
+interface SeqStep {
+  type: StepType
+  day: string
+  content: string
+}
+
+interface Sequence {
+  id: string
+  icon: string
+  bg: string
+  color: string
+  name: string
+  desc: string
+  active: boolean
+  usecase: string
+  steps: SeqStep[]
+}
+
+const STEP_ICONS: Record<StepType, string> = { mail: '✉', wa: '💬', sms: '📱', li: 'in' }
+const STEP_COLORS: Record<StepType, string> = { mail: C.indigo, wa: C.green, sms: C.gold, li: C.indigo }
+const STEP_LABELS: Record<StepType, string> = { mail: 'Email', wa: 'WhatsApp', sms: 'SMS', li: 'LinkedIn' }
+
+const SEQ_PROSPECTION: Sequence[] = [
+  {
+    id: 'p1', icon: '📞', bg: '#0d1a2e', color: C.indigo,
+    name: 'Séquence post-premier contact TNS', desc: '6 étapes · Après appel initial', active: true,
+    usecase: "Utilisée juste après un premier appel téléphonique avec un TNS pour maintenir le lien et obtenir un RDV 1.",
+    steps: [
+      { type: 'mail', day: 'J+0', content: "Objet : Suite à notre échange — Introduction cabinet CGP" },
+      { type: 'wa', day: 'J+2', content: "Bonjour {Prénom}, j'espère que mon email vous a bien..." },
+      { type: 'mail', day: 'J+5', content: "Les TNS et la fiscalité 2026 — ce qui change pour vous" },
+      { type: 'sms', day: 'J+7', content: "Bonjour {Prénom}, avez-vous pu consulter mon email ?" },
+      { type: 'li', day: 'J+10', content: "InMail LinkedIn : Bonjour {Prénom}, je me permets..." },
+      { type: 'mail', day: 'J+14', content: "Dernière tentative — Proposition RDV découverte 20min" },
+    ],
+  },
+  {
+    id: 'p2', icon: '🔄', bg: '#1a1400', color: C.gold,
+    name: 'Relance post-RDV 1 sans réponse', desc: '4 étapes · J+3 après RDV 1', active: true,
+    usecase: "Prospect qui a eu son RDV 1 mais n'a pas donné suite pour planifier un RDV 2.",
+    steps: [
+      { type: 'mail', day: 'J+3', content: "Suite à notre RDV — les points que nous avons abordés" },
+      { type: 'wa', day: 'J+6', content: "Bonjour {Prénom}, avez-vous eu le temps de réfléchir ?" },
+      { type: 'sms', day: 'J+10', content: "Bonjour {Prénom}, je reste disponible pour un 2e RDV" },
+      { type: 'mail', day: 'J+15', content: "Étude personnalisée prête — souhaitez-vous la recevoir ?" },
+    ],
+  },
+  {
+    id: 'p3', icon: '📅', bg: '#0d1f0f', color: C.green,
+    name: 'Confirmation RDV automatique', desc: '3 étapes · À la prise de RDV', active: true,
+    usecase: "Déclenchée automatiquement dès qu'un RDV est planifié dans l'agenda.",
+    steps: [
+      { type: 'mail', day: 'J+0', content: "Confirmation RDV + adresse + documents à préparer" },
+      { type: 'wa', day: 'J-1', content: "Rappel RDV demain à {Heure} — confirmez avec 👍" },
+      { type: 'sms', day: 'J-0 8h', content: "Bonjour {Prénom}, RDV aujourd'hui à {Heure}. À tout !" },
+    ],
+  },
+  {
+    id: 'p4', icon: '💼', bg: '#180d2e', color: '#b07aee',
+    name: "Séquence chefs d'entreprise", desc: '0 étapes · Textes à définir', active: false,
+    usecase: "Séquence dédiée aux chefs d'entreprise — textes en cours de rédaction.",
+    steps: [],
+  },
+]
+
+const SEQ_PATRIMOINE: Sequence[] = [
+  {
+    id: 'epargne', icon: '💰', bg: '#1a1400', color: C.gold,
+    name: 'Constituer votre épargne', desc: '5 étapes · TNS avec trésorerie dormante', active: true,
+    usecase: "Prospect TNS qui a de la trésorerie sur comptes courants ou un livret A plein, sans stratégie d'épargne à moyen/long terme.",
+    steps: [
+      { type: 'mail', day: 'J+0', content: "Objet : 3 min pour comparer votre épargne\n67% des TNS ont une épargne qui rapporte moins que l'inflation. Diagnostic gratuit de 15 min, mardi ou jeudi 13h ?" },
+      { type: 'wa', day: 'J+2', content: "Bonjour {Prénom}, j'ai envoyé une proposition de diagnostic patrimonial gratuit il y a 2 jours. Ça vous intéresserait d'échanger 15 min ?" },
+      { type: 'mail', day: 'J+5', content: "Objet : Comment un {Profession} a multiplié son rendement par 3\nCas concret : 45 000 € sur Livret A → répartition AV + PER + Tontine. Résultat 10 ans : +38 000 €." },
+      { type: 'sms', day: 'J+8', content: "Bonjour {Prénom}, je reste dispo pour un échange rapide sur votre épargne. Mercredi 14h vous convient ?" },
+      { type: 'mail', day: 'J+14', content: "Objet : Je ne vais plus vous solliciter\nJe comprends que ce n'est pas le moment. Mon numéro : 06 XX XX XX XX." },
+    ],
+  },
+  {
+    id: 'valoriser', icon: '📈', bg: '#141a0d', color: '#6aa83a',
+    name: 'Valoriser votre patrimoine', desc: '5 étapes · Fin de crédit, héritage, donation', active: true,
+    usecase: "Prospect qui vient de terminer un crédit immobilier, de recevoir un héritage, une donation, ou qui a une capacité d'épargne nouvelle.",
+    steps: [
+      { type: 'mail', day: 'J+0', content: "Objet : Vous venez de libérer 1 500 €/mois. Et maintenant ?\nPlacer ces 1 500 €/mois sur 10 ans = 220 000 € de capital. 20 min pour modéliser votre situation ?" },
+      { type: 'wa', day: 'J+3', content: "Bonjour {Prénom}, ma proposition de modélisation vous intéresse ? Je peux vous envoyer un créneau cette semaine." },
+      { type: 'mail', day: 'J+7', content: "Objet : Exemple pour un {Profession} à {Ville}\nStratégie : 60% AV, 30% PER, 10% PEA. Économie fiscale 4 200 €/an. Capital 10 ans : 268 000 €." },
+      { type: 'li', day: 'J+10', content: "Bonjour {Prénom}, j'aide des {Profession} à optimiser leur capacité de placement post-crédit. 20 min sans engagement ?" },
+      { type: 'mail', day: 'J+14', content: "Objet : Dernière fois\nJe comprends. Si vous souhaitez faire le point un jour, je reste disponible." },
+    ],
+  },
+  {
+    id: 'retraite', icon: '🌿', bg: '#0d1f0f', color: '#5aaa6a',
+    name: 'Préparer votre retraite', desc: '6 étapes · TNS 35-55 ans', active: true,
+    usecase: "TNS (médecin, kiné, pharmacien, chef d'entreprise...) qui touchera une retraite obligatoire de 40-50% de ses revenus d'activité.",
+    steps: [
+      { type: 'mail', day: 'J+0', content: "Objet : Votre retraite en tant que {Profession} : combien ?\nRevenu 100 000 € aujourd'hui → retraite 22-28 000 €. Chute de 75%. Simulation personnalisée ?" },
+      { type: 'wa', day: 'J+2', content: "Bonjour {Prénom}, avez-vous pu lire mon email sur la retraite des {Profession} ? Simulation prête." },
+      { type: 'mail', day: 'J+5', content: "Objet : Votre simulation retraite\n{Profession} 42 ans, revenu 90 000 € → sans PER 1 850 €/mois, avec PER 2 940 €/mois. 15 min ?" },
+      { type: 'sms', day: 'J+8', content: "Bonjour {Prénom}, créneau vendredi 11h pour votre simulation retraite ?" },
+      { type: 'li', day: 'J+12', content: "Bonjour {Prénom}, j'aide les {Profession} à reprendre la main sur leur retraite. 15 min suffisent." },
+      { type: 'mail', day: 'J+18', content: "Objet : Je m'arrête\n{Prénom}, pas de réponse = pas de suite. Si ça change un jour, je suis là." },
+    ],
+  },
+  {
+    id: 'diversifier', icon: '🧭', bg: '#0d1a2e', color: '#6aa3d9',
+    name: 'Diversifier votre patrimoine', desc: '5 étapes · Patrimoine 100% immobilier', active: true,
+    usecase: "Prospect avec résidence principale payée + 1 ou 2 biens locatifs. Patrimoine concentré sur l'immobilier.",
+    steps: [
+      { type: 'mail', day: 'J+0', content: "Objet : Votre patrimoine est-il trop immobilier ?\n90% en pierre = fiscalité lourde, illiquidité, dépendance locale. Audit de répartition 20 min ?" },
+      { type: 'wa', day: 'J+3', content: "Bonjour {Prénom}, ma proposition d'audit patrimonial vous intéresse ? Gratuit et sans engagement." },
+      { type: 'mail', day: 'J+6', content: "Objet : Un {Profession} qui a rééquilibré son patrimoine\n780 000 € dont 720 000 € immo → arbitrage + AV + SCPI EU. Rendement +1,8 pts. IFI -2 100 €/an." },
+      { type: 'sms', day: 'J+10', content: "Bonjour {Prénom}, dispo pour un échange sur la diversification de votre patrimoine ?" },
+      { type: 'mail', day: 'J+15', content: "Objet : Dernier message\nSi l'immobilier reste votre priorité aujourd'hui, c'est entendu. À disposition." },
+    ],
+  },
+  {
+    id: 'fiscalite', icon: '📋', bg: '#1a1010', color: C.cyan,
+    name: 'Gérer la fiscalité', desc: '6 étapes · TNS tranche 30%+', active: true,
+    usecase: "TNS imposé dans la tranche à 30% ou plus (revenu net >28 000 € pour un célibataire). Le PER Madelin offre des leviers immédiats.",
+    steps: [
+      { type: 'mail', day: 'J+0', content: "Objet : 3 200 € d'impôts économisés cette année (tranche 30%)\nTNS qui verse 10 700 € sur PER Madelin récupère 3 210 € d'impôts. Date limite 31 déc." },
+      { type: 'wa', day: 'J+2', content: "Bonjour {Prénom}, la fenêtre fiscale se ferme le 31 décembre. 20 min pour voir ce que vous pouvez économiser ?" },
+      { type: 'mail', day: 'J+5', content: "Objet : 3 leviers fiscaux TNS méconnus\n1. PER Madelin · 2. AV luxembourgeoise · 3. SCPI démembrement. Lequel pour vous ?" },
+      { type: 'sms', day: 'J+8', content: "Bonjour {Prénom}, date limite pour optimiser 2026 approche. Dispo rapidement ?" },
+      { type: 'li', day: 'J+12', content: "Bonjour {Prénom}, j'aide les {Profession} à économiser 3-8 000 € d'impôts/an légalement. Échangeons ?" },
+      { type: 'mail', day: 'J+18', content: "Objet : Fin de ma relance\nPromis je ne vous relance plus. Si un jour vous voulez optimiser, vous savez où me trouver." },
+    ],
+  },
+  {
+    id: 'transmettre', icon: '🤝', bg: '#180d2e', color: '#b07aee',
+    name: 'Transmettre votre patrimoine', desc: '5 étapes · 50+ ans avec enfants', active: true,
+    usecase: "Prospect 50+ ans, patrimoine construit, n'a pas encore structuré sa transmission. Droits jusqu'à 45%.",
+    steps: [
+      { type: 'mail', day: 'J+0', content: "Objet : Combien vos enfants vont-ils réellement hériter ?\nPatrimoine 600 000 €, 2 enfants → 90 000 € de droits. Avec stratégie : 0 €. Diagnostic 25 min ?" },
+      { type: 'wa', day: 'J+3', content: "Bonjour {Prénom}, ma proposition de diagnostic transmission vous intéresse ? Sujet qu'on repousse souvent et qui coûte cher." },
+      { type: 'mail', day: 'J+7', content: "Objet : Un cas réel — 197 000 € économisés\nCouple 58 ans, 1,2 M€, 3 enfants. Sans stratégie : 215 000 €. Après structuration : 18 000 €." },
+      { type: 'sms', day: 'J+12', content: "Bonjour {Prénom}, dispo pour un échange sur votre transmission ? Plus on anticipe, plus on optimise." },
+      { type: 'mail', day: 'J+18', content: "Objet : Je m'arrête\nSujet sensible, je comprends. À disposition quand vous serez prêt." },
+    ],
+  },
+]
+
+function StepBubble({ step }: { step: SeqStep }) {
+  const color = STEP_COLORS[step.type]
+  const icon = STEP_ICONS[step.type]
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, flexShrink: 0 }}>
+      <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 7, color: C.textVlo }}>{step.day}</div>
+      <div title={step.content} style={{
+        width: 26, height: 26, borderRadius: '50%', background: `${color}20`,
+        border: `1.5px solid ${color}`, display: 'flex', alignItems: 'center',
+        justifyContent: 'center', boxShadow: `0 0 6px ${color}40`,
+        fontSize: step.type === 'li' ? 7 : 10, color,
+        fontFamily: 'JetBrains Mono,monospace', fontWeight: 700, cursor: 'help',
+      }}>
+        {icon}
+      </div>
+    </div>
+  )
+}
+
+function SeqCard({ seq }: { seq: Sequence }) {
+  const [expanded, setExpanded] = useState(false)
+  return (
+    <div style={{
+      background: `linear-gradient(180deg,${C.surface1},${C.bgMid})`,
+      border: `1px solid ${seq.active ? seq.color + '40' : C.lineSoft}`,
+      borderRadius: 12, padding: 14, marginBottom: 10,
+      opacity: seq.active ? 1 : 0.7,
+    }}>
+      {/* Header row */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+        <span style={{ fontSize: 18 }}>{seq.icon}</span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2, flexWrap: 'wrap' }}>
+            <span style={{ fontFamily: 'Oswald,sans-serif', fontSize: 13, fontWeight: 500, color: seq.color, letterSpacing: '0.06em' }}>{seq.name}</span>
+            <span style={{
+              fontFamily: 'JetBrains Mono,monospace', fontSize: 8, fontWeight: 700,
+              color: seq.active ? C.green : C.textLo,
+              background: seq.active ? `${C.green}18` : `${C.textLo}18`,
+              border: `1px solid ${seq.active ? C.green : C.textLo}40`,
+              padding: '1px 7px', borderRadius: 4, flexShrink: 0,
+            }}>{seq.active ? 'Actif' : 'Inactif'}</span>
+          </div>
+          <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.textLo }}>{seq.desc}</div>
+        </div>
+        <button
+          onClick={() => setExpanded(v => !v)}
+          style={{
+            background: 'none', border: `1px solid ${C.line}`, borderRadius: 6,
+            color: C.textMid, fontSize: 9, fontFamily: 'JetBrains Mono,monospace',
+            padding: '4px 10px', cursor: 'pointer', flexShrink: 0,
+          }}
+        >
+          {expanded ? '▲ Réduire' : '▼ Voir détails'}
+        </button>
+      </div>
+
+      {/* Steps timeline */}
+      {seq.steps.length > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', overflowX: 'auto', paddingBottom: 4, gap: 0 }}>
+          {seq.steps.map((step, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+              <StepBubble step={step} />
+              {i < seq.steps.length - 1 && (
+                <div style={{ width: 14, height: 1, background: `${seq.color}40`, flexShrink: 0, marginBottom: 10 }} />
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {seq.steps.length === 0 && (
+        <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.textVlo, fontStyle: 'italic', padding: '8px 0' }}>
+          Aucune étape — séquence en construction
+        </div>
+      )}
+
+      {/* Expanded: use case + step details */}
+      {expanded && (
+        <div style={{ marginTop: 12, borderTop: `1px solid ${C.lineSoft}`, paddingTop: 12 }}>
+          {/* Use case block — blue left border */}
+          <div style={{
+            marginBottom: 12, padding: '10px 14px',
+            background: `${C.indigo}0e`, border: `1px solid ${C.indigo}30`,
+            borderLeft: `3px solid ${C.indigo}`, borderRadius: 8,
+          }}>
+            <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.indigo, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Cas d&apos;usage</div>
+            <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.textMid, lineHeight: 1.6 }}>{seq.usecase}</div>
+          </div>
+
+          {/* Step detail rows */}
+          {seq.steps.map((step, i) => {
+            const color = STEP_COLORS[step.type]
+            const icon = STEP_ICONS[step.type]
+            const label = STEP_LABELS[step.type]
+            return (
+              <div key={i} style={{
+                display: 'flex', gap: 10, marginBottom: 8, padding: '10px 12px',
+                background: C.surface2, border: `1px solid ${C.lineSoft}`, borderRadius: 8,
+              }}>
+                <div style={{
+                  width: 28, height: 28, borderRadius: '50%', background: `${color}18`,
+                  border: `1.5px solid ${color}`, display: 'flex', alignItems: 'center',
+                  justifyContent: 'center', fontSize: step.type === 'li' ? 8 : 11,
+                  color, fontFamily: 'JetBrains Mono,monospace', fontWeight: 700, flexShrink: 0,
+                }}>
+                  {icon}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                    <span style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color, background: `${color}18`, padding: '1px 6px', borderRadius: 4 }}>{step.day}</span>
+                    <span style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.textLo, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</span>
+                  </div>
+                  <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.textMid, lineHeight: 1.6, whiteSpace: 'pre-line' }}>{step.content}</div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+export default function SequencesPage() {
+  return (
+    <>
+      <style>{"@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap')"}</style>
+
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 3, height: 24, background: C.ribbon, borderRadius: 2 }} />
+            <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 22, fontWeight: 600, color: C.textHi, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+              Séquences <span style={{ color: C.indigo }}>Multi-Canal</span>
+            </div>
+          </div>
+          <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.textLo, marginTop: 2, paddingLeft: 13 }}>
+            2 bibliothèques · {SEQ_PROSPECTION.length + SEQ_PATRIMOINE.length} séquences
+          </div>
+        </div>
+        <button style={{ fontFamily: 'Oswald,sans-serif', fontSize: 11, fontWeight: 500, color: C.bgDeep, background: `linear-gradient(90deg,${C.cyan},${C.indigo})`, border: 'none', borderRadius: 8, padding: '8px 16px', cursor: 'pointer', letterSpacing: '0.1em' }}>
+          + CRÉER SÉQUENCE
+        </button>
+      </div>
+
+      {/* Channel legend */}
+      <div style={{ display: 'flex', gap: 16, marginBottom: 16, padding: '10px 14px', background: C.surface1, border: `1px solid ${C.lineSoft}`, borderRadius: 8 }}>
+        {(Object.entries(STEP_ICONS) as [StepType, string][]).map(([type, icon]) => (
+          <div key={type} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <div style={{
+              width: 18, height: 18, borderRadius: '50%',
+              background: `${STEP_COLORS[type]}20`, border: `1.5px solid ${STEP_COLORS[type]}`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: type === 'li' ? 7 : 9, color: STEP_COLORS[type],
+              fontFamily: 'JetBrains Mono,monospace', fontWeight: 700,
+            }}>{icon}</div>
+            <span style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.textMid }}>{STEP_LABELS[type]}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Library 1 — Tunnel de prospection */}
+      <div style={{
+        fontFamily: 'Oswald,sans-serif', fontSize: 14, fontWeight: 600,
+        color: C.indigo, letterSpacing: '0.1em', marginBottom: 4, textTransform: 'uppercase',
+      }}>
+        Bibliothèque · Tunnel de prospection
+      </div>
+      {/* Gold separator */}
+      <div style={{ height: 1, background: `linear-gradient(90deg,${C.gold},transparent)`, marginBottom: 6 }} />
+      <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.textLo, marginBottom: 12 }}>
+        Séquences liées aux étapes du pipeline commercial (premier contact, relance, confirmation RDV)
+      </div>
+      {SEQ_PROSPECTION.map(seq => <SeqCard key={seq.id} seq={seq} />)}
+
+      {/* Library 2 — Scénarios patrimoniaux */}
+      <div style={{
+        fontFamily: 'Oswald,sans-serif', fontSize: 14, fontWeight: 600,
+        color: C.gold, letterSpacing: '0.1em', marginBottom: 4, marginTop: 8, textTransform: 'uppercase',
+      }}>
+        Bibliothèque · Scénarios patrimoniaux
+      </div>
+      {/* Gold separator */}
+      <div style={{ height: 1, background: `linear-gradient(90deg,${C.gold},transparent)`, marginBottom: 6 }} />
+      <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.textLo, marginBottom: 12 }}>
+        Séquences thématiques basées sur la situation patrimoniale du prospect — à déclencher depuis sa fiche
+      </div>
+      {SEQ_PATRIMOINE.map(seq => <SeqCard key={seq.id} seq={seq} />)}
+
+      {/* New sequence CTA */}
+      <div style={{
+        textAlign: 'center', padding: '14px 0',
+        border: `1.5px dashed ${C.line}`, borderRadius: 10,
+        fontFamily: 'Oswald,sans-serif', fontSize: 12, color: C.textLo,
+        cursor: 'pointer', letterSpacing: '0.1em', marginTop: 4,
+      }}>
+        + Créer une nouvelle séquence
+      </div>
+    </>
+  )
+}

@@ -1,0 +1,6 @@
+# Supabase project config
+# See: https://supabase.com/docs/reference/cli/config
+
+[project]
+# Your Supabase project reference (fill in after creating project on supabase.com)
+# project_id = "your-project-ref"
