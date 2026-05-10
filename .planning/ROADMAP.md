@@ -7,7 +7,7 @@ Brownfield CGP dashboard — auth, Kanban CRM, and Supabase schema are already d
 ## Phases
 
 - [ ] **Phase 1: Data Wiring** - Branch the 4 mocked pages onto real Supabase views and APIs
-- [ ] **Phase 2: Sequences Multicanales** - Engine de relances activable depuis les cartes prospect
+- [x] **Phase 2: Sequences Multicanales** - Engine de relances activable depuis les cartes prospect (completed 2026-05-10)
 - [ ] **Phase 3: Configuration** - Page Paramètres permettant de configurer séquences, seuils et triggers
 - [ ] **Phase 4: Achievements & Artefacts** - Badges, célébrations et historique des objectifs atteints
 - [ ] **Phase 5: Automatisations Cron** - Edge Functions Supabase pour rapports et alertes automatiques
@@ -93,7 +93,7 @@ Brownfield CGP dashboard — auth, Kanban CRM, and Supabase schema are already d
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Data Wiring | 0/TBD | Not started | - |
-| 2. Sequences Multicanales | 3/5 | In Progress|  |
+| 2. Sequences Multicanales | 5/5 | Complete   | 2026-05-10 |
 | 3. Configuration | 0/TBD | Not started | - |
 | 4. Achievements & Artefacts | 0/TBD | Not started | - |
 | 5. Automatisations Cron | 0/TBD | Not started | - |
