@@ -5,7 +5,7 @@ milestone_name: milestone
 status: executing
 stopped_at: Roadmap created — prêt à planifier Phase 1
 last_updated: "2026-05-10T20:05:47.528Z"
-last_activity: 2026-05-10 -- Plan 02B complété (sequences engine lib + 3 routes API)
+last_activity: 2026-05-10 -- Plan 02C complété (section Séquences dans ProspectDrawer)
 progress:
   total_phases: 5
   completed_phases: 0
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-05-10)
 ## Current Position
 
 Phase: 2 of 5 (Sequences Multicanales)
-Plan: 02B completed (sequences engine lib + 3 routes API)
+Plan: 02C completed (section Séquences dans ProspectDrawer)
 Status: executing
-Last activity: 2026-05-10 -- Plan 02B complété (sequences engine lib + 3 routes API)
+Last activity: 2026-05-10 -- Plan 02C complété (section Séquences dans ProspectDrawer)
 
 Progress: [█░░░░░░░░░] 5%
 
@@ -62,6 +62,8 @@ Recent decisions affecting current work:
 - 02B: executeStep() ignore whatsapp/linkedin (canal client-only) — retourne status=skipped sans erreur
 - 02B: Guard doublon dans triggerSequenceForStage() via .eq('status','active') — empêche instances multiples actives
 - 02B: Optimistic update dans executor.ts — status='sent' inscrit AVANT l'envoi Brevo pour éviter doubles envois
+- 02C: Types SeqInstance dupliqués localement dans page.tsx (use client) — évite imports complexes depuis lib
+- 02C: Route /api/crm/sequences/templates différée au plan 02D — sélecteur gracieux sans erreur si absent
 
 ### Pending Todos
 
@@ -81,5 +83,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-05-10
-Stopped at: Plan 02B complété — sequences engine lib + 3 routes API prêtes
+Stopped at: Plan 02C complété — section Séquences dans ProspectDrawer (SEQ-01, SEQ-08, SEQ-09)
 Resume file: None
