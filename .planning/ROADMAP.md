@@ -93,7 +93,7 @@ Brownfield CGP dashboard — auth, Kanban CRM, and Supabase schema are already d
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Data Wiring | 0/TBD | Not started | - |
-| 2. Sequences Multicanales | 0/TBD | Not started | - |
+| 2. Sequences Multicanales | 1/5 | In Progress|  |
 | 3. Configuration | 0/TBD | Not started | - |
 | 4. Achievements & Artefacts | 0/TBD | Not started | - |
 | 5. Automatisations Cron | 0/TBD | Not started | - |
