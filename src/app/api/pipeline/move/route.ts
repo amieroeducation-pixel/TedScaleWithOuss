@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { apiSuccess, apiError, apiUnauthorized } from '@/lib/api'
 import { z } from 'zod'
+import { triggerSequenceForStage } from '@/lib/sequences/trigger'
 
 const moveSchema = z.object({
   prospect_id: z.string().uuid(),
@@ -58,6 +59,15 @@ export async function POST(request: NextRequest) {
     console.error('Failed to log pipeline event:', eventError.message)
     // Non-blocking — stage was updated, just log warning
   }
+
+  // SEQ-02 : déclencher séquence auto si un template auto_trigger existe pour ce stade
+  // Non-bloquant : void + pas de await (Pitfall 6 RESEARCH)
+  void triggerSequenceForStage({
+    supabase,
+    userId: user.id,
+    prospectId: prospect_id,
+    toStage: to_stage,
+  })
 
   return apiSuccess({ prospect_id, to_stage })
 }
