@@ -5,13 +5,13 @@ milestone_name: milestone
 status: executing
 stopped_at: Roadmap created — prêt à planifier Phase 1
 last_updated: "2026-05-10T20:05:47.528Z"
-last_activity: 2026-05-10 -- Plan 01B complété (clients list + health alerts)
+last_activity: 2026-05-10 -- Plan 02B complété (sequences engine lib + 3 routes API)
 progress:
   total_phases: 5
   completed_phases: 0
-  total_plans: 4
-  completed_plans: 3
-  percent: 75
+  total_plans: 5
+  completed_plans: 4
+  percent: 80
 ---
 
 # Project State
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-05-10)
 
 ## Current Position
 
-Phase: 1 of 5 (Data Wiring)
-Plan: 01B completed (DATA-04 + DATA-05)
+Phase: 2 of 5 (Sequences Multicanales)
+Plan: 02B completed (sequences engine lib + 3 routes API)
 Status: executing
-Last activity: 2026-05-10 -- Plan 01B complété (clients list + health alerts)
+Last activity: 2026-05-10 -- Plan 02B complété (sequences engine lib + 3 routes API)
 
 Progress: [█░░░░░░░░░] 5%
 
@@ -59,6 +59,9 @@ Recent decisions affecting current work:
 - Phase 0: `getUser()` dans middleware.ts (pas `getSession()`) — sécurité JWT côté serveur
 - Phase 0: Zod v4 avec `.issues` (pas `.errors`) — breaking change Zod v4
 - Pending: SMS provider non décidé (Brevo SMS / Onoff / autre) — à cadrer en Phase 2
+- 02B: executeStep() ignore whatsapp/linkedin (canal client-only) — retourne status=skipped sans erreur
+- 02B: Guard doublon dans triggerSequenceForStage() via .eq('status','active') — empêche instances multiples actives
+- 02B: Optimistic update dans executor.ts — status='sent' inscrit AVANT l'envoi Brevo pour éviter doubles envois
 
 ### Pending Todos
 
@@ -78,5 +81,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-05-10
-Stopped at: Roadmap created — prêt à planifier Phase 1
+Stopped at: Plan 02B complété — sequences engine lib + 3 routes API prêtes
 Resume file: None
