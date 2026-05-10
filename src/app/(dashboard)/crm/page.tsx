@@ -19,6 +19,7 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { C } from '@/lib/theme'
+import { openWhatsApp, openLinkedIn } from '@/lib/sequences/client-actions'
 
 // --- TYPES ---
 type Stage = 'À contacter' | 'RDV1' | 'RDV2' | 'RDV3' | 'Converti' | 'Perdu'
@@ -547,6 +548,34 @@ function ProspectDrawer({ prospect, onClose, onStageChange }: {
                     <span style={{ fontSize: 9, color: stepStatusColor(step.status) }}>
                       {step.status === 'sent' ? 'Envoyé' : step.status === 'failed' ? 'Échoué' : step.status === 'skipped' ? 'Ignoré' : 'Planifié'}
                     </span>
+                    {/* Bouton action manuelle pour étapes client-side (WhatsApp, LinkedIn) */}
+                    {(step.channel === 'whatsapp' || step.channel === 'linkedin') && step.status === 'pending' && (
+                      <button
+                        onClick={() => {
+                          if (step.channel === 'whatsapp') {
+                            openWhatsApp(
+                              prospect.telephone ?? '',
+                              `Bonjour ${prospect.nom.split(' ')[0]}, suite à notre échange...`
+                            )
+                          } else {
+                            openLinkedIn({
+                              linkedinUrl: null,
+                              prospectName: prospect.nom,
+                              inmailTemplate: `Bonjour ${prospect.nom.split(' ')[0]}, je me permets de vous contacter...`,
+                              onCopied: () => toast.success('Template InMail copié dans le presse-papier'),
+                            })
+                          }
+                        }}
+                        style={{
+                          fontSize: 9, padding: '2px 8px', borderRadius: 4, cursor: 'pointer',
+                          border: `1px solid ${step.channel === 'whatsapp' ? '#25D366' : '#0A66C2'}`,
+                          background: step.channel === 'whatsapp' ? 'rgba(37,211,102,0.1)' : 'rgba(10,102,194,0.1)',
+                          color: step.channel === 'whatsapp' ? '#25D366' : '#0A66C2',
+                        }}
+                      >
+                        {step.channel === 'whatsapp' ? 'Ouvrir WA' : 'Ouvrir LinkedIn'}
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
