@@ -5,13 +5,13 @@ milestone_name: milestone
 status: executing
 stopped_at: Roadmap created — prêt à planifier Phase 1
 last_updated: "2026-05-10T20:05:47.528Z"
-last_activity: 2026-05-10 -- Plan 02C complété (section Séquences dans ProspectDrawer)
+last_activity: 2026-05-10 -- Plan 02D complété (hook SEQ-02 + route templates + helpers client-side WA/LinkedIn)
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 5
-  completed_plans: 4
-  percent: 80
+  completed_plans: 5
+  percent: 100
 ---
 
 # Project State
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-05-10)
 ## Current Position
 
 Phase: 2 of 5 (Sequences Multicanales)
-Plan: 02C completed (section Séquences dans ProspectDrawer)
+Plan: 02D completed (hook SEQ-02 + route templates + helpers WA/LinkedIn)
 Status: executing
-Last activity: 2026-05-10 -- Plan 02C complété (section Séquences dans ProspectDrawer)
+Last activity: 2026-05-10 -- Plan 02D complété (hook SEQ-02 + route templates + helpers client-side WA/LinkedIn)
 
 Progress: [█░░░░░░░░░] 5%
 
@@ -64,6 +64,9 @@ Recent decisions affecting current work:
 - 02B: Optimistic update dans executor.ts — status='sent' inscrit AVANT l'envoi Brevo pour éviter doubles envois
 - 02C: Types SeqInstance dupliqués localement dans page.tsx (use client) — évite imports complexes depuis lib
 - 02C: Route /api/crm/sequences/templates différée au plan 02D — sélecteur gracieux sans erreur si absent
+- 02D: void triggerSequenceForStage() — fire-and-forget non-bloquant, erreurs séquence n'affectent pas pipeline/move
+- 02D: client-actions.ts avec 'use client' — protection import accidentel côté serveur (T-02D-04)
+- 02D: linkedinUrl null dans drawer — type Prospect local sans linkedin_url, fallback recherche LinkedIn par nom
 
 ### Pending Todos
 
@@ -83,5 +86,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-05-10
-Stopped at: Plan 02C complété — section Séquences dans ProspectDrawer (SEQ-01, SEQ-08, SEQ-09)
+Stopped at: Plan 02D complété — hook SEQ-02, route GET templates, helpers openWhatsApp/openLinkedIn (SEQ-02, SEQ-03, SEQ-07)
 Resume file: None
