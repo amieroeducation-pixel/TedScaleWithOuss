@@ -293,6 +293,85 @@ function ProspectDrawer({ prospect, onClose, onStageChange }: {
   onStageChange: (id: string, stage: Stage) => void
 }) {
   const [localNotes, setLocalNotes] = useState(prospect.notes)
+
+  // --- États séquences ---
+  const [seqInstances, setSeqInstances] = useState<SeqInstance[]>([])
+  const [seqTemplates, setSeqTemplates] = useState<SeqTemplate[]>([])
+  const [seqLoading, setSeqLoading] = useState(false)
+  const [seqStarting, setSeqStarting] = useState(false)
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('')
+
+  // --- Chargement instances + templates ---
+  useEffect(() => {
+    fetch(`/api/crm/sequences/by-prospect/${prospect.id}`)
+      .then(r => r.json())
+      .then(j => {
+        if (j.data?.instances) setSeqInstances(j.data.instances)
+      })
+      .catch(() => {})
+
+    fetch('/api/crm/sequences/templates')
+      .then(r => r.json())
+      .then(j => {
+        if (j.data?.templates) {
+          setSeqTemplates(j.data.templates)
+          if (j.data.templates.length > 0) setSelectedTemplateId(j.data.templates[0].id)
+        }
+      })
+      .catch(() => {})
+  }, [prospect.id])
+
+  // --- Handler démarrer séquence ---
+  async function handleStartSequence() {
+    if (!selectedTemplateId) { toast.error('Sélectionner un template'); return }
+    setSeqStarting(true)
+    try {
+      const res = await fetch('/api/crm/sequences/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prospect_id: prospect.id, template_id: selectedTemplateId }),
+      })
+      const json = await res.json()
+      if (json.error) { toast.error(json.error); return }
+      if (json.data?.already_active) {
+        toast.info('Une séquence est déjà active pour ce prospect')
+      } else {
+        toast.success('Séquence démarrée')
+      }
+      const r2 = await fetch(`/api/crm/sequences/by-prospect/${prospect.id}`)
+      const j2 = await r2.json()
+      if (j2.data?.instances) setSeqInstances(j2.data.instances)
+    } catch {
+      toast.error('Erreur lors du démarrage de la séquence')
+    } finally {
+      setSeqStarting(false)
+    }
+  }
+
+  // --- Handler pause/annulation ---
+  async function handleSeqAction(instanceId: string, action: 'pause' | 'resume' | 'cancel') {
+    setSeqLoading(true)
+    try {
+      const res = await fetch(`/api/crm/sequences/${instanceId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
+      })
+      const json = await res.json()
+      if (json.error) { toast.error(json.error); return }
+      toast.success(action === 'cancel' ? 'Séquence annulée' : action === 'pause' ? 'Séquence mise en pause' : 'Séquence reprise')
+      setSeqInstances(prev => prev.map(i =>
+        i.id === instanceId
+          ? { ...i, status: json.data.status as SeqStatus }
+          : i
+      ))
+    } catch {
+      toast.error('Erreur action séquence')
+    } finally {
+      setSeqLoading(false)
+    }
+  }
+
   const waMsg = encodeURIComponent(
     `Bonjour ${prospect.nom.split(' ').pop()}, je suis Ted, conseiller en gestion de patrimoine. Seriez-vous disponible pour un échange de 15 minutes cette semaine ?`
   )
@@ -388,6 +467,125 @@ function ProspectDrawer({ prospect, onClose, onStageChange }: {
             resize: 'vertical', outline: 'none', boxSizing: 'border-box',
           }}
         />
+      </div>
+
+      {/* Séquences */}
+      <div style={{ padding: '16px 20px', borderBottom: `1px solid ${C.line}` }}>
+        <div style={{ fontSize: 9, color: C.textLo, marginBottom: 10, fontWeight: 600,
+          textTransform: 'uppercase', letterSpacing: 1 }}>Séquences de relance</div>
+
+        {/* Démarrer une séquence — SEQ-01 */}
+        <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+          <select
+            value={selectedTemplateId}
+            onChange={e => setSelectedTemplateId(e.target.value)}
+            style={{
+              flex: 1, fontSize: 11, padding: '6px 8px', borderRadius: 6,
+              background: C.surface2, border: `1px solid ${C.line}`,
+              color: seqTemplates.length === 0 ? C.textLo : C.text, outline: 'none',
+            }}
+          >
+            {seqTemplates.length === 0
+              ? <option value="">Aucun template disponible</option>
+              : seqTemplates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)
+            }
+          </select>
+          <button
+            onClick={handleStartSequence}
+            disabled={seqStarting || seqTemplates.length === 0}
+            style={{
+              padding: '6px 12px', borderRadius: 6, fontSize: 11, fontWeight: 700,
+              border: `1px solid ${C.gold}`,
+              background: seqStarting ? C.surface2 : `${C.gold}22`,
+              color: seqStarting ? C.textLo : C.gold,
+              cursor: seqStarting || seqTemplates.length === 0 ? 'not-allowed' : 'pointer',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {seqStarting ? '...' : 'Démarrer'}
+          </button>
+        </div>
+
+        {/* Liste instances actives — SEQ-08 */}
+        {seqInstances.length === 0 ? (
+          <div style={{ fontSize: 10, color: C.textLo, fontStyle: 'italic' }}>
+            Aucune séquence active
+          </div>
+        ) : (
+          seqInstances.map(inst => (
+            <div key={inst.id} style={{
+              marginBottom: 12, padding: '10px 12px', borderRadius: 8,
+              background: C.surface2, border: `1px solid ${C.line}`,
+            }}>
+              {/* En-tête instance */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: C.text }}>
+                  {inst.template_name ?? 'Séquence'}
+                </span>
+                <span style={{
+                  fontSize: 9, fontWeight: 600, padding: '2px 8px', borderRadius: 10,
+                  background: inst.status === 'active' ? `${C.green}22` : `${C.textLo}22`,
+                  color: inst.status === 'active' ? C.green : C.textLo,
+                }}>
+                  {inst.status === 'active' ? 'ACTIVE' : inst.status === 'paused' ? 'PAUSÉE' : inst.status === 'cancelled' ? 'ANNULÉE' : 'TERMINÉE'}
+                </span>
+              </div>
+
+              {/* Étapes — SEQ-08 */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 8 }}>
+                {inst.steps.map(step => (
+                  <div key={step.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{
+                      width: 7, height: 7, borderRadius: '50%', flexShrink: 0,
+                      background: stepStatusColor(step.status),
+                    }} />
+                    <span style={{ fontSize: 10, color: C.textMid, flex: 1 }}>
+                      {CHANNEL_LABEL[step.channel]} — J+{
+                        Math.round((new Date(step.scheduled_at).getTime() - new Date(inst.started_at).getTime()) / 86400000)
+                      }
+                    </span>
+                    <span style={{ fontSize: 9, color: stepStatusColor(step.status) }}>
+                      {step.status === 'sent' ? 'Envoyé' : step.status === 'failed' ? 'Échoué' : step.status === 'skipped' ? 'Ignoré' : 'Planifié'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Actions Pause/Annuler — SEQ-09 */}
+              {(inst.status === 'active' || inst.status === 'paused') && (
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {inst.status === 'active' ? (
+                    <button
+                      onClick={() => handleSeqAction(inst.id, 'pause')}
+                      disabled={seqLoading}
+                      style={{
+                        fontSize: 9, padding: '3px 10px', borderRadius: 5, cursor: 'pointer',
+                        border: `1px solid ${C.gold}`, background: `${C.gold}15`, color: C.gold,
+                      }}
+                    >Pause</button>
+                  ) : (
+                    <button
+                      onClick={() => handleSeqAction(inst.id, 'resume')}
+                      disabled={seqLoading}
+                      style={{
+                        fontSize: 9, padding: '3px 10px', borderRadius: 5, cursor: 'pointer',
+                        border: `1px solid ${C.green}`, background: `${C.green}15`, color: C.green,
+                      }}
+                    >Reprendre</button>
+                  )}
+                  <button
+                    onClick={() => handleSeqAction(inst.id, 'cancel')}
+                    disabled={seqLoading}
+                    style={{
+                      fontSize: 9, padding: '3px 10px', borderRadius: 5, cursor: 'pointer',
+                      border: `1px solid ${C.warn}`, background: `${C.warn}15`, color: C.warn,
+                    }}
+                  >Annuler</button>
+                </div>
+              )}
+            </div>
+          ))
+        )}
       </div>
 
       {/* Actions rapides */}
