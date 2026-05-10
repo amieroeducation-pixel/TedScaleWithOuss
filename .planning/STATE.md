@@ -5,7 +5,7 @@ milestone_name: milestone
 status: executing
 stopped_at: Roadmap created — prêt à planifier Phase 1
 last_updated: "2026-05-10T20:05:47.528Z"
-last_activity: 2026-05-10 -- Plan 02D complété (hook SEQ-02 + route templates + helpers client-side WA/LinkedIn)
+last_activity: 2026-05-10 -- Plan 02E complété (routes email/SMS Brevo + cron fallback process-sequences + Edge Function Deno)
 progress:
   total_phases: 5
   completed_phases: 0
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-05-10)
 ## Current Position
 
 Phase: 2 of 5 (Sequences Multicanales)
-Plan: 02D completed (hook SEQ-02 + route templates + helpers WA/LinkedIn)
-Status: executing
-Last activity: 2026-05-10 -- Plan 02D complété (hook SEQ-02 + route templates + helpers client-side WA/LinkedIn)
+Plan: 02E completed (routes email/SMS Brevo + cron fallback process-sequences + Edge Function Deno)
+Status: executing — checkpoint:human-verify en attente (Task 3)
+Last activity: 2026-05-10 -- Plan 02E complété (routes email/SMS Brevo + cron fallback process-sequences + Edge Function Deno)
 
 Progress: [█░░░░░░░░░] 5%
 
@@ -67,6 +67,10 @@ Recent decisions affecting current work:
 - 02D: void triggerSequenceForStage() — fire-and-forget non-bloquant, erreurs séquence n'affectent pas pipeline/move
 - 02D: client-actions.ts avec 'use client' — protection import accidentel côté serveur (T-02D-04)
 - 02D: linkedinUrl null dans drawer — type Prospect local sans linkedin_url, fallback recherche LinkedIn par nom
+- 02E: Optimistic lock dans routes email/sms/process — status='sent' AVANT appel Brevo (anti-doublon, conforme 02B)
+- 02E: supabase/functions exclu de tsconfig.json — Deno globals incompatibles avec lib Next.js/Node
+- 02E: Deno.cron wrappé dans try/catch — compatibilité Deno < 1.41 sans bloquer le serve()
+- 02E: Route /process déclenchée manuellement (cookie auth) — auth service_role Deno différée Phase 5
 
 ### Pending Todos
 
@@ -74,7 +78,7 @@ None yet.
 
 ### Blockers/Concerns
 
-- Phase 2: SMS provider à choisir avant implémentation SEQ-05
+- Phase 5 : auth service_role pour Edge Function cron (actuellement appel manuel navigateur authentifié)
 - Phase 1: DATA-07 dépend de Google Calendar (v2) — utiliser `interactions` table comme fallback v1
 
 ## Deferred Items
