@@ -116,7 +116,10 @@ CRITIQUE Pitfall 4 : la page /today actuelle contient timer Pomodoro + compteurs
     Gestion erreurs : si pError ou rError -> apiError(error.message).
   </action>
   <verify>
-    <automated>cd C:/Users/Ted/Documents/GitHub/TedScaleWithOuss; npx tsc --noEmit -p tsconfig.json 2>&1 | Select-String "today/signal"</automated>
+    <automated>
+      if (-not (Test-Path "C:/Users/Ted/Documents/GitHub/TedScaleWithOuss/src/app/api/today/signal/route.ts")) { Write-Error "MISSING file: src/app/api/today/signal/route.ts"; exit 1 }
+      cd C:/Users/Ted/Documents/GitHub/TedScaleWithOuss; npx tsc --noEmit -p tsconfig.json 2>&1 | Select-String "today/signal"
+    </automated>
   </verify>
   <acceptance_criteria>
     - File `src/app/api/today/signal/route.ts` exists
@@ -184,7 +187,10 @@ CRITIQUE Pitfall 4 : la page /today actuelle contient timer Pomodoro + compteurs
     8. NE PAS TOUCHER aux blocs existants : timer Pomodoro, compteurs manuels (appels passes / mails envoyes / etc.), script d'appel statique. Ces donnees sont conservees telles quelles pour cette phase.
   </action>
   <verify>
-    <automated>cd C:/Users/Ted/Documents/GitHub/TedScaleWithOuss; npx tsc --noEmit -p tsconfig.json 2>&1 | Select-String "today/page"</automated>
+    <automated>
+      if (-not (Test-Path "C:/Users/Ted/Documents/GitHub/TedScaleWithOuss/src/app/(dashboard)/today/page.tsx")) { Write-Error "MISSING file: src/app/(dashboard)/today/page.tsx"; exit 1 }
+      cd C:/Users/Ted/Documents/GitHub/TedScaleWithOuss; npx tsc --noEmit -p tsconfig.json 2>&1 | Select-String "today/page"
+    </automated>
   </verify>
   <acceptance_criteria>
     - `grep -c "fetch.*api/today/signal" src/app/(dashboard)/today/page.tsx` returns >= 1

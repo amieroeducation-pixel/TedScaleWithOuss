@@ -149,7 +149,10 @@ Stage labels (a partir de l'enum pipeline_stage):
     Retour : apiSuccess({ stages: rows, totalProspects, convertedCount, lostCount }).
   </action>
   <verify>
-    <automated>cd C:/Users/Ted/Documents/GitHub/TedScaleWithOuss; npx tsc --noEmit -p tsconfig.json 2>&1 | Select-String "analytics/pipeline"</automated>
+    <automated>
+      if (-not (Test-Path "C:/Users/Ted/Documents/GitHub/TedScaleWithOuss/src/app/api/analytics/pipeline/route.ts")) { Write-Error "MISSING file: src/app/api/analytics/pipeline/route.ts"; exit 1 }
+      cd C:/Users/Ted/Documents/GitHub/TedScaleWithOuss; npx tsc --noEmit -p tsconfig.json 2>&1 | Select-String "analytics/pipeline"
+    </automated>
   </verify>
   <acceptance_criteria>
     - File `src/app/api/analytics/pipeline/route.ts` exists
@@ -167,7 +170,6 @@ Stage labels (a partir de l'enum pipeline_stage):
   <files>src/app/api/analytics/closing/route.ts</files>
   <read_first>
     - src/app/api/analytics/pipeline/route.ts (pattern frais juste cree)
-    - src/app/api/revenue/products/route.ts (pattern groupement par product_type pour reuse couleurs/labels)
     - .planning/phases/01-data-wiring/01-RESEARCH.md
   </read_first>
   <action>
@@ -178,6 +180,14 @@ Stage labels (a partir de l'enum pipeline_stage):
     - Auth : getUser() puis apiUnauthorized().
     - Constantes PRODUCT_LABELS et PRODUCT_COLORS identiques a celles de /api/revenue/products (dupliquer ici pour decouplage modules).
     - Type exporte : ClosingByProductRow = { type: string; label: string; converted: number; total: number; rate_pct: number; color: string; }
+
+    NOTE DATA-09 v1 approximation (decision explicite) :
+    rate_pct par produit = part de chaque type de produit dans les conversions totales (proxy du mix produit).
+    Ce n'est PAS un taux de closing strict (converti/total_prospects par type) car il n'existe pas de lien
+    direct prospect <-> produit dans le schema actuel (le produit est sur le contrat, pas sur le prospect).
+    Un taux strict necessitera une jointure prospects <-> financial_products via contracts, qui necessite
+    une vue SQL dediee. Reporte en v2.
+    Ajouter ce commentaire verbatim dans le code source de la route.
 
     Logique :
     1. Compter total prospects (hors 'perdu' optionnel : decision = inclure tous):
@@ -229,7 +239,10 @@ Stage labels (a partir de l'enum pipeline_stage):
        })
   </action>
   <verify>
-    <automated>cd C:/Users/Ted/Documents/GitHub/TedScaleWithOuss; npx tsc --noEmit -p tsconfig.json 2>&1 | Select-String "analytics/closing"</automated>
+    <automated>
+      if (-not (Test-Path "C:/Users/Ted/Documents/GitHub/TedScaleWithOuss/src/app/api/analytics/closing/route.ts")) { Write-Error "MISSING file: src/app/api/analytics/closing/route.ts"; exit 1 }
+      cd C:/Users/Ted/Documents/GitHub/TedScaleWithOuss; npx tsc --noEmit -p tsconfig.json 2>&1 | Select-String "analytics/closing"
+    </automated>
   </verify>
   <acceptance_criteria>
     - File `src/app/api/analytics/closing/route.ts` exists
@@ -308,7 +321,10 @@ Stage labels (a partir de l'enum pipeline_stage):
     9. Conserver le theme dark/gold partout reutiliser C.* sans inventer de couleurs.
   </action>
   <verify>
-    <automated>cd C:/Users/Ted/Documents/GitHub/TedScaleWithOuss; npx tsc --noEmit -p tsconfig.json 2>&1 | Select-String "analytics/page"</automated>
+    <automated>
+      if (-not (Test-Path "C:/Users/Ted/Documents/GitHub/TedScaleWithOuss/src/app/(dashboard)/analytics/page.tsx")) { Write-Error "MISSING file: src/app/(dashboard)/analytics/page.tsx"; exit 1 }
+      cd C:/Users/Ted/Documents/GitHub/TedScaleWithOuss; npx tsc --noEmit -p tsconfig.json 2>&1 | Select-String "analytics/page"
+    </automated>
   </verify>
   <acceptance_criteria>
     - `grep -c "fetch.*api/analytics/pipeline" src/app/(dashboard)/analytics/page.tsx` returns >= 1
