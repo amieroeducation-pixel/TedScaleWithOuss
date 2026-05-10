@@ -25,7 +25,11 @@ Brownfield CGP dashboard — auth, Kanban CRM, and Supabase schema are already d
   3. La page Weekly Signal affiche les relances prioritaires des 7 prochains jours et les RDV de la semaine
   4. La page Analytics affiche les taux de conversion par étape pipeline et le taux de closing par produit
   5. Aucune page n'affiche de données fictives ou de placeholder statique
-**Plans**: TBD
+**Plans**: 4 plans
+  - [ ] 01A-PLAN.md — Revenue page (DATA-01, DATA-02, DATA-03) — fix enum bug + wire CA/commissions/charts
+  - [ ] 01B-PLAN.md — Clients page (DATA-04, DATA-05) — list + health alerts
+  - [ ] 01C-PLAN.md — Weekly Signal /today page (DATA-06, DATA-07) — relances 7j + RDV semaine
+  - [ ] 01D-PLAN.md — Analytics page (DATA-08, DATA-09) — pipeline conversion + closing PieChart
 **UI hint**: yes
 
 ### Phase 2: Sequences Multicanales
