@@ -98,15 +98,45 @@
 
 ## Traceability
 
-*Populated during roadmap creation.*
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DATA-01 à DATA-09 | Phase 1 | Pending |
-| SEQ-01 à SEQ-10 | Phase 2 | Pending |
-| CFG-01 à CFG-09 | Phase 3 | Pending |
-| ACH-01 à ACH-05 | Phase 4 | Pending |
-| AUTO-01 à AUTO-04 | Phase 5 | Pending |
+| DATA-01 | Phase 1 | Pending |
+| DATA-02 | Phase 1 | Pending |
+| DATA-03 | Phase 1 | Pending |
+| DATA-04 | Phase 1 | Pending |
+| DATA-05 | Phase 1 | Pending |
+| DATA-06 | Phase 1 | Pending |
+| DATA-07 | Phase 1 | Pending |
+| DATA-08 | Phase 1 | Pending |
+| DATA-09 | Phase 1 | Pending |
+| SEQ-01 | Phase 2 | Pending |
+| SEQ-02 | Phase 2 | Pending |
+| SEQ-03 | Phase 2 | Pending |
+| SEQ-04 | Phase 2 | Pending |
+| SEQ-05 | Phase 2 | Pending |
+| SEQ-06 | Phase 2 | Pending |
+| SEQ-07 | Phase 2 | Pending |
+| SEQ-08 | Phase 2 | Pending |
+| SEQ-09 | Phase 2 | Pending |
+| SEQ-10 | Phase 2 | Pending |
+| CFG-01 | Phase 3 | Pending |
+| CFG-02 | Phase 3 | Pending |
+| CFG-03 | Phase 3 | Pending |
+| CFG-04 | Phase 3 | Pending |
+| CFG-05 | Phase 3 | Pending |
+| CFG-06 | Phase 3 | Pending |
+| CFG-07 | Phase 3 | Pending |
+| CFG-08 | Phase 3 | Pending |
+| CFG-09 | Phase 3 | Pending |
+| ACH-01 | Phase 4 | Pending |
+| ACH-02 | Phase 4 | Pending |
+| ACH-03 | Phase 4 | Pending |
+| ACH-04 | Phase 4 | Pending |
+| ACH-05 | Phase 4 | Pending |
+| AUTO-01 | Phase 5 | Pending |
+| AUTO-02 | Phase 5 | Pending |
+| AUTO-03 | Phase 5 | Pending |
+| AUTO-04 | Phase 5 | Pending |
 
 **Coverage:**
 - v1 requirements: 37 total
@@ -115,4 +145,4 @@
 
 ---
 *Requirements defined: 2026-05-10*
-*Last updated: 2026-05-10 after initial definition*
+*Last updated: 2026-05-10 — traceability populated after roadmap creation*
