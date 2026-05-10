@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Roadmap created — prêt à planifier Phase 1
-last_updated: "2026-05-10T19:54:43.110Z"
-last_activity: 2026-05-10 -- Phase 1 planning complete
+stopped_at: "Completed 01-data-wiring/01A-PLAN.md (Page Revenue)"
+last_updated: "2026-05-10T21:00:00.000Z"
+last_activity: "2026-05-10 -- Plan 01A executed: bug enum percue corrigé, 2 routes API créées, page Revenue branchée"
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 4
-  completed_plans: 0
-  percent: 0
+  completed_plans: 1
+  percent: 25
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-10)
 ## Current Position
 
 Phase: 1 of 5 (Data Wiring)
-Plan: 0 of TBD in current phase
-Status: Ready to execute
-Last activity: 2026-05-10 -- Phase 1 planning complete
+Plan: 1 of 4 in current phase (01A complete)
+Status: Executing
+Last activity: 2026-05-10 -- Plan 01A Page Revenue complet
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [██░░░░░░░░] 25%
 
 ## Performance Metrics
 
@@ -59,6 +59,9 @@ Recent decisions affecting current work:
 - Phase 0: `getUser()` dans middleware.ts (pas `getSession()`) — sécurité JWT côté serveur
 - Phase 0: Zod v4 avec `.issues` (pas `.errors`) — breaking change Zod v4
 - Pending: SMS provider non décidé (Brevo SMS / Onoff / autre) — à cadrer en Phase 2
+- Phase 1 (01A): commission_status enum = 'percue' (pas 'payee') — bug critique corrigé
+- Phase 1 (01A): monthlyData via v_monthly_revenue SQL view (pas groupement JS)
+- Phase 1 (01A): fetch+useState pour data fetching client (TanStack Query reporté à Phase 2)
 
 ### Pending Todos
 
@@ -78,5 +81,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-05-10
-Stopped at: Roadmap created — prêt à planifier Phase 1
+Stopped at: "Completed 01-data-wiring/01A-PLAN.md — Page Revenue branchée"
 Resume file: None
