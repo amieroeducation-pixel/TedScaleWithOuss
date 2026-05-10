@@ -21,16 +21,16 @@
 
 ### Séquences Multicanales
 
-- [ ] **SEQ-01**: L'utilisateur peut démarrer une séquence depuis le drawer d'une carte prospect (bouton "Démarrer séquence")
-- [ ] **SEQ-02**: Une séquence se déclenche automatiquement quand un prospect change de stade pipeline
-- [ ] **SEQ-03**: Une séquence peut envoyer un message WhatsApp Business à l'étape J+0
-- [ ] **SEQ-04**: Une séquence peut envoyer un email Brevo à une étape définie (J+X jours)
-- [ ] **SEQ-05**: Une séquence peut envoyer un SMS à une étape définie (Brevo SMS ou provider configurable)
-- [ ] **SEQ-06**: Une séquence peut créer un rappel appel interne (notification dans le dashboard)
-- [ ] **SEQ-07**: Une séquence peut ouvrir le profil LinkedIn + copier un template InMail
-- [ ] **SEQ-08**: L'utilisateur voit le statut de chaque étape de séquence (planifiée / envoyée / échouée)
-- [ ] **SEQ-09**: L'utilisateur peut mettre en pause ou annuler une séquence active
-- [ ] **SEQ-10**: Les séquences enregistrent chaque action dans la table `interactions`
+- [x] **SEQ-01**: L'utilisateur peut démarrer une séquence depuis le drawer d'une carte prospect (bouton "Démarrer séquence")
+- [x] **SEQ-02**: Une séquence se déclenche automatiquement quand un prospect change de stade pipeline
+- [x] **SEQ-03**: Une séquence peut envoyer un message WhatsApp Business à l'étape J+0
+- [x] **SEQ-04**: Une séquence peut envoyer un email Brevo à une étape définie (J+X jours)
+- [x] **SEQ-05**: Une séquence peut envoyer un SMS à une étape définie (Brevo SMS ou provider configurable)
+- [x] **SEQ-06**: Une séquence peut créer un rappel appel interne (notification dans le dashboard)
+- [x] **SEQ-07**: Une séquence peut ouvrir le profil LinkedIn + copier un template InMail
+- [x] **SEQ-08**: L'utilisateur voit le statut de chaque étape de séquence (planifiée / envoyée / échouée)
+- [x] **SEQ-09**: L'utilisateur peut mettre en pause ou annuler une séquence active
+- [x] **SEQ-10**: Les séquences enregistrent chaque action dans la table `interactions`
 
 ### Configuration (Paramètres)
 
@@ -109,16 +109,16 @@
 | DATA-07 | Phase 1 | Pending |
 | DATA-08 | Phase 1 | Pending |
 | DATA-09 | Phase 1 | Pending |
-| SEQ-01 | Phase 2 | Pending |
-| SEQ-02 | Phase 2 | Pending |
-| SEQ-03 | Phase 2 | Pending |
-| SEQ-04 | Phase 2 | Pending |
-| SEQ-05 | Phase 2 | Pending |
-| SEQ-06 | Phase 2 | Pending |
-| SEQ-07 | Phase 2 | Pending |
-| SEQ-08 | Phase 2 | Pending |
-| SEQ-09 | Phase 2 | Pending |
-| SEQ-10 | Phase 2 | Pending |
+| SEQ-01 | Phase 2 | Complete |
+| SEQ-02 | Phase 2 | Complete |
+| SEQ-03 | Phase 2 | Complete |
+| SEQ-04 | Phase 2 | Complete |
+| SEQ-05 | Phase 2 | Complete |
+| SEQ-06 | Phase 2 | Complete |
+| SEQ-07 | Phase 2 | Complete |
+| SEQ-08 | Phase 2 | Complete |
+| SEQ-09 | Phase 2 | Complete |
+| SEQ-10 | Phase 2 | Complete |
 | CFG-01 | Phase 3 | Pending |
 | CFG-02 | Phase 3 | Pending |
 | CFG-03 | Phase 3 | Pending |
