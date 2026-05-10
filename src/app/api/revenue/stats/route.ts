@@ -2,6 +2,8 @@ import { NextRequest } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { apiSuccess, apiError, apiUnauthorized } from '@/lib/api'
 
+const MONTH_LABELS = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc']
+
 export async function GET(_request: NextRequest) {
   const supabase = await createSupabaseServerClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -11,30 +13,38 @@ export async function GET(_request: NextRequest) {
   const currentYear = now.getFullYear()
   const currentMonth = now.getMonth() + 1
 
-  // Monthly revenue: commissions grouped by month (current year)
-  const { data: contracts, error: contractsError } = await supabase
-    .from('contracts')
-    .select('commission_amount, commission_date, commission_status')
+  // Monthly revenue: depuis la vue v_monthly_revenue (corriger bug enum 'payee' → 'percue' fait via la vue)
+  const { data: monthly, error: monthlyError } = await supabase
+    .from('v_monthly_revenue')
+    .select('month_num, revenue, objective, pct_of_objective')
     .eq('user_id', user.id)
-    .eq('commission_status', 'payee')
-    .gte('commission_date', `${currentYear}-01-01`)
-    .lte('commission_date', `${currentYear}-12-31`)
+    .eq('year', currentYear)
+    .order('month_num', { ascending: true })
 
-  if (contractsError) return apiError(contractsError.message)
+  if (monthlyError) return apiError(monthlyError.message)
 
-  // Group by month
+  // Construire byMonth et objByMonth avec 12 entrées garanties
   const byMonth: Record<number, number> = {}
-  for (let m = 1; m <= 12; m++) byMonth[m] = 0
-  for (const c of (contracts ?? [])) {
-    const month = new Date(c.commission_date).getMonth() + 1
-    byMonth[month] = (byMonth[month] || 0) + Number(c.commission_amount)
+  const objByMonth: Record<number, number> = {}
+  for (let m = 1; m <= 12; m++) { byMonth[m] = 0; objByMonth[m] = 0 }
+  for (const row of (monthly ?? [])) {
+    byMonth[row.month_num] = Number(row.revenue) || 0
+    objByMonth[row.month_num] = Number(row.objective) || 0
   }
 
-  // Current month total
-  const caCurrentMonth = byMonth[currentMonth] || 0
+  const monthlyData = Array.from({ length: 12 }, (_, i) => ({
+    month: MONTH_LABELS[i],
+    monthNum: i + 1,
+    ca: byMonth[i + 1],
+    objectif: objByMonth[i + 1],
+    current: (i + 1) === currentMonth,
+  }))
+
+  // KPI calculations
+  const caCurrentMonth = byMonth[currentMonth]
   const caYTD = Object.values(byMonth).reduce((a, b) => a + b, 0)
 
-  // Objective for current month
+  // Objective for current month — depuis revenue_objectives, fallback sur la vue
   const { data: objectives } = await supabase
     .from('revenue_objectives')
     .select('amount')
@@ -44,32 +54,30 @@ export async function GET(_request: NextRequest) {
     .is('product_type', null)
     .single()
 
-  const objectiveMonth = objectives?.amount ?? 0
+  const objectiveMonth = objectives?.amount ?? objByMonth[currentMonth] ?? 0
 
-  // Count active contracts and clients
+  // Count active contracts (tous statuts) et clients
   const { count: contractCount } = await supabase
     .from('contracts')
     .select('*', { count: 'exact', head: true })
     .eq('user_id', user.id)
+    .eq('commission_status', 'percue')
 
   const { count: clientCount } = await supabase
     .from('clients')
     .select('*', { count: 'exact', head: true })
     .eq('user_id', user.id)
 
-  const MONTH_LABELS = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc']
-  const monthlyData = Object.entries(byMonth).map(([m, value]) => ({
-    month: MONTH_LABELS[parseInt(m) - 1],
-    value,
-    current: parseInt(m) === currentMonth,
-  }))
+  const safeContractCount = contractCount ?? 0
+  const commissionAvg = safeContractCount > 0 ? Math.round(caYTD / safeContractCount) : 0
 
   return apiSuccess({
     caCurrentMonth,
     caYTD,
     objectiveMonth,
-    contractCount: contractCount ?? 0,
+    contractCount: safeContractCount,
     clientCount: clientCount ?? 0,
+    commissionAvg,
     monthlyData,
   })
 }
