@@ -430,7 +430,7 @@ Dans `process.env.BREVO_SENDER_EMAIL` (fichier `.env.local`). Le code `brevo.ts`
 | A3 | Un seul user (usage solo CGP) -- les routes cron iterent sur tous les users avec service_role mais en pratique il n'y en a qu'un | Pattern 2 | Si multi-user un jour, le code fonctionnera quand meme car il itere deja sur tous les users |
 | A4 | Le rapport hebdo est envoye a l'email du CGP (auth.users.email = amiero.education@gmail.com) | Pitfall 4 | Si le user veut un email different, il faudra un champ `notification_email` dans user_settings |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **WhatsApp Business API pour AUTO-03**
    - What we know: `WHATSAPP_PHONE_NUMBER_ID` et `WHATSAPP_ACCESS_TOKEN` sont declares dans `env.ts` comme optionnels. Le canal whatsapp est client-only dans Phase 2.
