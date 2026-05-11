@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
+status: ready_to_plan
 stopped_at: Plan 03-03 COMPLETE — TabTriggers + éditeur messages JSONB dans TabNotifications
 last_updated: "2026-05-11T05:27:00Z"
 last_activity: 2026-05-11
 progress:
   total_phases: 5
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 12
   completed_plans: 11
-  percent: 83
+  percent: 60
 ---
 
 # Project State
@@ -25,9 +25,9 @@ See: .planning/PROJECT.md (updated 2026-05-10)
 
 ## Current Position
 
-Phase: 3 (configuration) — COMPLETE
-Plan: 3 of 3 — COMPLETE
-Status: Phase 03 terminée, prête pour Phase 04
+Phase: 4
+Plan: Not started
+Status: Ready to plan
 Last activity: 2026-05-11
 
 Progress: [████████░░] 83%
@@ -36,7 +36,7 @@ Progress: [████████░░] 83%
 
 **Velocity:**
 
-- Total plans completed: 5
+- Total plans completed: 8
 - Average duration: —
 - Total execution time: —
 
@@ -45,6 +45,7 @@ Progress: [████████░░] 83%
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 2 | 5 | - | - |
+| 3 | 3 | - | - |
 
 **Recent Trend:** No data yet
 | Phase 03-configuration P01 | 25min | 2 tasks | 3 files |

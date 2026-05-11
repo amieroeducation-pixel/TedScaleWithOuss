@@ -34,14 +34,14 @@
 
 ### Configuration (Paramètres)
 
-- [ ] **CFG-01**: L'utilisateur peut configurer les séquences par stade pipeline (ajouter/modifier/supprimer étapes)
-- [ ] **CFG-02**: L'utilisateur peut définir les délais entre étapes (J+0, J+2, J+5...) par séquence
-- [ ] **CFG-03**: L'utilisateur peut choisir les canaux actifs par étape (WhatsApp / Email / SMS / Appel / LinkedIn)
-- [ ] **CFG-04**: L'utilisateur peut éditer les templates de messages par canal et par stade pipeline
-- [ ] **CFG-05**: L'utilisateur peut configurer quels changements de stade déclenchent une séquence automatique
+- [x] **CFG-01**: L'utilisateur peut configurer les séquences par stade pipeline (ajouter/modifier/supprimer étapes)
+- [x] **CFG-02**: L'utilisateur peut définir les délais entre étapes (J+0, J+2, J+5...) par séquence
+- [x] **CFG-03**: L'utilisateur peut choisir les canaux actifs par étape (WhatsApp / Email / SMS / Appel / LinkedIn)
+- [x] **CFG-04**: L'utilisateur peut éditer les templates de messages par canal et par stade pipeline
+- [x] **CFG-05**: L'utilisateur peut configurer quels changements de stade déclenchent une séquence automatique
 - [x] **CFG-06**: L'utilisateur peut configurer les seuils d'alerte KPI (CA mensuel cible, CA annuel cible)
 - [x] **CFG-07**: L'utilisateur peut configurer le seuil d'inactivité client par client (défaut 90 jours)
-- [ ] **CFG-08**: L'utilisateur peut activer/désactiver chaque trigger automatique individuellement
+- [x] **CFG-08**: L'utilisateur peut activer/désactiver chaque trigger automatique individuellement
 - [x] **CFG-09**: La configuration est persistée dans `user_settings` (Supabase) et chargée au démarrage
 
 ### Artefacts & Achievements
@@ -119,14 +119,14 @@
 | SEQ-08 | Phase 2 | Complete |
 | SEQ-09 | Phase 2 | Complete |
 | SEQ-10 | Phase 2 | Complete |
-| CFG-01 | Phase 3 | Pending |
-| CFG-02 | Phase 3 | Pending |
-| CFG-03 | Phase 3 | Pending |
-| CFG-04 | Phase 3 | Pending |
-| CFG-05 | Phase 3 | Pending |
+| CFG-01 | Phase 3 | Complete |
+| CFG-02 | Phase 3 | Complete |
+| CFG-03 | Phase 3 | Complete |
+| CFG-04 | Phase 3 | Complete |
+| CFG-05 | Phase 3 | Complete |
 | CFG-06 | Phase 3 | Complete |
 | CFG-07 | Phase 3 | Complete |
-| CFG-08 | Phase 3 | Pending |
+| CFG-08 | Phase 3 | Complete |
 | CFG-09 | Phase 3 | Complete |
 | ACH-01 | Phase 4 | Pending |
 | ACH-02 | Phase 4 | Pending |
