@@ -9,7 +9,7 @@ Brownfield CGP dashboard — auth, Kanban CRM, and Supabase schema are already d
 - [ ] **Phase 1: Data Wiring** - Branch the 4 mocked pages onto real Supabase views and APIs
 - [x] **Phase 2: Sequences Multicanales** - Engine de relances activable depuis les cartes prospect (completed 2026-05-10)
 - [x] **Phase 3: Configuration** - Page Paramètres permettant de configurer séquences, seuils et triggers (completed 2026-05-11)
-- [ ] **Phase 4: Achievements & Artefacts** - Badges, célébrations et historique des objectifs atteints
+- [x] **Phase 4: Achievements & Artefacts** - Badges, célébrations et historique des objectifs atteints (completed 2026-05-11)
 - [ ] **Phase 5: Automatisations Cron** - Edge Functions Supabase pour rapports et alertes automatiques
 
 ## Phase Details
@@ -77,7 +77,7 @@ Brownfield CGP dashboard — auth, Kanban CRM, and Supabase schema are already d
 **Plans**: 2 plans
 Plans:
   - [x] 04-01-PLAN.md -- Migration 006 + /api/achievements/check + AchievementsProvider + layout (ACH-01, ACH-02, ACH-03, ACH-05)
-  - [ ] 04-02-PLAN.md -- Page /achievements timeline + badge sidebar (ACH-04)
+  - [x] 04-02-PLAN.md -- Page /achievements timeline + badge sidebar (ACH-04)
 **UI hint**: yes
 
 ### Phase 5: Automatisations Cron
@@ -101,5 +101,5 @@ Plans:
 | 1. Data Wiring | 0/TBD | Not started | - |
 | 2. Sequences Multicanales | 5/5 | Complete    | 2026-05-10 |
 | 3. Configuration | 3/3 | Complete    | 2026-05-11 |
-| 4. Achievements & Artefacts | 1/2 | In Progress|  |
+| 4. Achievements & Artefacts | 2/2 | Complete   | 2026-05-11 |
 | 5. Automatisations Cron | 0/TBD | Not started | - |

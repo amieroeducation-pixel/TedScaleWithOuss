@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Plan 03-03 COMPLETE — TabTriggers + éditeur messages JSONB opérationnel. Phase 03 complète.
-last_updated: "2026-05-11T05:57:23.660Z"
+status: verifying
+stopped_at: Plan 04-02 COMPLETE — Page /achievements timeline + sidebar badge dynamique. Phase 04 complète.
+last_updated: "2026-05-11T06:03:19.417Z"
 last_activity: 2026-05-11
 progress:
   total_phases: 5
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 14
-  completed_plans: 12
-  percent: 86
+  completed_plans: 13
+  percent: 93
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-10)
 
 **Core value:** Avoir sur un seul écran tout ce qu'il faut faire aujourd'hui — relances prioritaires, alertes clients inactifs, CA en temps réel — sans aller chercher l'information ailleurs.
-**Current focus:** Phase 4 — achievements-artefacts
+**Current focus:** Phase 5 — finalisation (prochaine phase)
 
 ## Current Position
 
-Phase: 4 (achievements-artefacts) — EXECUTING
+Phase: 4 (achievements-artefacts) — COMPLETE
 Plan: 2 of 2
-Status: Ready to execute
+Status: Phase 04 complete — ACH-04 validé
 Last activity: 2026-05-11
 
-Progress: [█████████░] 86%
+Progress: [█████████░] 93%
 
 ## Performance Metrics
 
@@ -84,6 +84,7 @@ Recent decisions affecting current work:
 - 03-03: TabNotifications reçoit settings/save/saving props (pattern TabKPI) — useUserSettings instancié une seule fois dans parent
 - 03-03: Merge JSONB double protection client+serveur — aucun canal non modifié ne peut être écrasé
 - 03-03: PIPELINE_STAGES_LABELS partagé entre TabTriggers et TabNotifications — map labels sans duplication
+- 04-02: Item nav 'champions' → 'achievements' (id + href) — badge dynamique recentCount indexé sur item.id
 
 ### Pending Todos
 
@@ -102,6 +103,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-11T05:57:23.615Z
-Stopped at: Plan 03-03 COMPLETE — TabTriggers + éditeur messages JSONB opérationnel. Phase 03 complète.
+Last session: 2026-05-11T06:03:19.364Z
+Stopped at: Plan 04-02 COMPLETE — Page /achievements timeline + sidebar badge dynamique. Phase 04 complète.
 Resume file: None

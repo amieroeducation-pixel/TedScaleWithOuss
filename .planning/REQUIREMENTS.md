@@ -49,7 +49,7 @@
 - [x] **ACH-01**: L'utilisateur voit un badge + notification visuelle quand il atteint son objectif CA mensuel
 - [x] **ACH-02**: L'utilisateur voit un message de célébration avec animation (fire/confetti) quand l'objectif CA est atteint
 - [x] **ACH-03**: L'utilisateur voit un badge quand il atteint un seuil de clients actifs (ex : 10, 25, 50 clients)
-- [ ] **ACH-04**: L'utilisateur peut consulter l'historique de ses objectifs atteints (timeline des succès)
+- [x] **ACH-04**: L'utilisateur peut consulter l'historique de ses objectifs atteints (timeline des succès)
 - [x] **ACH-05**: Les achievements sont persistés en BDD et ne se re-déclenchent pas après rechargement
 
 ### Automatisations (Edge Functions Cron)
@@ -131,7 +131,7 @@
 | ACH-01 | Phase 4 | Complete |
 | ACH-02 | Phase 4 | Complete |
 | ACH-03 | Phase 4 | Complete |
-| ACH-04 | Phase 4 | Pending |
+| ACH-04 | Phase 4 | Complete |
 | ACH-05 | Phase 4 | Complete |
 | AUTO-01 | Phase 5 | Pending |
 | AUTO-02 | Phase 5 | Pending |
