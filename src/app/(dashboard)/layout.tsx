@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Toaster } from 'sonner'
@@ -15,7 +15,7 @@ const NAV_SECTIONS = [
       { id: 'today', href: '/today', label: "Aujourd'hui" },
       { id: 'weekly', href: '/dashboard', label: 'Vue hebdo' },
       { id: 'revenue', href: '/revenue', label: 'Revenue' },
-      { id: 'champions', href: '/champions', label: '🏆 Champions' },
+      { id: 'achievements', href: '/achievements', label: '🏆 Champions' },
       { id: 'pipeline', href: '/pipeline', label: 'Pipeline' },
       { id: 'tasks', href: '/tasks', label: 'Tâches', badge: 5 },
     ],
@@ -77,6 +77,21 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname()
   const [search, setSearch] = useState('')
+  const [recentCount, setRecentCount] = useState<number>(0)
+
+  useEffect(() => {
+    fetch('/api/achievements')
+      .then(r => r.json())
+      .then(({ data }) => {
+        const achievements = data?.achievements ?? []
+        const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000
+        const recent = achievements.filter((a: { achieved_at: string }) =>
+          new Date(a.achieved_at).getTime() > cutoff
+        )
+        setRecentCount(recent.length)
+      })
+      .catch(() => {/* silencieux */})
+  }, [])
 
   return (
     <>
@@ -229,7 +244,8 @@ export default function DashboardLayout({
                         boxShadow: isActive ? '0 0 6px rgba(255,100,112,0.7)' : 'none',
                       }} />
                       <span style={{ flex: 1 }}>{item.label}</span>
-                      {item.badge && (
+                      {/* Badge statique (tâches, prospects) */}
+                      {item.badge && item.id !== 'achievements' && (
                         <span style={{
                           minWidth: 16,
                           height: 16,
@@ -246,6 +262,26 @@ export default function DashboardLayout({
                           boxShadow: '0 2px 8px rgba(200,64,72,0.45)',
                         }}>
                           {item.badge}
+                        </span>
+                      )}
+                      {/* Badge dynamique achievements */}
+                      {item.id === 'achievements' && recentCount > 0 && (
+                        <span style={{
+                          minWidth: 16,
+                          height: 16,
+                          background: '#e8c878',
+                          color: '#0a0e22',
+                          borderRadius: 8,
+                          fontSize: 8,
+                          fontWeight: 700,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          padding: '0 4px',
+                          fontFamily: "'JetBrains Mono', monospace",
+                          boxShadow: '0 2px 8px rgba(232,200,120,0.5)',
+                        }}>
+                          {recentCount}
                         </span>
                       )}
                     </Link>
