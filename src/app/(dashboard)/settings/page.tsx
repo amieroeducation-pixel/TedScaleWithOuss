@@ -1,9 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { toast } from 'sonner'
 import { C } from '@/lib/theme'
+import { useUserSettings, UserSettings } from '@/hooks/useUserSettings'
 
-type Tab = 'general' | 'kpi' | 'notifications' | 'integrations' | 'sections' | 'mobile'
+type Tab = 'general' | 'kpi' | 'notifications' | 'integrations' | 'sections' | 'mobile' | 'sequences' | 'triggers'
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'general', label: 'Général' },
@@ -12,6 +14,8 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'integrations', label: '🔗 API' },
   { id: 'sections', label: '👁️ Sections' },
   { id: 'mobile', label: '📱 Mobile' },
+  { id: 'sequences', label: '🔗 Séquences' },
+  { id: 'triggers', label: '⚡ Triggers' },
 ]
 
 const MONTHS_SHORT = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc']
@@ -97,14 +101,18 @@ function SetLabel({ label, desc }: { label: string; desc?: string }) {
   )
 }
 
-function NumInput({ id, value, min, max, step }: { id?: string; value: number; min: number; max: number; step?: number }) {
+function NumInput({ id, value, min, max, step, onChange }: { id?: string; value: number; min: number; max: number; step?: number; onChange?: (v: number) => void }) {
   const [val, setVal] = useState(value)
   return (
     <input
       id={id}
       type="number"
       value={val}
-      onChange={e => setVal(Number(e.target.value))}
+      onChange={e => {
+        const n = Number(e.target.value)
+        setVal(n)
+        onChange?.(n)
+      }}
       min={min} max={max} step={step || 1}
       style={{
         width: 70, padding: '6px 8px', background: C.surface2,
@@ -347,7 +355,30 @@ function TabGeneral() {
 }
 
 // ─── ONGLET KPI ───────────────────────────────────────────────────────────────
-function TabKPI() {
+function TabKPI({ settings, save, saving }: { settings: UserSettings | null; save: (p: Partial<UserSettings>) => Promise<unknown>; saving: boolean }) {
+  const [caMonthly, setCaMonthly] = useState(settings?.ca_monthly_target ?? 15000)
+  const [caAnnual, setCaAnnual] = useState(settings?.ca_annual_target ?? 180000)
+  const [healthDays, setHealthDays] = useState(settings?.client_health_threshold_days ?? 90)
+
+  // Synchroniser les valeurs locales quand settings charge depuis l'API
+  useEffect(() => {
+    if (settings) {
+      setCaMonthly(settings.ca_monthly_target)
+      setCaAnnual(settings.ca_annual_target)
+      setHealthDays(settings.client_health_threshold_days)
+    }
+  }, [settings])
+
+  async function handleSaveCollecte() {
+    await save({ ca_monthly_target: caMonthly, ca_annual_target: caAnnual })
+    toast.success('Seuils CA enregistrés')
+  }
+
+  async function handleSaveInactivite() {
+    await save({ client_health_threshold_days: healthDays })
+    toast.success('Seuil d\'inactivité enregistré')
+  }
+
   return (
     <>
       <SectionPanel title="📅 Rendez-vous (R1 & R2)">
@@ -386,30 +417,41 @@ function TabKPI() {
         </div>
       </SectionPanel>
 
-      <SectionPanel title="💰 Collecte (Euros)">
-        <div style={{ fontSize: 9, color: C.textLo, marginBottom: 12, fontFamily: 'JetBrains Mono,monospace' }}>Objectif de collecte annuel réparti automatiquement</div>
+      <SectionPanel title="💰 Collecte (CA mensuel / annuel)">
+        <div style={{ fontSize: 9, color: C.textLo, marginBottom: 12, fontFamily: 'JetBrains Mono,monospace' }}>Objectifs de CA mensuel et annuel persistés en base</div>
         <SetRow>
-          <SetLabel label="🎯 Objectif collecte annuel" desc="Montant total à collecter en 2026" />
+          <SetLabel label="🎯 CA mensuel cible" desc="Montant de commission mensuel visé (€)" />
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <NumInput value={500000} min={1000} max={10000000} step={1000} />
+            <NumInput value={caMonthly} min={1000} max={1000000} step={500} onChange={setCaMonthly} />
             <span style={{ fontSize: 9, color: C.textLo, fontFamily: 'JetBrains Mono,monospace' }}>€</span>
           </div>
         </SetRow>
-        <div style={{ background: '#0d1a2e', border: `1px solid ${C.indigo}`, borderRadius: 6, padding: 12, marginBottom: 14 }}>
-          <div style={{ fontSize: 10, color: C.indigo, fontWeight: 600, marginBottom: 8, fontFamily: 'Oswald,sans-serif' }}>📊 Planification automatique</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 9, color: C.text, fontFamily: 'JetBrains Mono,monospace' }}>
-            <div><strong>Par mois :</strong> 41 667 €</div>
-            <div><strong>Par semaine :</strong> 9 615 €</div>
-            <div><strong>Par jour :</strong> 1 923 €</div>
+        <SetRow>
+          <SetLabel label="🎯 CA annuel cible" desc="Montant de commission annuel visé (€)" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <NumInput value={caAnnual} min={10000} max={10000000} step={1000} onChange={setCaAnnual} />
+            <span style={{ fontSize: 9, color: C.textLo, fontFamily: 'JetBrains Mono,monospace' }}>€</span>
           </div>
+        </SetRow>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 4 }}>
+          <SetBtn onClick={handleSaveCollecte} color={C.green} bg="#0d1a0d">
+            {saving ? '⏳ Enregistrement...' : '💾 Enregistrer'}
+          </SetBtn>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 6, maxHeight: 200, overflowY: 'auto' }}>
-          {MONTHS_SHORT.map(m => (
-            <div key={m} style={{ background: C.surface2, padding: 6, borderRadius: 4, border: `1px solid ${C.lineSoft}` }}>
-              <div style={{ fontSize: 8, color: C.textLo, marginBottom: 4, fontFamily: 'JetBrains Mono,monospace' }}>{m}</div>
-              <input type="number" placeholder="Montant €" style={{ width: '100%', padding: 4, background: '#1a1a1a', border: `1px solid ${C.line}`, borderRadius: 3, color: C.gold, fontSize: 8, boxSizing: 'border-box' }} min={0} step={1000} />
-            </div>
-          ))}
+      </SectionPanel>
+
+      <SectionPanel title="⚠️ Seuil d'inactivité client">
+        <SetRow>
+          <SetLabel label="Jours sans contact" desc="Client marqué inactif après X jours (défaut : 90)" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <NumInput value={healthDays} min={7} max={365} step={1} onChange={setHealthDays} />
+            <span style={{ fontSize: 9, color: C.textLo, fontFamily: 'JetBrains Mono,monospace' }}>j</span>
+          </div>
+        </SetRow>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 4 }}>
+          <SetBtn onClick={handleSaveInactivite} color={C.gold} bg="#1a1400">
+            {saving ? '⏳ Enregistrement...' : '💾 Enregistrer'}
+          </SetBtn>
         </div>
       </SectionPanel>
 
@@ -743,6 +785,7 @@ function TabMobile() {
 // ─── PAGE ─────────────────────────────────────────────────────────────────────
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<Tab>('general')
+  const { settings, saving, save } = useUserSettings()
 
   return (
     <>
@@ -773,7 +816,7 @@ export default function SettingsPage() {
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: 6, borderBottom: `0.5px solid ${C.lineSoft}`, marginBottom: 16, paddingBottom: 6 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8,1fr)', gap: 6, borderBottom: `0.5px solid ${C.lineSoft}`, marginBottom: 16, paddingBottom: 6 }}>
         {TABS.map(tab => (
           <button
             key={tab.id}
@@ -794,11 +837,13 @@ export default function SettingsPage() {
 
       {/* Tab content */}
       {activeTab === 'general' && <TabGeneral />}
-      {activeTab === 'kpi' && <TabKPI />}
+      {activeTab === 'kpi' && <TabKPI settings={settings} save={save} saving={saving} />}
       {activeTab === 'notifications' && <TabNotifications />}
       {activeTab === 'integrations' && <TabIntegrations />}
       {activeTab === 'sections' && <TabSections />}
       {activeTab === 'mobile' && <TabMobile />}
+      {activeTab === 'sequences' && <div style={{ color: C.textLo, fontSize: 11, padding: 20, fontFamily: 'JetBrains Mono,monospace' }}>Onglet Séquences — disponible plan 03-02</div>}
+      {activeTab === 'triggers' && <div style={{ color: C.textLo, fontSize: 11, padding: 20, fontFamily: 'JetBrains Mono,monospace' }}>Onglet Triggers — disponible plan 03-03</div>}
     </>
   )
 }
