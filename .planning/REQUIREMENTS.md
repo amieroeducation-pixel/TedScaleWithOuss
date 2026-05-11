@@ -54,10 +54,10 @@
 
 ### Automatisations (Edge Functions Cron)
 
-- [ ] **AUTO-01**: Un rapport hebdomadaire est envoyé par email (Brevo) chaque lundi à 8h
-- [ ] **AUTO-02**: Des alertes Client Health sont envoyées quotidiennement (email/SMS) pour les clients dépassant le seuil
-- [ ] **AUTO-03**: Un rappel WhatsApp est envoyé automatiquement J-1 avant chaque RDV
-- [ ] **AUTO-04**: Une alerte est envoyée si le CA mensuel est inférieur au seuil défini
+- [x] **AUTO-01**: Un rapport hebdomadaire est envoyé par email (Brevo) chaque lundi à 8h
+- [x] **AUTO-02**: Des alertes Client Health sont envoyées quotidiennement (email/SMS) pour les clients dépassant le seuil
+- [x] **AUTO-03**: Un rappel WhatsApp est envoyé automatiquement J-1 avant chaque RDV
+- [x] **AUTO-04**: Une alerte est envoyée si le CA mensuel est inférieur au seuil défini
 
 ---
 
@@ -133,10 +133,10 @@
 | ACH-03 | Phase 4 | Complete |
 | ACH-04 | Phase 4 | Complete |
 | ACH-05 | Phase 4 | Complete |
-| AUTO-01 | Phase 5 | Pending |
-| AUTO-02 | Phase 5 | Pending |
-| AUTO-03 | Phase 5 | Pending |
-| AUTO-04 | Phase 5 | Pending |
+| AUTO-01 | Phase 5 | Complete |
+| AUTO-02 | Phase 5 | Complete |
+| AUTO-03 | Phase 5 | Complete |
+| AUTO-04 | Phase 5 | Complete |
 
 **Coverage:**
 - v1 requirements: 37 total

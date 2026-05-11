@@ -90,7 +90,10 @@ Plans:
   2. Des alertes Client Health (email ou SMS) sont envoyées quotidiennement pour les clients dépassant le seuil d'inactivité
   3. Un message WhatsApp de rappel RDV est envoyé automatiquement J-1 avant chaque RDV planifié
   4. Une alerte est envoyée si le CA mensuel tombe en dessous du seuil configuré
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+  - [x] 05-01-PLAN.md -- Migration 007 + helpers cron + 4 routes /api/cron/* (AUTO-01, AUTO-02, AUTO-03, AUTO-04)
+  - [ ] 05-02-PLAN.md -- Page /automatisations branchee sur cron_logs + script Task Scheduler Windows (AUTO-01, AUTO-02, AUTO-03, AUTO-04)
 
 ## Progress
 
@@ -102,4 +105,4 @@ Plans:
 | 2. Sequences Multicanales | 5/5 | Complete    | 2026-05-10 |
 | 3. Configuration | 3/3 | Complete    | 2026-05-11 |
 | 4. Achievements & Artefacts | 2/2 | Complete    | 2026-05-11 |
-| 5. Automatisations Cron | 0/TBD | Not started | - |
+| 5. Automatisations Cron | 1/2 | In Progress|  |
