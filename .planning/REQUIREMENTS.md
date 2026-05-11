@@ -39,10 +39,10 @@
 - [ ] **CFG-03**: L'utilisateur peut choisir les canaux actifs par étape (WhatsApp / Email / SMS / Appel / LinkedIn)
 - [ ] **CFG-04**: L'utilisateur peut éditer les templates de messages par canal et par stade pipeline
 - [ ] **CFG-05**: L'utilisateur peut configurer quels changements de stade déclenchent une séquence automatique
-- [ ] **CFG-06**: L'utilisateur peut configurer les seuils d'alerte KPI (CA mensuel cible, CA annuel cible)
-- [ ] **CFG-07**: L'utilisateur peut configurer le seuil d'inactivité client par client (défaut 90 jours)
+- [x] **CFG-06**: L'utilisateur peut configurer les seuils d'alerte KPI (CA mensuel cible, CA annuel cible)
+- [x] **CFG-07**: L'utilisateur peut configurer le seuil d'inactivité client par client (défaut 90 jours)
 - [ ] **CFG-08**: L'utilisateur peut activer/désactiver chaque trigger automatique individuellement
-- [ ] **CFG-09**: La configuration est persistée dans `user_settings` (Supabase) et chargée au démarrage
+- [x] **CFG-09**: La configuration est persistée dans `user_settings` (Supabase) et chargée au démarrage
 
 ### Artefacts & Achievements
 
@@ -124,10 +124,10 @@
 | CFG-03 | Phase 3 | Pending |
 | CFG-04 | Phase 3 | Pending |
 | CFG-05 | Phase 3 | Pending |
-| CFG-06 | Phase 3 | Pending |
-| CFG-07 | Phase 3 | Pending |
+| CFG-06 | Phase 3 | Complete |
+| CFG-07 | Phase 3 | Complete |
 | CFG-08 | Phase 3 | Pending |
-| CFG-09 | Phase 3 | Pending |
+| CFG-09 | Phase 3 | Complete |
 | ACH-01 | Phase 4 | Pending |
 | ACH-02 | Phase 4 | Pending |
 | ACH-03 | Phase 4 | Pending |

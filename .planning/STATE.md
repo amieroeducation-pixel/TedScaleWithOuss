@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: ready_to_plan
-stopped_at: Roadmap created — prêt à planifier Phase 1
-last_updated: "2026-05-10T20:05:47.528Z"
-last_activity: 2026-05-10 -- Plan 02E FINALISÉ — checkpoint human-verify APPROVED (tsc 0 erreurs, 4 fichiers vérifiés)
+status: executing
+stopped_at: Plan 03-01 COMPLETE — route API settings + hook useUserSettings + TabKPI branché
+last_updated: "2026-05-11T05:14:12.671Z"
+last_activity: 2026-05-11
 progress:
   total_phases: 5
   completed_phases: 1
-  total_plans: 5
-  completed_plans: 5
-  percent: 20
+  total_plans: 12
+  completed_plans: 9
+  percent: 75
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-10)
 
 **Core value:** Avoir sur un seul écran tout ce qu'il faut faire aujourd'hui — relances prioritaires, alertes clients inactifs, CA en temps réel — sans aller chercher l'information ailleurs.
-**Current focus:** Phase 1 — Data Wiring
+**Current focus:** Phase 3 — configuration
 
 ## Current Position
 
-Phase: 3 of 5 (configuration)
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-05-10
+Phase: 3 (configuration) — EXECUTING
+Plan: 2 of 3
+Status: Ready to execute
+Last activity: 2026-05-11
 
-Progress: [█░░░░░░░░░] 5%
+Progress: [████████░░] 75%
 
 ## Performance Metrics
 
@@ -47,6 +47,7 @@ Progress: [█░░░░░░░░░] 5%
 | 2 | 5 | - | - |
 
 **Recent Trend:** No data yet
+| Phase 03-configuration P01 | 25min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -71,6 +72,9 @@ Recent decisions affecting current work:
 - 02E: supabase/functions exclu de tsconfig.json — Deno globals incompatibles avec lib Next.js/Node
 - 02E: Deno.cron wrappé dans try/catch — compatibilité Deno < 1.41 sans bloquer le serve()
 - 02E: Route /process déclenchée manuellement (cookie auth) — auth service_role Deno différée Phase 5
+- [Phase ?]: UserSettings type défini inline dans le hook — évite dépendance circulaire client→serveur
+- [Phase ?]: 03-01: z.record(z.string(), z.record(...)) — Zod v4 requiert 2 arguments pour z.record()
+- [Phase ?]: 03-01: useEffect sync pattern pour initialiser état local TabKPI depuis settings prop async
 
 ### Pending Todos
 
@@ -89,6 +93,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-10
-Stopped at: Plan 02E FINALISÉ — checkpoint human-verify APPROVED — Phase 02 séquences multicanales complète (SEQ-01→SEQ-10)
+Last session: 2026-05-11T05:14:12.616Z
+Stopped at: Plan 03-01 COMPLETE — route API settings + hook useUserSettings + TabKPI branché
 Resume file: None

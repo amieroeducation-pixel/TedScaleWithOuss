@@ -57,7 +57,10 @@ Brownfield CGP dashboard — auth, Kanban CRM, and Supabase schema are already d
   3. L'utilisateur peut définir les seuils KPI (CA mensuel cible, CA annuel cible, jours d'inactivité)
   4. L'utilisateur peut activer ou désactiver chaque trigger automatique individuellement
   5. Toutes les configurations sont persistées dans `user_settings` et rechargées au démarrage sans perte
-**Plans**: TBD
+**Plans**: 3 plans
+  - [x] 03-01-PLAN.md — Settings API + KPI thresholds (CFG-06, CFG-07, CFG-09) — route /api/settings + hook useUserSettings + onglet KPI branché
+  - [ ] 03-02-PLAN.md — Sequences CRUD API + onglet Séquences (CFG-01, CFG-02, CFG-03, CFG-05, CFG-08, CFG-09) — 4 routes API + TabSequences
+  - [ ] 03-03-PLAN.md — Templates messages + onglet Triggers (CFG-04, CFG-05, CFG-08, CFG-09) — TabTriggers + éditeur JSONB messages
 **UI hint**: yes
 
 ### Phase 4: Achievements & Artefacts
@@ -94,6 +97,6 @@ Brownfield CGP dashboard — auth, Kanban CRM, and Supabase schema are already d
 |-------|----------------|--------|-----------|
 | 1. Data Wiring | 0/TBD | Not started | - |
 | 2. Sequences Multicanales | 5/5 | Complete    | 2026-05-10 |
-| 3. Configuration | 0/TBD | Not started | - |
+| 3. Configuration | 1/3 | In Progress|  |
 | 4. Achievements & Artefacts | 0/TBD | Not started | - |
 | 5. Automatisations Cron | 0/TBD | Not started | - |
