@@ -509,11 +509,47 @@ function TabKPI({ settings, save, saving }: { settings: UserSettings | null; sav
 }
 
 // ─── ONGLET NOTIFICATIONS ────────────────────────────────────────────────────
-function TabNotifications() {
+function TabNotifications({
+  settings,
+  save,
+  saving,
+}: {
+  settings: UserSettings | null
+  save: (p: Partial<UserSettings>) => Promise<unknown>
+  saving: boolean
+}) {
   const [pushOn, setPushOn] = useState(true)
   const [emailOn, setEmailOn] = useState(false)
   const [smsOn, setSmsOn] = useState(false)
   const [telegramOn, setTelegramOn] = useState(false)
+
+  // État éditeur de messages
+  const [selectedChannel, setSelectedChannel] = useState<'whatsapp' | 'email' | 'sms'>('whatsapp')
+  const [selectedStage, setSelectedStage] = useState<string>('a_contacter')
+  const [editedText, setEditedText] = useState('')
+  const [msgSaving, setMsgSaving] = useState(false)
+
+  // Synchroniser editedText depuis settings quand channel/stage changent
+  useEffect(() => {
+    const current = settings?.message_templates?.[selectedChannel]?.[selectedStage] ?? ''
+    setEditedText(current)
+  }, [selectedChannel, selectedStage, settings])
+
+  async function saveMessageTemplate() {
+    if (!settings) return
+    setMsgSaving(true)
+    try {
+      // Merger avec l'existant côté client (protection double avec le merge côté serveur)
+      const channelTemplates = { ...(settings.message_templates?.[selectedChannel] ?? {}), [selectedStage]: editedText }
+      const merged = { ...(settings.message_templates ?? {}), [selectedChannel]: channelTemplates }
+      await save({ message_templates: merged })
+      toast.success('Template de message enregistré')
+    } catch {
+      toast.error('Erreur lors de la sauvegarde')
+    } finally {
+      setMsgSaving(false)
+    }
+  }
 
   return (
     <>
@@ -587,6 +623,83 @@ function TabNotifications() {
           <SetBtn color={C.gold} bg="#1a1400">📧 Test Email</SetBtn>
           <SetBtn color={C.green} bg="#0d1a0d">📱 Test SMS</SetBtn>
           <SetBtn color={C.indigo} bg="#0d1a2e">💬 Test Telegram</SetBtn>
+        </div>
+      </SectionPanel>
+
+      <SectionPanel title="📝 TEMPLATES DE MESSAGES">
+        <div style={{ fontSize: 9, color: C.textLo, marginBottom: 12, lineHeight: 1.6, fontFamily: 'JetBrains Mono,monospace' }}>
+          Personnalise le message envoyé pour chaque canal et chaque stade pipeline.
+          Variables disponibles : {'{{prenom}}'}, {'{{nom}}'}, {'{{email}}'}, {'{{telephone}}'}
+        </div>
+
+        {/* Sélecteur canal */}
+        <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+          {(['whatsapp', 'email', 'sms'] as const).map(ch => (
+            <button
+              key={ch}
+              onClick={() => setSelectedChannel(ch)}
+              style={{
+                padding: '5px 12px', borderRadius: 5, fontSize: 9, cursor: 'pointer',
+                fontFamily: 'Oswald,sans-serif', letterSpacing: '0.05em',
+                background: selectedChannel === ch ? '#1a1400' : C.surface2,
+                color: selectedChannel === ch ? C.gold : C.textLo,
+                border: `1px solid ${selectedChannel === ch ? C.gold : C.line}`,
+              }}
+            >
+              {ch === 'whatsapp' ? '💬 WhatsApp' : ch === 'email' ? '📧 Email' : '📱 SMS'}
+            </button>
+          ))}
+        </div>
+
+        {/* Sélecteur stade */}
+        <div style={{ marginBottom: 10 }}>
+          <select
+            value={selectedStage}
+            onChange={e => setSelectedStage(e.target.value)}
+            style={{
+              width: '100%', padding: '6px 8px', background: C.surface2,
+              border: `1px solid ${C.line}`, borderRadius: 5,
+              color: C.text, fontSize: 10, fontFamily: 'Inter,sans-serif',
+            }}
+          >
+            {Object.entries(PIPELINE_STAGES_LABELS).map(([val, label]) => (
+              <option key={val} value={val}>{label}</option>
+            ))}
+            <option value="default">Défaut (tous stades)</option>
+          </select>
+        </div>
+
+        {/* Éditeur textarea */}
+        <textarea
+          value={editedText}
+          onChange={e => setEditedText(e.target.value)}
+          placeholder={`Template ${selectedChannel} pour ${selectedStage}...\nEx: Bonjour {{prenom}}, suite à notre échange...`}
+          style={{
+            width: '100%', minHeight: 120, padding: 10,
+            background: C.surface2, border: `1px solid ${C.line}`,
+            borderRadius: 6, color: C.text, fontSize: 10,
+            lineHeight: 1.6, resize: 'vertical', fontFamily: 'Inter,sans-serif',
+            boxSizing: 'border-box',
+          }}
+        />
+
+        {/* Indicateur longueur pour SMS */}
+        {selectedChannel === 'sms' && (
+          <div style={{ fontSize: 8, color: editedText.length > 160 ? C.warn : C.textLo, marginTop: 4, fontFamily: 'JetBrains Mono,monospace' }}>
+            {editedText.length}/160 caractères {editedText.length > 160 ? '(SMS multiple)' : ''}
+          </div>
+        )}
+
+        {/* Bouton Enregistrer */}
+        <div style={{ marginTop: 10, display: 'flex', gap: 8, alignItems: 'center' }}>
+          <SetBtn color={C.green} bg="#0d1a0d" onClick={saveMessageTemplate}>
+            {msgSaving || saving ? '⏳ Enregistrement...' : '💾 Enregistrer le template'}
+          </SetBtn>
+          {settings?.message_templates?.[selectedChannel]?.[selectedStage] && (
+            <span style={{ fontSize: 8, color: C.textLo, fontFamily: 'JetBrains Mono,monospace' }}>
+              ✓ Template existant chargé
+            </span>
+          )}
         </div>
       </SectionPanel>
     </>
@@ -1220,7 +1333,7 @@ export default function SettingsPage() {
       {/* Tab content */}
       {activeTab === 'general' && <TabGeneral />}
       {activeTab === 'kpi' && <TabKPI settings={settings} save={save} saving={saving} />}
-      {activeTab === 'notifications' && <TabNotifications />}
+      {activeTab === 'notifications' && <TabNotifications settings={settings} save={save} saving={saving} />}
       {activeTab === 'integrations' && <TabIntegrations />}
       {activeTab === 'sections' && <TabSections />}
       {activeTab === 'mobile' && <TabMobile />}
