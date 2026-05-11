@@ -741,6 +741,15 @@ type TemplateWithSteps = {
 const PIPELINE_STAGE_OPTIONS = ['a_contacter', 'rdv1', 'rdv2', 'rdv3', 'converti', 'perdu'] as const
 const CHANNEL_OPTIONS = ['whatsapp', 'email', 'sms', 'call_reminder', 'linkedin'] as const
 
+const PIPELINE_STAGES_LABELS: Record<string, string> = {
+  a_contacter: 'À contacter',
+  rdv1: 'RDV R1',
+  rdv2: 'RDV R2',
+  rdv3: 'RDV R3',
+  converti: 'Converti',
+  perdu: 'Perdu',
+}
+
 function TabSequences() {
   const [templates, setTemplates] = useState<TemplateWithSteps[]>([])
   const [loading, setLoading] = useState(true)
@@ -986,6 +995,113 @@ function TabSequences() {
   )
 }
 
+// ─── ONGLET TRIGGERS ─────────────────────────────────────────────────────────
+function TabTriggers() {
+  const [templates, setTemplates] = useState<Array<{
+    id: string
+    name: string
+    pipeline_stage: string | null
+    auto_trigger: boolean
+  }>>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    fetch('/api/crm/sequences/templates')
+      .then(r => r.json())
+      .then(({ data }) => { setTemplates(data?.templates ?? []); setLoading(false) })
+      .catch(() => setLoading(false))
+  }, [])
+
+  async function handleToggle(t: { id: string; name: string; pipeline_stage: string | null; auto_trigger: boolean }) {
+    setError(null)
+    const newVal = !t.auto_trigger
+    // Optimistic update
+    setTemplates(prev => prev.map(x => x.id === t.id ? { ...x, auto_trigger: newVal } : x))
+    try {
+      const res = await fetch(`/api/crm/sequences/templates/${t.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ auto_trigger: newVal }),
+      })
+      const { data, error: apiErr } = await res.json()
+      if (apiErr || !res.ok) {
+        // Rollback
+        setTemplates(prev => prev.map(x => x.id === t.id ? { ...x, auto_trigger: t.auto_trigger } : x))
+        setError(apiErr ?? `Erreur ${res.status}`)
+        return
+      }
+      // Sync avec valeur serveur
+      setTemplates(prev => prev.map(x => x.id === t.id ? { ...x, ...data.template } : x))
+    } catch {
+      // Rollback en cas d'erreur réseau
+      setTemplates(prev => prev.map(x => x.id === t.id ? { ...x, auto_trigger: t.auto_trigger } : x))
+      setError('Erreur réseau')
+    }
+  }
+
+  if (loading) return <div style={{ color: C.textLo, fontSize: 11, padding: 20 }}>Chargement...</div>
+
+  return (
+    <>
+      <SectionPanel title="⚡ TRIGGERS AUTOMATIQUES PAR SÉQUENCE">
+        <div style={{ fontSize: 9, color: C.textLo, marginBottom: 12, lineHeight: 1.6, fontFamily: 'JetBrains Mono,monospace' }}>
+          Chaque trigger déclenche automatiquement la séquence associée quand un prospect entre dans le stade correspondant.
+          Un seul trigger auto par stade pipeline est autorisé.
+        </div>
+
+        {templates.length === 0 && (
+          <div style={{ color: C.textLo, fontSize: 10, padding: 12, textAlign: 'center', fontFamily: 'Inter,sans-serif' }}>
+            Aucune séquence configurée — créez des templates dans l'onglet Séquences.
+          </div>
+        )}
+
+        {templates.map(t => (
+          <SetRow key={t.id}>
+            <div style={{ flex: 1 }}>
+              <SetLabel
+                label={t.name}
+                desc={t.pipeline_stage ? `Stade : ${PIPELINE_STAGES_LABELS[t.pipeline_stage] ?? t.pipeline_stage}` : 'Aucun stade assigné — trigger impossible'}
+              />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              {t.pipeline_stage ? (
+                <>
+                  <span style={{ fontSize: 8, color: t.auto_trigger ? C.green : C.textVlo, fontFamily: 'JetBrains Mono,monospace' }}>
+                    {t.auto_trigger ? 'ACTIF' : 'INACTIF'}
+                  </span>
+                  <Toggle
+                    checked={t.auto_trigger}
+                    onChange={() => handleToggle(t)}
+                  />
+                </>
+              ) : (
+                <span style={{ fontSize: 8, color: C.textVlo, fontFamily: 'JetBrains Mono,monospace' }}>
+                  Assigner un stade d&apos;abord
+                </span>
+              )}
+            </div>
+          </SetRow>
+        ))}
+
+        {error && (
+          <div style={{ marginTop: 8, padding: 8, background: '#1f0d0d', border: `1px solid ${C.cyan}`, borderRadius: 6, color: C.cyan, fontSize: 9, fontFamily: 'JetBrains Mono,monospace' }}>
+            {error}
+          </div>
+        )}
+      </SectionPanel>
+
+      <SectionPanel title="ℹ️ RÈGLES">
+        <div style={{ fontSize: 9, color: C.textLo, lineHeight: 1.8, fontFamily: 'JetBrains Mono,monospace' }}>
+          <div>• Un seul trigger auto par stade pipeline (contrainte système)</div>
+          <div>• Désactiver un trigger n&apos;annule pas les séquences déjà en cours</div>
+          <div>• Configurer le stade d&apos;un template dans l&apos;onglet Séquences</div>
+        </div>
+      </SectionPanel>
+    </>
+  )
+}
+
 // ─── ONGLET MOBILE ────────────────────────────────────────────────────────────
 function TabMobile() {
   const [checked, setChecked] = useState<Record<string, boolean>>(
@@ -1109,7 +1225,7 @@ export default function SettingsPage() {
       {activeTab === 'sections' && <TabSections />}
       {activeTab === 'mobile' && <TabMobile />}
       {activeTab === 'sequences' && <TabSequences />}
-      {activeTab === 'triggers' && <div style={{ color: C.textLo, fontSize: 11, padding: 20, fontFamily: 'JetBrains Mono,monospace' }}>Onglet Triggers — disponible plan 03-03</div>}
+      {activeTab === 'triggers' && <TabTriggers />}
     </>
   )
 }
