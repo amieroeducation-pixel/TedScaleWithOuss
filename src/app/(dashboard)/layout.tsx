@@ -4,6 +4,8 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Toaster } from 'sonner'
+import Script from 'next/script'
+import { AchievementsProvider } from '@/components/achievements/AchievementsProvider'
 
 const NAV_SECTIONS = [
   {
@@ -431,7 +433,9 @@ export default function DashboardLayout({
           </div>
         </main>
       </div>
+      <AchievementsProvider />
       <Toaster theme="dark" position="bottom-right" richColors />
+      <Script src="/celebrations.js" strategy="lazyOnload" />
     </>
   )
 }
