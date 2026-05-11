@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Plan 03-01 COMPLETE — route API settings + hook useUserSettings + TabKPI branché
-last_updated: "2026-05-11T05:14:12.671Z"
+stopped_at: Plan 03-02 COMPLETE — routes CRUD sequences/templates + TabSequences opérationnel
+last_updated: "2026-05-11T05:21:22.932Z"
 last_activity: 2026-05-11
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 12
-  completed_plans: 9
+  completed_plans: 10
   percent: 75
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-05-10)
 ## Current Position
 
 Phase: 3 (configuration) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-05-11
 
@@ -75,6 +75,9 @@ Recent decisions affecting current work:
 - [Phase ?]: UserSettings type défini inline dans le hook — évite dépendance circulaire client→serveur
 - [Phase ?]: 03-01: z.record(z.string(), z.record(...)) — Zod v4 requiert 2 arguments pour z.record()
 - [Phase ?]: 03-01: useEffect sync pattern pour initialiser état local TabKPI depuis settings prop async
+- 03-02: step_order non exposé dans PATCH step — élimine violations UNIQUE (template_id, step_order)
+- 03-02: Conflict check auto_trigger récupère pipeline_stage courant si absent du PATCH body
+- 03-02: Steps chargés à la demande (lazy expand) — GET templates reste léger
 
 ### Pending Todos
 
