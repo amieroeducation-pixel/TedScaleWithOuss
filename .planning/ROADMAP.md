@@ -8,7 +8,7 @@ Brownfield CGP dashboard — auth, Kanban CRM, and Supabase schema are already d
 
 - [ ] **Phase 1: Data Wiring** - Branch the 4 mocked pages onto real Supabase views and APIs
 - [x] **Phase 2: Sequences Multicanales** - Engine de relances activable depuis les cartes prospect (completed 2026-05-10)
-- [ ] **Phase 3: Configuration** - Page Paramètres permettant de configurer séquences, seuils et triggers
+- [x] **Phase 3: Configuration** - Page Paramètres permettant de configurer séquences, seuils et triggers (completed 2026-05-11)
 - [ ] **Phase 4: Achievements & Artefacts** - Badges, célébrations et historique des objectifs atteints
 - [ ] **Phase 5: Automatisations Cron** - Edge Functions Supabase pour rapports et alertes automatiques
 
@@ -60,7 +60,7 @@ Brownfield CGP dashboard — auth, Kanban CRM, and Supabase schema are already d
 **Plans**: 3 plans
   - [x] 03-01-PLAN.md — Settings API + KPI thresholds (CFG-06, CFG-07, CFG-09) — route /api/settings + hook useUserSettings + onglet KPI branché
   - [x] 03-02-PLAN.md — Sequences CRUD API + onglet Séquences (CFG-01, CFG-02, CFG-03, CFG-05, CFG-08, CFG-09) — 4 routes API + TabSequences (completed 2026-05-11)
-  - [ ] 03-03-PLAN.md — Templates messages + onglet Triggers (CFG-04, CFG-05, CFG-08, CFG-09) — TabTriggers + éditeur JSONB messages
+  - [x] 03-03-PLAN.md — Templates messages + onglet Triggers (CFG-04, CFG-05, CFG-08, CFG-09) — TabTriggers + éditeur JSONB messages (completed 2026-05-11)
 **UI hint**: yes
 
 ### Phase 4: Achievements & Artefacts
@@ -97,6 +97,6 @@ Brownfield CGP dashboard — auth, Kanban CRM, and Supabase schema are already d
 |-------|----------------|--------|-----------|
 | 1. Data Wiring | 0/TBD | Not started | - |
 | 2. Sequences Multicanales | 5/5 | Complete    | 2026-05-10 |
-| 3. Configuration | 1/3 | In Progress|  |
+| 3. Configuration | 3/3 | Complete   | 2026-05-11 |
 | 4. Achievements & Artefacts | 0/TBD | Not started | - |
 | 5. Automatisations Cron | 0/TBD | Not started | - |
