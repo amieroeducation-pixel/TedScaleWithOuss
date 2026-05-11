@@ -74,7 +74,10 @@ Brownfield CGP dashboard — auth, Kanban CRM, and Supabase schema are already d
   3. Un badge s'affiche lors de l'atteinte de seuils de clients actifs (10, 25, 50 clients)
   4. L'utilisateur peut consulter la timeline des objectifs atteints avec dates
   5. Les achievements ne se re-déclenchent pas après rechargement de page (persistés en BDD)
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+  - [x] 04-01-PLAN.md -- Migration 006 + /api/achievements/check + AchievementsProvider + layout (ACH-01, ACH-02, ACH-03, ACH-05)
+  - [ ] 04-02-PLAN.md -- Page /achievements timeline + badge sidebar (ACH-04)
 **UI hint**: yes
 
 ### Phase 5: Automatisations Cron
@@ -98,5 +101,5 @@ Brownfield CGP dashboard — auth, Kanban CRM, and Supabase schema are already d
 | 1. Data Wiring | 0/TBD | Not started | - |
 | 2. Sequences Multicanales | 5/5 | Complete    | 2026-05-10 |
 | 3. Configuration | 3/3 | Complete    | 2026-05-11 |
-| 4. Achievements & Artefacts | 0/TBD | Not started | - |
+| 4. Achievements & Artefacts | 1/2 | In Progress|  |
 | 5. Automatisations Cron | 0/TBD | Not started | - |
