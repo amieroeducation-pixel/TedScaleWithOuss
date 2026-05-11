@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: verifying
+status: ready_to_plan
 stopped_at: Plan 04-02 COMPLETE — Page /achievements timeline + sidebar badge dynamique. Phase 04 complète.
 last_updated: "2026-05-11T06:03:19.417Z"
 last_activity: 2026-05-11
 progress:
   total_phases: 5
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 14
   completed_plans: 13
-  percent: 93
+  percent: 80
 ---
 
 # Project State
@@ -25,9 +25,9 @@ See: .planning/PROJECT.md (updated 2026-05-10)
 
 ## Current Position
 
-Phase: 4 (achievements-artefacts) — COMPLETE
-Plan: 2 of 2
-Status: Phase 04 complete — ACH-04 validé
+Phase: 5
+Plan: Not started
+Status: Ready to plan
 Last activity: 2026-05-11
 
 Progress: [█████████░] 93%
@@ -36,7 +36,7 @@ Progress: [█████████░] 93%
 
 **Velocity:**
 
-- Total plans completed: 8
+- Total plans completed: 10
 - Average duration: —
 - Total execution time: —
 
@@ -46,6 +46,7 @@ Progress: [█████████░] 93%
 |-------|-------|-------|----------|
 | 2 | 5 | - | - |
 | 3 | 3 | - | - |
+| 4 | 2 | - | - |
 
 **Recent Trend:** No data yet
 | Phase 03-configuration P01 | 25min | 2 tasks | 3 files |

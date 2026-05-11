@@ -101,5 +101,5 @@ Plans:
 | 1. Data Wiring | 0/TBD | Not started | - |
 | 2. Sequences Multicanales | 5/5 | Complete    | 2026-05-10 |
 | 3. Configuration | 3/3 | Complete    | 2026-05-11 |
-| 4. Achievements & Artefacts | 2/2 | Complete   | 2026-05-11 |
+| 4. Achievements & Artefacts | 2/2 | Complete    | 2026-05-11 |
 | 5. Automatisations Cron | 0/TBD | Not started | - |
