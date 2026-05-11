@@ -720,6 +720,272 @@ function TabSections() {
   )
 }
 
+// ─── ONGLET SÉQUENCES ─────────────────────────────────────────────────────────
+
+type SequenceStep = {
+  id: string
+  step_order: number
+  channel: string
+  delay_days: number
+  message_template: string | null
+}
+
+type TemplateWithSteps = {
+  id: string
+  name: string
+  pipeline_stage: string | null
+  auto_trigger: boolean
+  steps: SequenceStep[]
+}
+
+const PIPELINE_STAGE_OPTIONS = ['a_contacter', 'rdv1', 'rdv2', 'rdv3', 'converti', 'perdu'] as const
+const CHANNEL_OPTIONS = ['whatsapp', 'email', 'sms', 'call_reminder', 'linkedin'] as const
+
+function TabSequences() {
+  const [templates, setTemplates] = useState<TemplateWithSteps[]>([])
+  const [loading, setLoading] = useState(true)
+  const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [creating, setCreating] = useState(false)
+  const [newName, setNewName] = useState('')
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    loadTemplates()
+  }, [])
+
+  async function loadTemplates() {
+    setLoading(true)
+    try {
+      const res = await fetch('/api/crm/sequences/templates')
+      const { data, error: apiErr } = await res.json()
+      if (apiErr) { setError(apiErr); return }
+      setTemplates((data?.templates ?? []).map((t: Omit<TemplateWithSteps, 'steps'>) => ({ ...t, steps: [] })))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function loadSteps(templateId: string) {
+    const res = await fetch(`/api/crm/sequences/templates/${templateId}/steps`)
+    const { data, error: apiErr } = await res.json()
+    if (apiErr) { setError(apiErr); return }
+    setTemplates(prev => prev.map(t =>
+      t.id === templateId ? { ...t, steps: data?.steps ?? [] } : t
+    ))
+  }
+
+  async function createTemplate() {
+    if (!newName.trim()) return
+    setError(null)
+    const res = await fetch('/api/crm/sequences/templates', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: newName.trim() }),
+    })
+    const { data, error: apiErr } = await res.json()
+    if (apiErr) { setError(apiErr); return }
+    setTemplates(prev => [...prev, { ...data.template, steps: [] }])
+    setNewName('')
+    setCreating(false)
+  }
+
+  async function deleteTemplate(id: string) {
+    setError(null)
+    const res = await fetch(`/api/crm/sequences/templates/${id}`, { method: 'DELETE' })
+    const { error: apiErr } = await res.json()
+    if (apiErr) { setError(apiErr); return }
+    setTemplates(prev => prev.filter(t => t.id !== id))
+    if (expandedId === id) setExpandedId(null)
+  }
+
+  async function patchTemplate(id: string, patch: Record<string, unknown>) {
+    setError(null)
+    const res = await fetch(`/api/crm/sequences/templates/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(patch),
+    })
+    const { data, error: apiErr } = await res.json()
+    if (apiErr) { setError(apiErr); return }
+    setTemplates(prev => prev.map(t =>
+      t.id === id ? { ...t, ...data.template } : t
+    ))
+  }
+
+  async function toggleAutoTrigger(t: TemplateWithSteps) {
+    setError(null)
+    const res = await fetch(`/api/crm/sequences/templates/${t.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ auto_trigger: !t.auto_trigger }),
+    })
+    const { data, error: apiErr } = await res.json()
+    if (apiErr) { setError(apiErr); return }
+    setTemplates(prev => prev.map(tpl =>
+      tpl.id === t.id ? { ...tpl, ...data.template } : tpl
+    ))
+  }
+
+  async function addStep(templateId: string) {
+    setError(null)
+    const t = templates.find(tpl => tpl.id === templateId)
+    const step_order = (t?.steps?.length ?? 0) + 1
+    const res = await fetch(`/api/crm/sequences/templates/${templateId}/steps`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ channel: 'email', delay_days: 3, step_order }),
+    })
+    const { error: apiErr } = await res.json()
+    if (apiErr) { setError(apiErr); return }
+    await loadSteps(templateId)
+  }
+
+  async function deleteStep(templateId: string, stepId: string) {
+    setError(null)
+    const res = await fetch(`/api/crm/sequences/templates/${templateId}/steps/${stepId}`, {
+      method: 'DELETE',
+    })
+    const { error: apiErr } = await res.json()
+    if (apiErr) { setError(apiErr); return }
+    setTemplates(prev => prev.map(t =>
+      t.id === templateId ? { ...t, steps: t.steps.filter(s => s.id !== stepId) } : t
+    ))
+  }
+
+  async function patchStep(templateId: string, stepId: string, patch: Record<string, unknown>) {
+    setError(null)
+    const res = await fetch(`/api/crm/sequences/templates/${templateId}/steps/${stepId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(patch),
+    })
+    const { data, error: apiErr } = await res.json()
+    if (apiErr) { setError(apiErr); return }
+    setTemplates(prev => prev.map(t =>
+      t.id === templateId
+        ? { ...t, steps: t.steps.map(s => s.id === stepId ? { ...s, ...data.step } : s) }
+        : t
+    ))
+  }
+
+  async function handleExpand(id: string) {
+    if (expandedId === id) {
+      setExpandedId(null)
+      return
+    }
+    setExpandedId(id)
+    const t = templates.find(tpl => tpl.id === id)
+    if (t && t.steps.length === 0) {
+      await loadSteps(id)
+    }
+  }
+
+  if (loading) {
+    return (
+      <SectionPanel title="SEQUENCES PAR STADE PIPELINE">
+        <div style={{ fontSize: 9, color: C.textLo, padding: 12, fontFamily: 'JetBrains Mono,monospace' }}>Chargement...</div>
+      </SectionPanel>
+    )
+  }
+
+  return (
+    <SectionPanel title="SEQUENCES PAR STADE PIPELINE">
+      <div style={{ marginBottom: 12 }}>
+        <SetBtn color={C.green} bg="#0d1a0d" onClick={() => setCreating(true)}>+ Nouveau template</SetBtn>
+      </div>
+
+      {creating && (
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 12, padding: 10, background: C.surface2, borderRadius: 6, border: `1px solid ${C.line}` }}>
+          <input
+            value={newName}
+            onChange={e => setNewName(e.target.value)}
+            placeholder="Nom du template..."
+            onKeyDown={e => { if (e.key === 'Enter') createTemplate() }}
+            style={{ flex: 1, padding: '6px 8px', background: C.bgMid, color: C.text, border: `1px solid ${C.line}`, borderRadius: 4, fontSize: 10, fontFamily: 'Inter,sans-serif' }}
+          />
+          <SetBtn color={C.green} bg="#0d1a0d" onClick={createTemplate}>Créer</SetBtn>
+          <SetBtn color={C.textLo} bg={C.surface1} onClick={() => { setCreating(false); setNewName('') }}>Annuler</SetBtn>
+        </div>
+      )}
+
+      {templates.length === 0 && !creating && (
+        <div style={{ fontSize: 9, color: C.textLo, padding: 12, fontFamily: 'JetBrains Mono,monospace', textAlign: 'center' }}>
+          Aucun template. Crée ton premier template de séquence.
+        </div>
+      )}
+
+      {templates.map(t => (
+        <div key={t.id} style={{ border: `1px solid ${C.line}`, borderRadius: 8, marginBottom: 8, overflow: 'hidden' }}>
+          {/* Header template */}
+          <SetRow>
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <span style={{ color: C.textHi, fontSize: 11, fontFamily: 'Inter,sans-serif', fontWeight: 500 }}>{t.name}</span>
+              <select
+                value={t.pipeline_stage ?? ''}
+                onChange={e => patchTemplate(t.id, { pipeline_stage: e.target.value || null })}
+                style={{ background: C.surface2, color: C.text, border: `1px solid ${C.line}`, borderRadius: 4, fontSize: 10, padding: '3px 6px', fontFamily: 'JetBrains Mono,monospace' }}
+              >
+                <option value="">-- Aucun stade --</option>
+                {PIPELINE_STAGE_OPTIONS.map(s => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+              <span style={{ fontSize: 9, color: C.textLo, fontFamily: 'JetBrains Mono,monospace' }}>Auto</span>
+              <Toggle checked={t.auto_trigger} onChange={() => toggleAutoTrigger(t)} />
+              <SetBtn color={C.indigo} bg="#0d1a2e" onClick={() => handleExpand(t.id)}>
+                {expandedId === t.id ? '▲ Etapes' : '▼ Etapes'}
+              </SetBtn>
+              <SetBtn color={C.cyan} bg="#1f0d0d" onClick={() => deleteTemplate(t.id)}>Suppr</SetBtn>
+            </div>
+          </SetRow>
+
+          {/* Steps — visibles si expanded */}
+          {expandedId === t.id && (
+            <div style={{ padding: '8px 12px', background: C.bgMid }}>
+              {t.steps.length === 0 && (
+                <div style={{ fontSize: 9, color: C.textLo, marginBottom: 8, fontFamily: 'JetBrains Mono,monospace' }}>Aucune étape. Ajoute la première.</div>
+              )}
+              {t.steps.map(step => (
+                <div key={step.id} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6 }}>
+                  <span style={{ fontSize: 9, color: C.gold, width: 32, textAlign: 'center', fontFamily: 'JetBrains Mono,monospace', flexShrink: 0 }}>J+{step.delay_days}</span>
+                  <select
+                    value={step.channel}
+                    onChange={e => patchStep(t.id, step.id, { channel: e.target.value })}
+                    style={{ background: C.surface2, color: C.text, border: `1px solid ${C.line}`, borderRadius: 4, fontSize: 10, padding: '3px 6px', fontFamily: 'JetBrains Mono,monospace' }}
+                  >
+                    {CHANNEL_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                  <input
+                    type="number"
+                    value={step.delay_days}
+                    min={0}
+                    max={365}
+                    onChange={e => patchStep(t.id, step.id, { delay_days: Number(e.target.value) })}
+                    style={{ width: 50, background: C.surface2, color: C.gold, border: `1px solid ${C.line}`, borderRadius: 4, fontSize: 10, textAlign: 'center', fontFamily: 'JetBrains Mono,monospace', padding: '3px 4px' }}
+                  />
+                  <span style={{ fontSize: 9, color: C.textLo, fontFamily: 'JetBrains Mono,monospace' }}>jours</span>
+                  <SetBtn color={C.cyan} bg="#1f0d0d" onClick={() => deleteStep(t.id, step.id)}>x</SetBtn>
+                </div>
+              ))}
+              <div style={{ marginTop: 8 }}>
+                <SetBtn color={C.green} bg="#0d1a0d" onClick={() => addStep(t.id)}>+ Etape</SetBtn>
+              </div>
+            </div>
+          )}
+        </div>
+      ))}
+
+      {error && (
+        <div style={{ color: C.cyan, fontSize: 10, padding: 8, background: '#1f0d0d', borderRadius: 6, border: `1px solid ${C.cyan}40`, marginTop: 8, fontFamily: 'JetBrains Mono,monospace' }}>
+          {error}
+        </div>
+      )}
+    </SectionPanel>
+  )
+}
+
 // ─── ONGLET MOBILE ────────────────────────────────────────────────────────────
 function TabMobile() {
   const [checked, setChecked] = useState<Record<string, boolean>>(
@@ -842,7 +1108,7 @@ export default function SettingsPage() {
       {activeTab === 'integrations' && <TabIntegrations />}
       {activeTab === 'sections' && <TabSections />}
       {activeTab === 'mobile' && <TabMobile />}
-      {activeTab === 'sequences' && <div style={{ color: C.textLo, fontSize: 11, padding: 20, fontFamily: 'JetBrains Mono,monospace' }}>Onglet Séquences — disponible plan 03-02</div>}
+      {activeTab === 'sequences' && <TabSequences />}
       {activeTab === 'triggers' && <div style={{ color: C.textLo, fontSize: 11, padding: 20, fontFamily: 'JetBrains Mono,monospace' }}>Onglet Triggers — disponible plan 03-03</div>}
     </>
   )
