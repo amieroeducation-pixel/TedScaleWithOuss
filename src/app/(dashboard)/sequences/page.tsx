@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { C } from '@/lib/theme'
 
 type StepType = 'mail' | 'wa' | 'sms' | 'li'
@@ -271,6 +271,15 @@ function SeqCard({ seq }: { seq: Sequence }) {
 }
 
 export default function SequencesPage() {
+  const [dbTemplates, setDbTemplates] = useState<{ id: string; name: string; pipeline_stage: string | null; auto_trigger: boolean }[]>([])
+
+  useEffect(() => {
+    fetch('/api/crm/sequences/templates')
+      .then(r => r.json())
+      .then(json => { if (json.success) setDbTemplates(json.data.templates) })
+      .catch(() => {})
+  }, [])
+
   return (
     <>
       <style>{"@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap')"}</style>
@@ -285,7 +294,10 @@ export default function SequencesPage() {
             </div>
           </div>
           <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.textLo, marginTop: 2, paddingLeft: 13 }}>
-            2 bibliothèques · {SEQ_PROSPECTION.length + SEQ_PATRIMOINE.length} séquences
+            {dbTemplates.length > 0
+              ? `${dbTemplates.length} séquences personnalisées · 2 bibliothèques par défaut`
+              : `2 bibliothèques · ${SEQ_PROSPECTION.length + SEQ_PATRIMOINE.length} séquences`
+            }
           </div>
         </div>
         <button style={{ fontFamily: 'Oswald,sans-serif', fontSize: 11, fontWeight: 500, color: C.bgDeep, background: `linear-gradient(90deg,${C.cyan},${C.indigo})`, border: 'none', borderRadius: 8, padding: '8px 16px', cursor: 'pointer', letterSpacing: '0.1em' }}>
@@ -308,6 +320,52 @@ export default function SequencesPage() {
           </div>
         ))}
       </div>
+
+      {/* Mes séquences (DB) — affiché uniquement si des templates existent */}
+      {dbTemplates.length > 0 && (
+        <>
+          <div style={{
+            fontFamily: 'Oswald,sans-serif', fontSize: 14, fontWeight: 600,
+            color: C.green, letterSpacing: '0.1em', marginBottom: 4, textTransform: 'uppercase',
+          }}>
+            Mes séquences
+          </div>
+          <div style={{ height: 1, background: `linear-gradient(90deg,${C.green},transparent)`, marginBottom: 6 }} />
+          <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.textLo, marginBottom: 12 }}>
+            Séquences créées et enregistrées dans votre compte
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
+            {dbTemplates.map(t => (
+              <div key={t.id} style={{
+                background: `linear-gradient(180deg,${C.surface1},${C.bgMid})`,
+                border: `1px solid ${C.green}40`, borderRadius: 12, padding: '12px 14px',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontSize: 16 }}>📋</span>
+                  <div>
+                    <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 12, fontWeight: 500, color: C.green }}>{t.name}</div>
+                    {t.pipeline_stage && (
+                      <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.textLo, marginTop: 2 }}>
+                        Étape : {t.pipeline_stage}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <span style={{
+                  fontFamily: 'JetBrains Mono,monospace', fontSize: 8, fontWeight: 700,
+                  color: t.auto_trigger ? C.gold : C.textLo,
+                  background: t.auto_trigger ? `${C.gold}18` : `${C.textLo}18`,
+                  border: `1px solid ${t.auto_trigger ? C.gold : C.textLo}40`,
+                  padding: '1px 7px', borderRadius: 4,
+                }}>
+                  {t.auto_trigger ? 'Auto' : 'Manuel'}
+                </span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
 
       {/* Library 1 — Tunnel de prospection */}
       <div style={{

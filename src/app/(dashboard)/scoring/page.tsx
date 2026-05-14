@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { C } from '@/lib/theme'
 
 type ScoreRow = { label: string; val: number }
@@ -87,9 +87,26 @@ function StarRow({ label, val, onSet }: { label: string; val: number; onSet: (v:
   )
 }
 
+type ProspectRow = { id: string; full_name: string; profession: string | null; city: string | null; lead_score: number | null; pipeline_stage: string | null }
+
 export default function ScoringPage() {
   const prof = useStarRows(PROFESSIONS)
   const zone = useStarRows(ZONES)
+  const [topProspects, setTopProspects] = useState<ProspectRow[]>([])
+
+  useEffect(() => {
+    fetch('/api/prospects?limit=50')
+      .then(r => r.json())
+      .then(json => {
+        if (json.success && Array.isArray(json.data)) {
+          const sorted = [...json.data]
+            .sort((a, b) => (b.lead_score ?? 0) - (a.lead_score ?? 0))
+            .slice(0, 8)
+          setTopProspects(sorted)
+        }
+      })
+      .catch(() => {})
+  }, [])
 
   return (
     <>
@@ -112,6 +129,52 @@ export default function ScoringPage() {
       <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.textLo, marginBottom: 14, lineHeight: 1.6 }}>
         Score = moyenne(profession + zone). Modifiable à la volée, le Kanban se met à jour automatiquement.
       </div>
+
+      {/* Top prospects scorés */}
+      {topProspects.length > 0 && (
+        <div style={{ marginBottom: 16 }}>
+          <Panel style={{ paddingBottom: 8 }}>
+            <PanelTitle title="Top prospects — par lead score" />
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              {topProspects.map((p, i) => {
+                const score = p.lead_score ?? 0
+                const scoreCol = score >= 80 ? C.green : score >= 60 ? C.gold : C.cyan
+                return (
+                  <div key={p.id} style={{
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    padding: '6px 0', borderBottom: `0.5px solid ${C.lineSoft}`,
+                  }}>
+                    <span style={{ fontSize: 9, color: C.textVlo, width: 14, textAlign: 'right', fontFamily: 'JetBrains Mono,monospace' }}>{i + 1}</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 10, color: C.textHi, fontWeight: 600 }}>{p.full_name}</div>
+                      {(p.profession || p.city) && (
+                        <div style={{ fontSize: 8, color: C.textLo }}>{[p.profession, p.city].filter(Boolean).join(' — ')}</div>
+                      )}
+                    </div>
+                    <div style={{ fontSize: 8, color: C.textLo, fontFamily: 'JetBrains Mono,monospace' }}>
+                      {p.pipeline_stage ?? '—'}
+                    </div>
+                    <div style={{
+                      fontSize: 11, fontWeight: 800, color: scoreCol,
+                      background: scoreCol + '22', borderRadius: 4, padding: '1px 7px',
+                      fontFamily: 'JetBrains Mono,monospace',
+                    }}>{score}</div>
+                  </div>
+                )
+              })}
+            </div>
+          </Panel>
+        </div>
+      )}
+      {topProspects.length === 0 && (
+        <div style={{
+          padding: '12px 16px', borderRadius: 8, marginBottom: 16,
+          background: C.surface1, border: `1px solid ${C.lineSoft}`,
+          fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.textLo, textAlign: 'center',
+        }}>
+          Aucun prospect scoré — ajoutez des prospects depuis le CRM pour voir leur classement ici.
+        </div>
+      )}
 
       {/* Two-column scoring */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>

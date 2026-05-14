@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { C } from '@/lib/theme'
 
 type ThemeId = 'decouverte' | 'prospection' | 'objections' | 'closing'
@@ -71,9 +71,25 @@ function PanelTitle({ title, accent = C.indigo }: { title: string; accent?: stri
   )
 }
 
+type ProductRow = { type: string; label: string; montant: number; pct: number; color: string }
+
 export default function CommercePage() {
   const [selectedTheme, setSelectedTheme] = useState<ThemeId>('decouverte')
   const [watchedVideos, setWatchedVideos] = useState<Set<string>>(new Set())
+  const [products, setProducts] = useState<ProductRow[]>([])
+  const [productTotal, setProductTotal] = useState(0)
+
+  useEffect(() => {
+    fetch('/api/revenue/products')
+      .then(r => r.json())
+      .then(json => {
+        if (json.success) {
+          setProducts(json.data.products)
+          setProductTotal(json.data.total)
+        }
+      })
+      .catch(() => {})
+  }, [])
 
   const theme = THEMES.find(t => t.id === selectedTheme)!
   const videos = VIDEOS[selectedTheme]
@@ -219,6 +235,36 @@ export default function CommercePage() {
           </div>
         ))}
       </div>
+
+      {/* CA par produit */}
+      <Panel accent={C.gold} style={{ marginBottom: 16 }}>
+        <PanelTitle title="CA par produit" accent={C.gold} />
+        {products.length === 0 ? (
+          <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.textLo, textAlign: 'center', padding: '8px 0' }}>
+            Aucun contrat enregistré — les commissions s&apos;afficheront ici.
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {products.map(p => (
+              <div key={p.type} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ width: 8, height: 8, borderRadius: '50%', background: p.color, flexShrink: 0 }} />
+                <div style={{ fontSize: 10, color: C.text, flex: 1 }}>{p.label}</div>
+                <div style={{ flex: 2, height: 6, background: C.surface3, borderRadius: 3, overflow: 'hidden' }}>
+                  <div style={{ width: `${p.pct}%`, height: '100%', background: p.color, borderRadius: 3 }} />
+                </div>
+                <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: p.color, width: 70, textAlign: 'right', flexShrink: 0 }}>
+                  {p.montant.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })}
+                </div>
+              </div>
+            ))}
+            <div style={{ borderTop: `1px solid ${C.lineSoft}`, paddingTop: 8, fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.textLo, textAlign: 'right' }}>
+              Total commissions percues : <span style={{ color: C.gold, fontWeight: 700 }}>
+                {productTotal.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })}
+              </span>
+            </div>
+          </div>
+        )}
+      </Panel>
 
       {/* Daily objective info */}
       <Panel accent={C.indigo}>

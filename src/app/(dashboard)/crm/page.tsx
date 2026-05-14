@@ -691,11 +691,12 @@ function KanbanColumn({ stage, prospects, onCardClick }: {
 
 // --- PAGE ---
 export default function CrmPage() {
-  const [prospects, setProspects] = useState<Prospect[]>(INITIAL_PROSPECTS)
+  const [prospects, setProspects] = useState<Prospect[]>([])
   const [activeId, setActiveId] = useState<string | null>(null)
   const [selectedProspect, setSelectedProspect] = useState<Prospect | null>(null)
   const [filter, setFilter] = useState<'Tous' | 'TNS' | 'Chefs' | '★★★★★'>('Tous')
   const [isLoading, setIsLoading] = useState(true)
+  const [fetchError, setFetchError] = useState<string | null>(null)
 
   // Fetch real prospects from DB
   const fetchProspects = useCallback(async () => {
@@ -724,7 +725,7 @@ export default function CrmPage() {
         setProspects(mapped)
       }
     } catch {
-      // Network error — keep mock data, show nothing
+      setFetchError('Impossible de charger les prospects. Vérifiez votre connexion.')
     } finally {
       setIsLoading(false)
     }
@@ -792,8 +793,6 @@ export default function CrmPage() {
     }
     if (stage !== currentStage) persistMove(id, stage)
   }
-
-  void isLoading // used for future loading skeleton
 
   const totalPipeline = filteredProspects.filter(p => !['Converti', 'Perdu'].includes(p.stage)).length
   const totalConverti = filteredProspects.filter(p => p.stage === 'Converti').length
@@ -865,6 +864,22 @@ export default function CrmPage() {
           </div>
         ))}
       </div>
+
+      {/* Loading / Error states */}
+      {isLoading && (
+        <div style={{ textAlign: 'center', padding: '24px 0', color: C.textLo, fontSize: 12 }}>
+          Chargement du CRM…
+        </div>
+      )}
+      {fetchError && (
+        <div style={{
+          padding: '10px 14px', borderRadius: 8, marginBottom: 12,
+          background: `${C.warn}15`, border: `1px solid ${C.warn}40`,
+          color: C.warn, fontSize: 11,
+        }}>
+          ⚠️ {fetchError}
+        </div>
+      )}
 
       {/* Board */}
       <DndContext
