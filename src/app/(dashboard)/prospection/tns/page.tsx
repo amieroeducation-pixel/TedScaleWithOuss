@@ -340,7 +340,9 @@ export default function TnsPage() {
               {/* Info */}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 12, color: C.textHi, fontWeight: 500, marginBottom: 1 }}>{p.nom}</div>
-                <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.textLo }}>{p.metier} · {p.ville} · {p.telephone}</div>
+                <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.textLo }}>
+                  {p.metier} · {p.ville} · <a href={`tel:${p.telephone}`} style={{ color: C.gold, textDecoration: 'none' }}>{p.telephone}</a>
+                </div>
               </div>
 
               {/* Score */}

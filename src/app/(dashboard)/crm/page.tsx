@@ -414,8 +414,8 @@ function ProspectDrawer({ prospect, onClose, onStageChange }: {
       <div style={{ padding: '16px 20px', borderBottom: `1px solid ${C.line}` }}>
         <div style={{ fontSize: 9, color: C.textLo, marginBottom: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1 }}>Contact</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <div style={{ fontSize: 12, color: C.textMid }}>📞 {prospect.telephone}</div>
-          <div style={{ fontSize: 12, color: C.textMid }}>✉️ {prospect.email}</div>
+          <a href={`tel:${prospect.telephone}`} style={{ fontSize: 12, color: C.gold, textDecoration: 'none', display: 'block' }}>📞 {prospect.telephone}</a>
+          <a href={`mailto:${prospect.email}`} style={{ fontSize: 12, color: C.textMid, textDecoration: 'none', display: 'block' }}>✉️ {prospect.email}</a>
           <div style={{ fontSize: 11, color: C.textLo }}>Dernier contact : {prospect.lastContact}</div>
         </div>
       </div>
