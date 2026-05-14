@@ -85,14 +85,23 @@ export default function PipelinePage() {
   } | null>(null)
 
   const [loading, setLoading] = useState(true)
+  const [calendarEvents, setCalendarEvents] = useState<{
+    id: string; title: string; start: string | null; end: string | null; allDay: boolean; location: string | null
+  }[]>([])
+  const [calendarConnected, setCalendarConnected] = useState(false)
 
   useEffect(() => {
     Promise.all([
       fetch('/api/analytics/pipeline').then(r => r.json()),
       fetch('/api/analytics/closing').then(r => r.json()),
-    ]).then(([pRes, cRes]) => {
+      fetch('/api/calendar/events').then(r => r.json()),
+    ]).then(([pRes, cRes, calRes]) => {
       if (pRes.success) setPipelineData(pRes.data)
       if (cRes.success) setClosingData(cRes.data)
+      if (calRes.success) {
+        setCalendarEvents(calRes.data.events ?? [])
+        setCalendarConnected(calRes.data.connected ?? false)
+      }
     }).catch(() => {}).finally(() => setLoading(false))
   }, [])
 
@@ -268,13 +277,55 @@ export default function PipelinePage() {
 
       {/* Row 3: placeholders pour données futures */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 12 }}>
-        <div style={{ background: C.surface1, border: `1px solid ${C.lineSoft}`, borderRadius: 10, padding: '14px 16px', opacity: 0.6 }}>
+        <div style={{ background: C.surface1, border: `1px solid ${C.line}`, borderRadius: 10, padding: '14px 16px' }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: C.textHi, marginBottom: 12, textTransform: 'uppercase', letterSpacing: 1 }}>
             📅 RDV cette semaine
           </div>
-          <div style={{ fontSize: 10, color: C.textLo, textAlign: 'center', padding: '20px 0', lineHeight: 1.6 }}>
-            Données agenda non disponibles.<br />À connecter avec Google Calendar.
-          </div>
+          {!calendarConnected ? (
+            <div style={{ textAlign: 'center', padding: '16px 0' }}>
+              <div style={{ fontSize: 10, color: C.textLo, marginBottom: 10, lineHeight: 1.6 }}>
+                Google Calendar non connecté.
+              </div>
+              <a href="/api/auth/google-calendar" style={{
+                display: 'inline-block', padding: '7px 14px', borderRadius: 6, textDecoration: 'none',
+                fontSize: 10, fontWeight: 600, fontFamily: 'Oswald,sans-serif',
+                background: `linear-gradient(90deg,${C.indigo},${C.cyan})`, color: C.bgDeep,
+              }}>
+                🔗 Connecter Calendar
+              </a>
+            </div>
+          ) : calendarEvents.length === 0 ? (
+            <div style={{ fontSize: 10, color: C.textLo, textAlign: 'center', padding: '16px 0' }}>
+              Aucun RDV cette semaine.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {calendarEvents.map(ev => {
+                const date = ev.start ? new Date(ev.start) : null
+                const dayLabel = date ? date.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric' }) : '—'
+                const timeLabel = !ev.allDay && ev.start ? new Date(ev.start).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : 'Journée'
+                return (
+                  <div key={ev.id} style={{
+                    display: 'flex', alignItems: 'flex-start', gap: 8,
+                    padding: '7px 10px', background: C.surface2, borderRadius: 6,
+                    border: `1px solid ${C.lineSoft}`,
+                    borderLeft: `3px solid ${C.indigo}`,
+                  }}>
+                    <div style={{ flexShrink: 0, textAlign: 'center', minWidth: 38 }}>
+                      <div style={{ fontSize: 9, color: C.indigo, fontWeight: 700, fontFamily: 'JetBrains Mono,monospace' }}>{dayLabel}</div>
+                      <div style={{ fontSize: 8, color: C.textLo, fontFamily: 'JetBrains Mono,monospace' }}>{timeLabel}</div>
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 10, color: C.textHi, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.title}</div>
+                      {ev.location && (
+                        <div style={{ fontSize: 8, color: C.textLo, marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>📍 {ev.location}</div>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
 
         <div style={{ background: C.surface1, border: `1px solid ${C.lineSoft}`, borderRadius: 10, padding: '14px 16px', opacity: 0.6 }}>

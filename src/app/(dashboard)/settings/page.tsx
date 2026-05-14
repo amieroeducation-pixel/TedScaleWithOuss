@@ -708,8 +708,52 @@ function TabNotifications({
 
 // ─── ONGLET INTÉGRATIONS ─────────────────────────────────────────────────────
 function TabIntegrations() {
+  const [calendarStatus, setCalendarStatus] = useState<'loading' | 'connected' | 'disconnected'>('loading')
+
+  useEffect(() => {
+    fetch('/api/calendar/events')
+      .then(r => r.json())
+      .then(json => setCalendarStatus(json.success && json.data?.connected ? 'connected' : 'disconnected'))
+      .catch(() => setCalendarStatus('disconnected'))
+  }, [])
+
   return (
     <>
+      {/* Google Calendar */}
+      <SectionPanel title="📅 Google Calendar">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <div>
+            <div style={{ fontSize: 9, color: C.textLo, fontFamily: 'JetBrains Mono,monospace', marginBottom: 4 }}>
+              Synchronise tes RDVs Outlook / Fantastical via Google Calendar.
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={{ width: 7, height: 7, borderRadius: '50%', background: calendarStatus === 'connected' ? '#4ade80' : calendarStatus === 'loading' ? '#e8c878' : '#6b7280' }} />
+              <span style={{ fontSize: 9, color: C.textMid, fontFamily: 'JetBrains Mono,monospace' }}>
+                {calendarStatus === 'connected' ? 'Connecté' : calendarStatus === 'loading' ? 'Vérification…' : 'Non connecté'}
+              </span>
+            </div>
+          </div>
+          <a
+            href="/api/auth/google-calendar"
+            style={{
+              padding: '8px 16px', borderRadius: 6, textDecoration: 'none', fontSize: 10, fontWeight: 600,
+              fontFamily: 'Oswald,sans-serif', letterSpacing: '0.05em',
+              background: calendarStatus === 'connected' ? C.surface2 : `linear-gradient(90deg,${C.indigo},${C.cyan})`,
+              color: calendarStatus === 'connected' ? C.textLo : C.bgDeep,
+              border: calendarStatus === 'connected' ? `1px solid ${C.line}` : 'none',
+              cursor: 'pointer',
+            }}
+          >
+            {calendarStatus === 'connected' ? '🔄 Reconnecter' : '🔗 Connecter Google Calendar'}
+          </a>
+        </div>
+        {calendarStatus === 'connected' && (
+          <div style={{ fontSize: 8, color: C.green, fontFamily: 'JetBrains Mono,monospace', padding: '6px 10px', background: `${C.green}12`, borderRadius: 4 }}>
+            ✅ Tes RDVs apparaissent dans la page Pipeline — section &quot;RDV cette semaine&quot;
+          </div>
+        )}
+      </SectionPanel>
+
       <SectionPanel title="🔄 Workflows & Automatisations">
         <div style={{ fontSize: 9, color: C.textLo, marginBottom: 12, fontFamily: 'JetBrains Mono,monospace' }}>
           Configure tes workflows automatisés avec clés API et serveurs MCP. Choisis dans quelle base de données les prospects arrivent.
