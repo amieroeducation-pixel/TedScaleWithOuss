@@ -6,7 +6,7 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get('code')
   const error = searchParams.get('error')
   const origin = new URL(request.url).origin
-  const settingsUrl = `${origin}/dashboard/settings?tab=integrations`
+  const settingsUrl = `${origin}/settings?tab=integrations`
 
   if (error || !code) {
     return NextResponse.redirect(`${settingsUrl}&calendar_error=1`)
