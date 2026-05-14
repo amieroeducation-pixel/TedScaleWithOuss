@@ -57,26 +57,8 @@ const NAV_SECTIONS = [
   },
 ]
 
-const ribbon = 'linear-gradient(90deg,#c84048 0%,#ff6470 25%,#f5e8c8 55%,#7a92e8 80%,#5c70b8 100%)'
-
-function StarballSVG() {
-  return (
-    <svg width={32} height={32} viewBox="0 0 36 36" fill="none" style={{ filter: 'drop-shadow(0 0 10px rgba(255,100,112,0.6))', flexShrink: 0 }}>
-      <circle cx={18} cy={18} r={17} fill="#14193d" stroke="#3a4690" strokeWidth={1} />
-      <circle cx={18} cy={18} r={13} fill="#11163a" opacity={0.7} />
-      <path d="M18 7l2.35 7.23h7.6l-6.15 4.47 2.35 7.23L18 21.46l-6.15 4.47 2.35-7.23-6.15-4.47h7.6z" fill="#ffffff" opacity={0.9} />
-      <path d="M18 5l1.4 4.3h4.52l-3.66 2.66 1.4 4.3L18 13.6l-3.66 2.66 1.4-4.3-3.66-2.66h4.52z" fill="#ff6470" opacity={0.5} />
-    </svg>
-  )
-}
-
-export default function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  const [search, setSearch] = useState('')
   const [recentCount, setRecentCount] = useState<number>(0)
 
   useEffect(() => {
@@ -90,7 +72,7 @@ export default function DashboardLayout({
         )
         setRecentCount(recent.length)
       })
-      .catch(() => {/* silencieux */})
+      .catch(() => {})
   }, [])
 
   return (
@@ -98,55 +80,25 @@ export default function DashboardLayout({
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: #0a0e22; }
+        body { background: #0a0a0a; }
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #3a4690; border-radius: 2px; }
+        ::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 2px; }
+        ::-webkit-scrollbar-thumb:hover { background: #c9a84c; }
       `}</style>
 
       <div style={{
         display: 'flex',
-        background: 'linear-gradient(180deg,#0a0e22 0%,#14193d 50%,#0a0e22 100%)',
+        background: '#0a0a0a',
         minHeight: '100vh',
-        fontFamily: "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-        position: 'relative',
-        overflow: 'hidden',
+        fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
       }}>
-
-        {/* Radial overlays on main bg */}
-        <div style={{
-          position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0,
-          background: [
-            'radial-gradient(ellipse 1200px 600px at 50% -10%,rgba(200,64,72,0.45),transparent 55%)',
-            'radial-gradient(ellipse 900px 500px at 85% 110%,rgba(92,112,184,0.35),transparent 60%)',
-          ].join(','),
-        }} />
-
-        {/* Star field */}
-        <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0 }}>
-          {[
-            { top: '8%', left: '22%', size: 2 }, { top: '15%', left: '55%', size: 1.5 },
-            { top: '23%', left: '78%', size: 1 }, { top: '31%', left: '12%', size: 1.5 },
-            { top: '42%', left: '67%', size: 2 }, { top: '51%', left: '38%', size: 1 },
-            { top: '60%', left: '88%', size: 1.5 }, { top: '70%', left: '5%', size: 1 },
-            { top: '77%', left: '48%', size: 2 }, { top: '85%', left: '72%', size: 1 },
-            { top: '91%', left: '30%', size: 1.5 }, { top: '5%', left: '92%', size: 1 },
-            { top: '37%', left: '92%', size: 1.5 }, { top: '65%', left: '58%', size: 1 },
-          ].map((s, i) => (
-            <div key={i} style={{
-              position: 'absolute', top: s.top, left: s.left,
-              width: s.size, height: s.size, borderRadius: '50%',
-              background: 'radial-gradient(circle,rgba(255,255,255,0.9),rgba(122,146,232,0.4))',
-              filter: 'blur(0.3px)',
-            }} />
-          ))}
-        </div>
 
         {/* SIDEBAR */}
         <aside style={{
           width: 185,
-          background: 'linear-gradient(180deg,rgba(8,18,74,0.96),rgba(4,8,31,0.99))',
-          borderRight: '1px solid #3a4690',
+          background: '#0f0f0f',
+          borderRight: '0.5px solid #1a1a1a',
           display: 'flex',
           flexDirection: 'column',
           flexShrink: 0,
@@ -157,40 +109,27 @@ export default function DashboardLayout({
           zIndex: 10,
         }}>
 
-          {/* Prismatic ribbon top */}
-          <div style={{ height: 2, background: ribbon, flexShrink: 0 }} />
-
-          {/* Logo area */}
+          {/* Logo */}
           <div style={{
-            padding: '14px 14px 12px',
-            borderBottom: '1px solid #3a4690',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
-            flexShrink: 0,
+            padding: '16px 14px',
+            borderBottom: '0.5px solid #1a1a1a',
           }}>
-            <StarballSVG />
-            <div>
-              <div style={{
-                fontFamily: "'Oswald', sans-serif",
-                fontWeight: 600,
-                fontSize: 13,
-                color: '#e8c878',
-                letterSpacing: '0.04em',
-                lineHeight: 1.1,
-                textShadow: '0 0 12px rgba(232,200,120,0.4)',
-              }}>
-                Champion&apos;s
-              </div>
-              <div style={{
-                fontFamily: "'JetBrains Mono', monospace",
-                fontSize: 8,
-                color: '#5a6ba8',
-                marginTop: 2,
-                letterSpacing: '0.06em',
-              }}>
-                CGP Dashboard
-              </div>
+            <div style={{
+              fontSize: 12,
+              fontWeight: 500,
+              color: '#c9a84c',
+              letterSpacing: '0.05em',
+              fontFamily: 'Oswald, sans-serif',
+            }}>
+              CGP Dashboard
+            </div>
+            <div style={{
+              fontSize: 9,
+              color: '#333',
+              marginTop: 2,
+              fontFamily: 'JetBrains Mono, monospace',
+            }}>
+              Gestion Patrimoniale
             </div>
           </div>
 
@@ -200,18 +139,16 @@ export default function DashboardLayout({
               <div key={section.label}>
                 <div style={{
                   fontSize: 8,
-                  color: '#3a4885',
-                  padding: '10px 12px 3px',
-                  letterSpacing: '0.12em',
+                  color: '#2a2a2a',
+                  padding: '8px 12px 3px',
+                  letterSpacing: '0.08em',
                   textTransform: 'uppercase',
-                  fontFamily: "'JetBrains Mono', monospace",
-                  fontWeight: 600,
+                  fontFamily: 'JetBrains Mono, monospace',
                 }}>
                   {section.label}
                 </div>
                 {section.items.map((item) => {
-                  const isActive =
-                    pathname === item.href ||
+                  const isActive = pathname === item.href ||
                     (item.href !== '/dashboard' && pathname.startsWith(item.href))
                   return (
                     <Link
@@ -220,37 +157,31 @@ export default function DashboardLayout({
                       style={{
                         display: 'flex',
                         alignItems: 'center',
-                        gap: 7,
+                        gap: 6,
                         padding: '5px 12px',
-                        fontSize: 11,
-                        fontWeight: isActive ? 500 : 400,
-                        color: isActive ? '#ffe89a' : 'rgba(255,216,102,0.65)',
+                        fontSize: 10,
+                        color: isActive ? '#c9a84c' : '#444',
                         textDecoration: 'none',
-                        borderLeft: isActive ? '2px solid #ff6470' : '2px solid transparent',
-                        background: isActive
-                          ? 'linear-gradient(90deg,rgba(200,64,72,0.22),transparent 70%)'
-                          : 'transparent',
-                        transition: 'all 0.15s ease',
+                        borderLeft: isActive ? '2px solid #c9a84c' : '2px solid transparent',
+                        background: isActive ? 'rgba(201,168,76,0.06)' : 'transparent',
                         position: 'relative',
                       }}
                     >
                       <span style={{
-                        width: 3,
-                        height: 3,
+                        width: 4,
+                        height: 4,
                         borderRadius: '50%',
-                        background: isActive ? '#ff6470' : 'rgba(255,216,102,0.4)',
+                        background: isActive ? '#c9a84c' : 'currentColor',
                         flexShrink: 0,
                         display: 'inline-block',
-                        boxShadow: isActive ? '0 0 6px rgba(255,100,112,0.7)' : 'none',
                       }} />
                       <span style={{ flex: 1 }}>{item.label}</span>
-                      {/* Badge statique (tâches, prospects) */}
                       {item.badge && item.id !== 'achievements' && (
                         <span style={{
                           minWidth: 16,
                           height: 16,
-                          background: ribbon,
-                          color: '#0a0e22',
+                          background: '#4a8ac9',
+                          color: '#fff',
                           borderRadius: 8,
                           fontSize: 8,
                           fontWeight: 700,
@@ -258,19 +189,17 @@ export default function DashboardLayout({
                           alignItems: 'center',
                           justifyContent: 'center',
                           padding: '0 4px',
-                          fontFamily: "'JetBrains Mono', monospace",
-                          boxShadow: '0 2px 8px rgba(200,64,72,0.45)',
+                          boxShadow: '0 2px 6px rgba(74,138,201,0.5)',
                         }}>
                           {item.badge}
                         </span>
                       )}
-                      {/* Badge dynamique achievements */}
                       {item.id === 'achievements' && recentCount > 0 && (
                         <span style={{
                           minWidth: 16,
                           height: 16,
-                          background: '#e8c878',
-                          color: '#0a0e22',
+                          background: '#c9a84c',
+                          color: '#0a0a0a',
                           borderRadius: 8,
                           fontSize: 8,
                           fontWeight: 700,
@@ -278,8 +207,6 @@ export default function DashboardLayout({
                           alignItems: 'center',
                           justifyContent: 'center',
                           padding: '0 4px',
-                          fontFamily: "'JetBrains Mono', monospace",
-                          boxShadow: '0 2px 8px rgba(232,200,120,0.5)',
                         }}>
                           {recentCount}
                         </span>
@@ -290,60 +217,6 @@ export default function DashboardLayout({
               </div>
             ))}
           </nav>
-
-          {/* User avatar at bottom */}
-          <div style={{
-            padding: '12px 14px',
-            borderTop: '1px solid #3a4690',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 9,
-            flexShrink: 0,
-          }}>
-            <div style={{
-              width: 32,
-              height: 32,
-              borderRadius: '50%',
-              background: 'linear-gradient(135deg,#c84048,#7a92e8)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontFamily: "'Oswald', sans-serif",
-              fontWeight: 600,
-              fontSize: 11,
-              color: '#fff',
-              letterSpacing: '0.04em',
-              flexShrink: 0,
-              boxShadow: '0 0 10px rgba(200,64,72,0.4)',
-            }}>
-              TK
-            </div>
-            <div style={{ minWidth: 0 }}>
-              <div style={{
-                fontFamily: "'Oswald', sans-serif",
-                fontWeight: 500,
-                fontSize: 11,
-                color: '#d8e1ff',
-                letterSpacing: '0.03em',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-              }}>
-                Ted K.
-              </div>
-              <div style={{
-                fontFamily: "'JetBrains Mono', monospace",
-                fontSize: 8,
-                color: '#5a6ba8',
-                marginTop: 1,
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-              }}>
-                CGP Manager
-              </div>
-            </div>
-          </div>
         </aside>
 
         {/* MAIN */}
@@ -352,123 +225,45 @@ export default function DashboardLayout({
           display: 'flex',
           flexDirection: 'column',
           minWidth: 0,
-          position: 'relative',
-          zIndex: 1,
         }}>
 
-          {/* Prismatic ribbon at very top */}
-          <div style={{ height: 2, background: ribbon, flexShrink: 0 }} />
-
-          {/* Top bar */}
+          {/* Search bar */}
           <div style={{
             display: 'flex',
             alignItems: 'center',
-            gap: 12,
-            padding: '8px 20px',
-            borderBottom: '1px solid #3a4690',
-            background: 'rgba(17,22,58,0.95)',
-            position: 'sticky',
-            top: 0,
-            zIndex: 50,
-            backdropFilter: 'blur(8px)',
-            flexShrink: 0,
+            gap: 8,
+            padding: '8px 14px',
+            borderBottom: '0.5px solid #1a1a1a',
+            background: '#0d0d0d',
           }}>
-            {/* Branding */}
-            <div style={{
-              fontFamily: "'Oswald', sans-serif",
-              fontWeight: 600,
-              fontSize: 14,
-              color: '#e8c878',
-              letterSpacing: '0.08em',
-              textTransform: 'uppercase',
-              whiteSpace: 'nowrap',
-              textShadow: '0 0 12px rgba(232,200,120,0.35)',
-              flexShrink: 0,
-            }}>
-              CGP <span style={{ color: '#ff6470' }}>·</span> Dashboard
-            </div>
-
-            <div style={{
-              width: 1,
-              height: 18,
-              background: '#3a4690',
-              flexShrink: 0,
-            }} />
-
-            {/* Search input */}
-            <div style={{ flex: 1, position: 'relative', maxWidth: 560 }}>
-              <span style={{
-                position: 'absolute',
-                left: 10,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                color: '#5a6ba8',
-                fontSize: 12,
-                pointerEvents: 'none',
-              }}>
-                ⌕
-              </span>
-              <input
-                type="text"
-                placeholder="Rechercher prospect, client, tâche, séquence…"
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                style={{
-                  width: '100%',
-                  background: 'rgba(26,33,80,0.7)',
-                  border: '1px solid #3a4690',
-                  borderRadius: 6,
-                  padding: '5px 10px 5px 28px',
-                  fontSize: 11,
-                  color: '#d8e1ff',
-                  fontFamily: "Inter, sans-serif",
-                  outline: 'none',
-                  caretColor: '#ff6470',
-                }}
-              />
-            </div>
-
-            <div style={{ flex: 1 }} />
-
-            {/* Status pill */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 5,
-              padding: '3px 10px',
-              background: 'rgba(26,33,80,0.8)',
-              border: '1px solid #3a4690',
-              borderRadius: 20,
-              flexShrink: 0,
-            }}>
-              <div style={{
-                width: 6,
-                height: 6,
-                borderRadius: '50%',
-                background: '#ff6470',
-                boxShadow: '0 0 6px rgba(255,100,112,0.8)',
-              }} />
-              <span style={{
-                fontFamily: "'JetBrains Mono', monospace",
-                fontSize: 9,
-                color: '#8ea0d9',
-                letterSpacing: '0.06em',
-              }}>
-                LIVE
-              </span>
-            </div>
+            <input
+              type="text"
+              placeholder="🔍 Rechercher prospect, client, tâche, séquence..."
+              style={{
+                flex: 1,
+                background: '#141414',
+                border: '0.5px solid #2a2a2a',
+                borderRadius: 6,
+                padding: '7px 12px',
+                color: '#e8e8e8',
+                fontSize: 10,
+                fontFamily: 'inherit',
+                outline: 'none',
+              }}
+            />
           </div>
 
           {/* Page content */}
           <div style={{
             flex: 1,
             overflowY: 'auto',
-            padding: '16px',
+            padding: '12px 14px',
           }}>
             {children}
           </div>
         </main>
       </div>
+
       <AchievementsProvider />
       <Toaster theme="dark" position="bottom-right" richColors />
       <Script src="/celebrations.js" strategy="lazyOnload" />
