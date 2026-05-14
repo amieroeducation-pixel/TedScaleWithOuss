@@ -93,7 +93,7 @@ Plans:
 **Plans**: 2 plans
 Plans:
   - [x] 05-01-PLAN.md -- Migration 007 + helpers cron + 4 routes /api/cron/* (AUTO-01, AUTO-02, AUTO-03, AUTO-04)
-  - [ ] 05-02-PLAN.md -- Page /automatisations branchee sur cron_logs + script Task Scheduler Windows (AUTO-01, AUTO-02, AUTO-03, AUTO-04)
+  - [x] 05-02-PLAN.md -- Page /automatisations branchee sur cron_logs + script Task Scheduler Windows (AUTO-01, AUTO-02, AUTO-03, AUTO-04) (completed 2026-05-14)
 
 ## Progress
 
@@ -105,4 +105,4 @@ Plans:
 | 2. Sequences Multicanales | 5/5 | Complete    | 2026-05-10 |
 | 3. Configuration | 3/3 | Complete    | 2026-05-11 |
 | 4. Achievements & Artefacts | 2/2 | Complete    | 2026-05-11 |
-| 5. Automatisations Cron | 1/2 | In Progress|  |
+| 5. Automatisations Cron | 2/2 | Complete    | 2026-05-14 |
