@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { apiSuccess, apiError, apiUnauthorized } from '@/lib/api'
 
-export function getDefaultSettings() {
+function getDefaultSettings() {
   return {
     ca_monthly_target: 15000,
     ca_annual_target: 180000,
