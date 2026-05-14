@@ -1,14 +1,14 @@
-// CGP Dashboard Premium — dark gold palette (validated design)
+// Shared PSG Cosmos color palette — imported by all dashboard pages
 export const C: Record<string, string> = {
-  bgDeep: '#0a0a0a', bgMid: '#0f0f0f',
-  surface1: '#141414', surface2: '#121212', surface3: '#1a1a1a',
-  line: '#1e1e1e', lineSoft: '#1a1a1a',
-  textHi: '#e8e8e8', text: '#cccccc', textMid: '#aaaaaa',
-  textLo: '#444444', textVlo: '#2a2a2a',
-  cyan: '#4a8ac9', indigo: '#4a8ac9', magenta: '#c96a6a',
-  lime: '#4a9a5a', gold: '#c9a84c', warn: '#e9943a', green: '#4a9a5a',
-  purple: '#9a7acc',
-  ribbon: '#c9a84c',
+  bgDeep: '#0a0e22', bgMid: '#14193d',
+  surface1: '#11163a', surface2: '#1a2150', surface3: '#252e68',
+  line: '#3a4690', lineSoft: '#1a2150',
+  textHi: '#ffffff', text: '#d8e1ff', textMid: '#8ea0d9',
+  textLo: '#5a6ba8', textVlo: '#3a4885',
+  cyan: '#ff6470', indigo: '#7a92e8', magenta: '#c84048',
+  lime: '#f5e8c8', gold: '#e8c878', warn: '#d8884a', green: '#4ade80',
+  purple: '#b07aee',
+  ribbon: 'linear-gradient(90deg,#c84048 0%,#ff6470 25%,#f5e8c8 55%,#7a92e8 80%,#5c70b8 100%)',
 }
 
 export type ColorKey = keyof typeof C
