@@ -24,6 +24,7 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const stage = searchParams.get('stage')
   const search = searchParams.get('search')
+  const source = searchParams.get('source')
   const limit = parseInt(searchParams.get('limit') || '200')
   const offset = parseInt(searchParams.get('offset') || '0')
 
@@ -36,6 +37,10 @@ export async function GET(request: NextRequest) {
 
   if (stage && stage !== 'all') {
     query = query.eq('pipeline_stage', stage)
+  }
+
+  if (source) {
+    query = query.eq('source', source)
   }
 
   if (search) {

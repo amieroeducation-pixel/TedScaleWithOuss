@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { C } from '@/lib/theme'
+import ProspectCard, { type ProspectCardData } from '@/components/prospects/ProspectCard'
 
 // --- TYPES ---
 type ProspectStatus = 'Non contacté' | 'En cours' | 'Converti' | 'Perdu'
@@ -137,6 +138,28 @@ function ActionBtn({ type }: { type: string }) {
   )
 }
 
+type SearchResult = {
+  id: number
+  siren: string | null
+  initials: string
+  nom: string
+  entreprise: string
+  metier: string
+  ville: string
+  codePostal: string
+  adresse: string
+  telephone: string | null
+  email: string | null
+  googleUrl: string
+  pagesJaunesUrl?: string
+  mapsUrl: string
+  lat: number | null
+  lng: number | null
+  status: ProspectStatus
+  score: number
+  source: string
+}
+
 export default function TnsPage() {
   const [metier, setMetier] = useState('')
   const [ville, setVille] = useState('')
@@ -144,9 +167,14 @@ export default function TnsPage() {
   const [includeEmail, setIncludeEmail] = useState(false)
   const [limite, setLimite] = useState('10')
   const [showResults, setShowResults] = useState(false)
-  const [searchResults, setSearchResults] = useState<Prospect[]>([])
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([])
+  const [searchLoading, setSearchLoading] = useState(false)
+  const [searchError, setSearchError] = useState<string | null>(null)
+  const [addingAll, setAddingAll] = useState(false)
   const [activeFilter, setActiveFilter] = useState<MetierFilter>('all')
   const [prospects, setProspects] = useState<Prospect[]>(BASE_PROSPECTS)
+  const [selectedProspect, setSelectedProspect] = useState<ProspectCardData | null>(null)
+  const [hasUserProspects, setHasUserProspects] = useState(false)
 
   const stats = {
     total: prospects.length,
@@ -155,17 +183,89 @@ export default function TnsPage() {
     convertis: prospects.filter(p => p.status === 'Converti').length,
   }
 
-  function handleSearch() {
+  async function handleSearch() {
     if (!metier || !ville) return
-    const mock = BASE_PROSPECTS.slice(0, parseInt(limite) || 5)
-    setSearchResults(mock)
-    setShowResults(true)
+    setSearchLoading(true)
+    setSearchError(null)
+    setShowResults(false)
+    try {
+      const res = await fetch('/api/prospection/tns', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ metier, ville, limite: parseInt(limite) || 10 }),
+      })
+      const data = await res.json()
+      if (!data.success) throw new Error(data.error ?? 'Erreur recherche')
+      setSearchResults(data.data.prospects ?? [])
+      setShowResults(true)
+    } catch (err) {
+      setSearchError(err instanceof Error ? err.message : 'Erreur inconnue')
+    } finally {
+      setSearchLoading(false)
+    }
   }
 
-  function addAllToProspection() {
-    const newOnes = searchResults.filter(r => !prospects.find(p => p.id === r.id))
-    setProspects(prev => [...newOnes, ...prev])
-    setShowResults(false)
+  function exportCSV() {
+    if (searchResults.length === 0) return
+    const rows = [
+      ['Nom', 'Entreprise', 'Métier', 'Ville', 'Téléphone', 'SIREN', 'Score'],
+      ...searchResults.map(r => [r.nom, r.entreprise, r.metier, r.ville, r.telephone ?? '', r.siren ?? '', String(Math.round(r.score * 100)) + '%']),
+    ]
+    const csv = rows.map(row => row.map(v => `"${v.replace(/"/g, '""')}"`).join(',')).join('\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `tns_${metier}_${ville}_${new Date().toISOString().split('T')[0]}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  async function addAllToProspection() {
+    if (searchResults.length === 0) return
+    setAddingAll(true)
+    try {
+      await Promise.all(
+        searchResults.map(r =>
+          fetch('/api/prospects', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              full_name: r.nom,
+              company: r.entreprise,
+              profession: r.metier,
+              city: r.ville,
+              phone: r.telephone ?? '',
+              source: 'tns',
+              tags: [metier],
+              notes: r.adresse ? `Adresse: ${r.adresse}` : '',
+            }),
+          })
+        )
+      )
+      // Update local list
+      const asProspects: Prospect[] = searchResults.map((r, i) => ({
+        id: Date.now() + i,
+        initials: r.initials,
+        nom: r.nom,
+        metier: r.metier,
+        ville: r.ville,
+        telephone: r.telephone ?? '—',
+        status: 'Non contacté' as ProspectStatus,
+        score: r.score,
+        source: r.source,
+        actions: ['email', 'seq'] as ('WA' | 'email' | 'SMS' | 'LI' | 'seq')[],
+        metierFilter: 'all' as MetierFilter,
+      }))
+      setProspects(prev => [...asProspects, ...prev])
+      setHasUserProspects(true)
+      setShowResults(false)
+      setSearchResults([])
+    } catch {
+      setSearchError('Erreur lors de l\'ajout au CRM')
+    } finally {
+      setAddingAll(false)
+    }
   }
 
   const filtered = prospects.filter(p => activeFilter === 'all' || p.metierFilter === activeFilter)
@@ -253,11 +353,20 @@ export default function TnsPage() {
 
         <button
           onClick={handleSearch}
-          style={{ width: '100%', padding: '10px 0', borderRadius: 6, border: `1px solid #4ade8060`, background: '#0a140a', color: C.green, cursor: 'pointer', fontFamily: 'Oswald,sans-serif', fontSize: 11, fontWeight: 600, letterSpacing: '0.1em' }}
+          disabled={searchLoading || !metier || !ville}
+          style={{ width: '100%', padding: '10px 0', borderRadius: 6, border: `1px solid #4ade8060`, background: '#0a140a', color: C.green, cursor: searchLoading || !metier || !ville ? 'not-allowed' : 'pointer', fontFamily: 'Oswald,sans-serif', fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', opacity: !metier || !ville ? 0.5 : 1 }}
         >
-          LANCER LA RECHERCHE
+          {searchLoading ? '⏳ RECHERCHE EN COURS...' : 'LANCER LA RECHERCHE'}
         </button>
       </Panel>
+
+      {/* Error banner */}
+      {searchError && (
+        <div style={{ background: '#1a0d0d', border: `1px solid #ff647060`, borderRadius: 8, padding: '10px 14px', fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: '#ff6470', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span>⚠️</span>
+          <span>{searchError}</span>
+        </div>
+      )}
 
       {/* Search results */}
       {showResults && (
@@ -265,24 +374,45 @@ export default function TnsPage() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
             <PanelTitle title={`Résultats (${searchResults.length})`} accent={C.indigo} />
             <div style={{ display: 'flex', gap: 6 }}>
-              <button style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, padding: '5px 10px', borderRadius: 5, border: `1px solid ${C.indigo}40`, background: C.surface2, color: C.indigo, cursor: 'pointer' }}>
+              <button onClick={exportCSV} style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, padding: '5px 10px', borderRadius: 5, border: `1px solid ${C.indigo}40`, background: C.surface2, color: C.indigo, cursor: 'pointer' }}>
                 📥 Export CSV
               </button>
               <button
                 onClick={addAllToProspection}
-                style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, padding: '5px 10px', borderRadius: 5, border: `1px solid #4ade8040`, background: '#0a140a', color: C.green, cursor: 'pointer' }}
+                disabled={addingAll}
+                style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, padding: '5px 10px', borderRadius: 5, border: `1px solid #4ade8040`, background: '#0a140a', color: C.green, cursor: addingAll ? 'not-allowed' : 'pointer', opacity: addingAll ? 0.6 : 1 }}
               >
-                ➕ Tout ajouter
+                {addingAll ? '⏳ Ajout...' : '➕ Tout ajouter'}
               </button>
             </div>
           </div>
           <div style={{ maxHeight: 300, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 1 }}>
             {searchResults.map(r => (
-              <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', background: C.surface2, borderRadius: 7, border: `1px solid ${C.lineSoft}` }}>
+              <div key={r.id} onClick={() => setSelectedProspect({ id: r.id, nom: r.nom, entreprise: r.entreprise, siren: r.siren, metier: r.metier, ville: r.ville, codePostal: r.codePostal, adresse: r.adresse, telephone: r.telephone, email: r.email, score: r.score, source: r.source, googleUrl: r.googleUrl, mapsUrl: r.mapsUrl })} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', background: C.surface2, borderRadius: 7, border: `1px solid ${C.lineSoft}`, cursor: 'pointer' }}>
                 <div style={{ width: 30, height: 30, borderRadius: 8, background: C.surface3, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Oswald,sans-serif', fontSize: 10, color: C.indigo, fontWeight: 600, flexShrink: 0 }}>{r.initials}</div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 11, color: C.textHi, fontWeight: 500 }}>{r.nom}</div>
-                  <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.textLo }}>{r.metier} · {r.ville} · {r.telephone}</div>
+                  <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.textLo }}>{r.metier} · {r.ville}{r.codePostal ? ` (${r.codePostal})` : ''}</div>
+                  {r.adresse && <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 7.5, color: C.textLo }}>{r.adresse}</div>}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'flex-end', flexShrink: 0 }}>
+                  {r.telephone ? (
+                    <a href={`tel:${r.telephone}`} style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, padding: '3px 8px', borderRadius: 5, border: `1px solid #4ade8040`, background: '#0a140a', color: C.green, textDecoration: 'none', fontWeight: 600 }}>
+                      📞 {r.telephone}
+                    </a>
+                  ) : (
+                    <div style={{ display: 'flex', gap: 3 }}>
+                      {r.pagesJaunesUrl && (
+                        <a href={r.pagesJaunesUrl} target="_blank" rel="noopener noreferrer" style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 7, padding: '3px 7px', borderRadius: 5, border: `1px solid #f5a62340`, background: '#1a1000', color: '#f5a623', textDecoration: 'none' }}>
+                          PJ
+                        </a>
+                      )}
+                      <a href={r.googleUrl} target="_blank" rel="noopener noreferrer" style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 7, padding: '3px 7px', borderRadius: 5, border: `1px solid ${C.indigo}40`, background: C.surface3, color: C.indigo, textDecoration: 'none' }}>
+                        🔍
+                      </a>
+                    </div>
+                  )}
+                  {r.email && <span style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 7, color: C.textLo }}>{r.email}</span>}
                 </div>
                 <ScoreDot score={r.score} />
                 <StatusBadge status={r.status} />
@@ -322,43 +452,74 @@ export default function TnsPage() {
         </div>
 
         {/* Prospect list */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {filtered.map(p => (
-            <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 10px', background: C.surface2, borderRadius: 8, border: `1px solid ${C.lineSoft}` }}>
-              {/* Avatar */}
-              <div style={{
-                width: 32, height: 32, borderRadius: 8, flexShrink: 0,
-                background: p.status === 'Converti' ? '#0a1f0a' : p.status === 'En cours' ? '#1a1400' : C.surface3,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontFamily: 'Oswald,sans-serif', fontSize: 11, fontWeight: 700,
-                color: p.status === 'Converti' ? C.green : p.status === 'En cours' ? C.gold : C.indigo,
-                border: `1px solid ${p.status === 'Converti' ? C.green + '40' : p.status === 'En cours' ? C.gold + '40' : C.line}`,
-              }}>
-                {p.initials}
-              </div>
-
-              {/* Info */}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 12, color: C.textHi, fontWeight: 500, marginBottom: 1 }}>{p.nom}</div>
-                <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.textLo }}>
-                  {p.metier} · {p.ville} · <a href={`tel:${p.telephone}`} style={{ color: C.gold, textDecoration: 'none' }}>{p.telephone}</a>
+        {hasUserProspects ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {filtered.map(p => (
+              <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 10px', background: C.surface2, borderRadius: 8, border: `1px solid ${C.lineSoft}` }}>
+                {/* Avatar */}
+                <div style={{
+                  width: 32, height: 32, borderRadius: 8, flexShrink: 0,
+                  background: p.status === 'Converti' ? '#0a1f0a' : p.status === 'En cours' ? '#1a1400' : C.surface3,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontFamily: 'Oswald,sans-serif', fontSize: 11, fontWeight: 700,
+                  color: p.status === 'Converti' ? C.green : p.status === 'En cours' ? C.gold : C.indigo,
+                  border: `1px solid ${p.status === 'Converti' ? C.green + '40' : p.status === 'En cours' ? C.gold + '40' : C.line}`,
+                }}>
+                  {p.initials}
                 </div>
+
+                {/* Info */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 12, color: C.textHi, fontWeight: 500, marginBottom: 1 }}>{p.nom}</div>
+                  <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.textLo }}>
+                    {p.metier} · {p.ville} · <a href={`tel:${p.telephone}`} style={{ color: C.gold, textDecoration: 'none' }}>{p.telephone}</a>
+                  </div>
+                </div>
+
+                {/* Score */}
+                <ScoreDot score={p.score} />
+
+                {/* Actions */}
+                <div style={{ display: 'flex', gap: 3, alignItems: 'center' }}>
+                  {p.actions.map((a, i) => <ActionBtn key={i} type={a} />)}
+                </div>
+
+                {/* Status */}
+                <StatusBadge status={p.status} />
               </div>
-
-              {/* Score */}
-              <ScoreDot score={p.score} />
-
-              {/* Actions */}
-              <div style={{ display: 'flex', gap: 3, alignItems: 'center' }}>
-                {p.actions.map((a, i) => <ActionBtn key={i} type={a} />)}
-              </div>
-
-              {/* Status */}
-              <StatusBadge status={p.status} />
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <div style={{ textAlign: 'center', padding: '48px 0' }}>
+            <div style={{ fontSize: 32, marginBottom: 12 }}>🔍</div>
+            <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 14, color: C.textMid, marginBottom: 6 }}>Aucun prospect ajouté</div>
+            <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 11, color: C.textLo }}>Lancez une recherche et cliquez &quot;Tout ajouter&quot; pour remplir votre liste</div>
+          </div>
+        )}
       </Panel>
+
+      {selectedProspect && (
+        <ProspectCard
+          prospect={selectedProspect}
+          onClose={() => setSelectedProspect(null)}
+          onAddToCRM={async (p) => {
+            await fetch('/api/prospects', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                full_name: p.nom,
+                company: p.entreprise ?? '',
+                profession: p.metier ?? '',
+                city: p.ville ?? '',
+                phone: p.telephone ?? '',
+                email: p.email ?? '',
+                source: 'tns',
+                notes: p.adresse ? `Adresse: ${p.adresse}` : '',
+              }),
+            })
+          }}
+        />
+      )}
     </>
   )
 }

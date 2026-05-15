@@ -1,34 +1,58 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { C } from '@/lib/theme'
+import ProspectCard, { type ProspectCardData } from '@/components/prospects/ProspectCard'
 
 type MainTab = 'portefeuille' | 'acquisition'
 type AcqTab = 'pipeline' | 'tableau' | 'prospection'
-type Status = 'Non contacté' | 'En cours' | 'Converti' | 'Perdu'
 
-interface Chef {
-  id: number
-  initials: string
-  nom: string
-  role: string
-  entreprise: string
-  forme: string
-  ca: string
-  ville: string
-  status: Status
-  aum?: string
-  rdv?: string
-  actions: ('WA' | 'email' | 'LI' | 'seq')[]
-  avatarBg: string
-  avatarColor: string
+type SupabaseProspect = {
+  id: string
+  full_name: string
+  company?: string | null
+  city?: string | null
+  phone?: string | null
+  email?: string | null
+  profession?: string | null
+  pipeline_stage?: string | null
+  notes?: string | null
+  source?: string | null
 }
 
-const STATUS_COLORS: Record<Status, string> = {
-  'Non contacté': '#7a92e8',
-  'En cours': '#e8c878',
-  'Converti': '#4ade80',
-  'Perdu': '#ff6470',
+type WorkflowLead = {
+  id: string
+  siren: string | null
+  nom: string
+  forme: string
+  ville: string
+  codePostal: string
+  dateCreation: string | null
+  signal: string
+  signalLabel: string
+  score: number
+  scoreColor: string
+  urgence: boolean
+}
+
+type WorkflowStats = {
+  total: number
+  dateExecution: string
+  prochaine: string
+  creations?: number
+  cessions?: number
+  holdings?: number
+  dividendes?: number
+  seniors?: number
+}
+
+const STATUS_COLORS: Record<string, string> = {
+  a_contacter: '#7a92e8',
+  rdv1: '#e8c878',
+  rdv2: '#e8c878',
+  rdv3: '#e8c878',
+  converti: '#4ade80',
+  perdu: '#ff6470',
 }
 
 const SECTEURS = [
@@ -36,34 +60,6 @@ const SECTEURS = [
   'Services aux entreprises', 'Industrie / Fabrication', 'Transport / Logistique',
   'Tech / Numérique', 'Santé / Bien-être', 'Finance / Assurance',
 ]
-
-const PORTEFEUILLE: Chef[] = [
-  { id: 1, initials: 'AP', nom: 'Antoine Perrin', role: 'PDG', entreprise: 'Perrin & Fils', forme: 'SASU', ca: '2,8M€', ville: 'Paris 8e', status: 'Converti', aum: '850k€', actions: ['LI', 'seq'], avatarBg: '#0a1f0a', avatarColor: '#4ade80' },
-  { id: 2, initials: 'CM', nom: 'Claire Morin', role: 'Gérante', entreprise: 'Studio CM Design', forme: 'SARL', ca: '680k€', ville: 'Levallois', status: 'En cours', rdv: 'RDV 2 · 12 mai', actions: ['LI', 'email'], avatarBg: '#0a1f0a', avatarColor: '#4ade80' },
-  { id: 3, initials: 'FT', nom: 'François Thibault', role: 'Directeur', entreprise: 'FT Consulting', forme: 'SAS', ca: '1,2M€', ville: 'Neuilly', status: 'Non contacté', rdv: 'Séquence active', actions: ['LI', 'seq'], avatarBg: '#1a1400', avatarColor: '#e8c878' },
-  { id: 4, initials: 'MD', nom: 'Dr. Marie Dubois', role: 'Dentiste', entreprise: 'Cabinet Dubois', forme: 'SASU', ca: '520k€', ville: 'Paris 16e', status: 'Converti', aum: '320k€', actions: ['WA'], avatarBg: '#0a1f0a', avatarColor: '#4ade80' },
-  { id: 5, initials: 'JR', nom: 'Jean Rousseau', role: 'Pharmacien', entreprise: 'Pharmacie Centrale', forme: 'SARL', ca: '2,1M€', ville: 'Versailles', status: 'Converti', aum: '1,2M€', actions: ['LI'], avatarBg: '#0a1f0a', avatarColor: '#4ade80' },
-  { id: 6, initials: 'PL', nom: 'Pierre Laurent', role: 'Avocat', entreprise: 'Cabinet Laurent & Associés', forme: '', ca: '890k€', ville: 'Paris 9e', status: 'En cours', rdv: 'RDV 1 fixé', actions: ['email'], avatarBg: '#0a0e22', avatarColor: '#7a92e8' },
-]
-
-const MOCK_PIPELINE = {
-  creations: [
-    { id: 'c1', nom: 'Cabinet Dr. Moreau', siret: '123 456 789', info: 'CA: 450k€ • 18j', score: 8, scoreColor: C.green, scoreBg: '#0a1f0a' },
-    { id: 'c2', nom: 'SARL Conseil Plus', siret: '234 567 890', info: 'Capital: 25k€', score: 6, scoreColor: C.gold, scoreBg: '#1a1400' },
-  ],
-  cessions: [
-    { id: 'ce1', nom: 'Distrib. Médicale', siret: '345 678 901', info: 'Cession: 2,8M€', score: 10, scoreColor: C.cyan, scoreBg: '#1a0d0d', urgence: true },
-  ],
-  holdings: [
-    { id: 'h1', nom: 'Hold. Rousseau', siret: '567 890 123', info: 'Filles: SAS+SCI', score: 9, scoreColor: C.purple, scoreBg: '#140d1e', urgence: true },
-  ],
-  dividendes: [
-    { id: 'd1', nom: 'Cabinet Bernard', siret: '678 901 234', info: 'Div: 280k€', score: 8, scoreColor: C.gold, scoreBg: '#1a1400' },
-  ],
-  seniors: [
-    { id: 's1', nom: 'Industrie Précis.', siret: '890 123 456', info: '62 ans • 3,2M€', score: 9, scoreColor: C.indigo, scoreBg: '#0d1a2e' },
-  ],
-}
 
 const ACTION_STYLE: Record<string, { bg: string; color: string; border: string }> = {
   LI:    { bg: '#0a1929', color: '#7a92e8', border: '#7a92e840' },
@@ -88,16 +84,6 @@ function PanelTitle({ title, accent = C.indigo }: { title: string; accent?: stri
       <span style={{ width: 6, height: 6, background: accent, transform: 'rotate(45deg)', display: 'inline-block', boxShadow: `0 0 7px ${accent}`, flexShrink: 0 }} />
       <span style={{ fontFamily: 'Oswald,sans-serif', fontSize: 12, fontWeight: 500, color: C.textHi, textTransform: 'uppercase', letterSpacing: '0.16em' }}>{title}</span>
     </div>
-  )
-}
-
-function StatusBadge({ status, extra }: { status: Status; extra?: string }) {
-  const color = STATUS_COLORS[status]
-  const label = extra ?? status
-  return (
-    <span style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, fontWeight: 600, borderRadius: 6, padding: '3px 8px', background: color + '20', color, border: `1px solid ${color}44`, whiteSpace: 'nowrap' as const }}>
-      {label}
-    </span>
   )
 }
 
@@ -132,35 +118,109 @@ export default function ChefsEntreprisePage() {
   const [mainTab, setMainTab] = useState<MainTab>('portefeuille')
   const [acqTab, setAcqTab] = useState<AcqTab>('pipeline')
   const [showForm, setShowForm] = useState(false)
-  const [chefs, setChefs] = useState<Chef[]>(PORTEFEUILLE)
+  const [chefs, setChefs] = useState<SupabaseProspect[]>([])
+  const [chefsLoading, setChefsLoading] = useState(true)
+  const [selectedProspect, setSelectedProspect] = useState<ProspectCardData | null>(null)
   const [form, setForm] = useState({ nom: '', entreprise: '', secteur: SECTEURS[0], ville: '', ca: '', effectif: '', telephone: '' })
   const [search, setSearch] = useState('')
+  const [workflowLoading, setWorkflowLoading] = useState<'hebdomadaire' | 'mensuel' | null>(null)
+  const [workflowError, setWorkflowError] = useState<string | null>(null)
+  const [workflowLeads, setWorkflowLeads] = useState<WorkflowLead[]>([])
+  const [workflowStats, setWorkflowStats] = useState<WorkflowStats | null>(null)
+  const [lastWorkflowType, setLastWorkflowType] = useState<'hebdomadaire' | 'mensuel' | null>(null)
+  const [addingLead, setAddingLead] = useState<string | null>(null)
+
+  useEffect(() => {
+    async function loadChefs() {
+      try {
+        const res = await fetch('/api/prospects?source=chefs_entreprise&limit=50')
+        const data = await res.json()
+        if (data.success) setChefs(data.data ?? [])
+      } catch { /* silently */ }
+      finally { setChefsLoading(false) }
+    }
+    loadChefs()
+  }, [])
 
   const stats = {
     contacts: chefs.length,
-    enCours: chefs.filter(c => c.status === 'En cours').length,
-    convertis: chefs.filter(c => c.status === 'Converti').length,
-    aum: '4,2M€',
+    enCours: chefs.filter(c => c.pipeline_stage && !['a_contacter', 'converti', 'perdu'].includes(c.pipeline_stage)).length,
+    convertis: chefs.filter(c => c.pipeline_stage === 'converti').length,
+    aum: '—',
   }
 
-  function handleAdd() {
+  async function handleAdd() {
     if (!form.nom || !form.entreprise) return
-    const newChef: Chef = {
-      id: Date.now(),
-      initials: form.nom.split(' ').map(w => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase(),
-      nom: form.nom, role: '', entreprise: form.entreprise, forme: '', ca: form.ca, ville: form.ville,
-      status: 'Non contacté', actions: ['LI', 'email'], avatarBg: C.surface3, avatarColor: C.indigo,
-    }
-    setChefs(prev => [newChef, ...prev])
+    try {
+      const res = await fetch('/api/prospects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          full_name: form.nom,
+          company: form.entreprise,
+          city: form.ville,
+          phone: form.telephone,
+          source: 'chefs_entreprise',
+          notes: form.ca ? `CA: ${form.ca}` : '',
+        }),
+      })
+      const data = await res.json()
+      if (data.success && data.data) setChefs(prev => [data.data, ...prev])
+    } catch { /* silently */ }
     setForm({ nom: '', entreprise: '', secteur: SECTEURS[0], ville: '', ca: '', effectif: '', telephone: '' })
     setShowForm(false)
   }
 
+  async function runWorkflow(type: 'hebdomadaire' | 'mensuel') {
+    setWorkflowLoading(type)
+    setWorkflowError(null)
+    try {
+      const res = await fetch('/api/prospection/chefs/workflow', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type }),
+      })
+      const data = await res.json()
+      if (!data.success) throw new Error(data.error ?? 'Erreur workflow')
+      setWorkflowLeads(data.data.leads ?? [])
+      setWorkflowStats(data.data.stats ?? null)
+      setLastWorkflowType(type)
+      setAcqTab('tableau')
+    } catch (err) {
+      setWorkflowError(err instanceof Error ? err.message : 'Erreur inconnue')
+    } finally {
+      setWorkflowLoading(null)
+    }
+  }
+
+  async function addLeadToCRM(lead: WorkflowLead) {
+    setAddingLead(lead.id)
+    try {
+      await fetch('/api/prospects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          full_name: lead.nom,
+          company: lead.nom,
+          city: lead.ville,
+          source: 'chefs_entreprise',
+          tags: [lead.signal],
+          notes: `Forme: ${lead.forme} · Création: ${lead.dateCreation ?? 'N/A'} · Signal: ${lead.signalLabel}`,
+        }),
+      })
+      setWorkflowLeads(prev => prev.filter(l => l.id !== lead.id))
+      const res = await fetch('/api/prospects?source=chefs_entreprise&limit=50')
+      const data = await res.json()
+      if (data.success) setChefs(data.data ?? [])
+    } catch { /* silently */ }
+    finally { setAddingLead(null) }
+  }
+
   const filtered = chefs.filter(c =>
     !search ||
-    c.nom.toLowerCase().includes(search.toLowerCase()) ||
-    c.entreprise.toLowerCase().includes(search.toLowerCase()) ||
-    c.ville.toLowerCase().includes(search.toLowerCase())
+    c.full_name.toLowerCase().includes(search.toLowerCase()) ||
+    (c.company ?? '').toLowerCase().includes(search.toLowerCase()) ||
+    (c.city ?? '').toLowerCase().includes(search.toLowerCase())
   )
 
   return (
@@ -202,7 +262,7 @@ export default function ChefsEntreprisePage() {
               { label: 'Contacts', val: stats.contacts, sub: 'Base clients', accent: C.indigo },
               { label: 'En cours', val: stats.enCours, sub: 'Prospection', accent: C.gold },
               { label: 'Convertis', val: stats.convertis, sub: 'Clients actifs', accent: C.green },
-              { label: 'AUM Total', val: stats.aum, sub: '+18% YTD', accent: C.cyan },
+              { label: 'AUM Total', val: stats.aum, sub: 'Non disponible', accent: C.cyan },
             ].map(k => (
               <div key={k.label} style={{ background: `linear-gradient(180deg,${C.surface2},${C.surface1})`, border: `1px solid ${C.line}`, borderRadius: 10, padding: '12px 14px', position: 'relative', overflow: 'hidden' }}>
                 <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: k.accent, opacity: 0.55 }} />
@@ -278,44 +338,46 @@ export default function ChefsEntreprisePage() {
               Clients &amp; prospects en cours
             </div>
 
-            {/* Chef rows */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-              {filtered.map(chef => (
-                <div key={chef.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', background: C.surface2, borderRadius: 8, border: `1px solid ${C.lineSoft}` }}>
-                  {/* Avatar */}
-                  <div style={{
-                    width: 34, height: 34, borderRadius: 9, flexShrink: 0,
-                    background: chef.avatarBg, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontFamily: 'Oswald,sans-serif', fontSize: 12, fontWeight: 700, color: chef.avatarColor,
-                    border: `1px solid ${chef.avatarColor}40`,
-                  }}>
-                    {chef.initials}
-                  </div>
-
-                  {/* Info */}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 13, color: C.textHi, fontWeight: 500, marginBottom: 2 }}>{chef.nom}</div>
-                    <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.textLo }}>
-                      {chef.role}{chef.role ? ' · ' : ''}{chef.entreprise}{chef.forme ? ` (${chef.forme})` : ''} · CA {chef.ca} · {chef.ville}
+            {/* Chefs rows */}
+            {chefsLoading ? (
+              <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.textLo, padding: '24px', textAlign: 'center' }}>Chargement…</div>
+            ) : filtered.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '48px 0' }}>
+                <div style={{ fontSize: 32, marginBottom: 12 }}>👔</div>
+                <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 14, color: C.textMid, marginBottom: 6 }}>Portefeuille vide</div>
+                <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 11, color: C.textLo }}>Ajoutez des leads depuis l&apos;onglet Acquisition ou via &quot;+ Ajouter&quot;</div>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                {filtered.map(chef => {
+                  const initials = chef.full_name.split(' ').map(w => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase() || '??'
+                  const stageColor = STATUS_COLORS[chef.pipeline_stage ?? ''] ?? C.indigo
+                  return (
+                    <div key={chef.id} onClick={() => setSelectedProspect({ id: chef.id, nom: chef.full_name, entreprise: chef.company ?? undefined, ville: chef.city ?? undefined, telephone: chef.phone ?? null, email: chef.email ?? null, source: chef.source ?? undefined })} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', background: C.surface2, borderRadius: 8, border: `1px solid ${C.lineSoft}`, cursor: 'pointer' }}>
+                      <div style={{ width: 34, height: 34, borderRadius: 9, flexShrink: 0, background: stageColor + '22', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Oswald,sans-serif', fontSize: 12, fontWeight: 700, color: stageColor, border: `1px solid ${stageColor}40` }}>
+                        {initials}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 13, color: C.textHi, fontWeight: 500, marginBottom: 2 }}>{chef.full_name}</div>
+                        <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.textLo }}>
+                          {[chef.company, chef.city].filter(Boolean).join(' · ')}
+                          {chef.phone && <> · <a href={`tel:${chef.phone}`} onClick={e => e.stopPropagation()} style={{ color: C.gold, textDecoration: 'none' }}>{chef.phone}</a></>}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: 3 }}>
+                        <ActionBtn type="LI" />
+                        <ActionBtn type="email" />
+                      </div>
+                      {chef.pipeline_stage && (
+                        <span style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, fontWeight: 600, borderRadius: 6, padding: '3px 8px', background: stageColor + '20', color: stageColor, border: `1px solid ${stageColor}44`, whiteSpace: 'nowrap' as const }}>
+                          {chef.pipeline_stage}
+                        </span>
+                      )}
                     </div>
-                  </div>
-
-                  {/* Actions */}
-                  <div style={{ display: 'flex', gap: 3, alignItems: 'center' }}>
-                    {chef.actions.map((a, i) => <ActionBtn key={i} type={a} />)}
-                  </div>
-
-                  {/* Status */}
-                  {chef.status === 'Converti' && chef.aum ? (
-                    <StatusBadge status={chef.status} extra={`Client · ${chef.aum}`} />
-                  ) : chef.rdv ? (
-                    <StatusBadge status={chef.status} extra={chef.rdv} />
-                  ) : (
-                    <StatusBadge status={chef.status} />
-                  )}
-                </div>
-              ))}
-            </div>
+                  )
+                })}
+              </div>
+            )}
           </Panel>
         </>
       )}
@@ -348,78 +410,101 @@ export default function ChefsEntreprisePage() {
             })}
           </div>
 
-          {/* PIPELINE Kanban */}
+          {/* PIPELINE Kanban — alimenté par workflowLeads */}
           {acqTab === 'pipeline' && (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 10 }}>
-              {/* Créations */}
-              <div style={{ background: C.surface1, borderRadius: 8, padding: 10, border: `1px solid ${C.line}` }}>
-                <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 9, fontWeight: 600, color: C.textLo, textTransform: 'uppercase', marginBottom: 8, display: 'flex', justifyContent: 'space-between', letterSpacing: '0.1em' }}>
-                  <span>🏢 Créations</span>
-                  <span style={{ background: C.surface2, padding: '2px 6px', borderRadius: 8, fontSize: 8 }}>12</span>
+              {[
+                { key: 'creation', label: '🏢 Créations', color: C.green, count: workflowLeads.filter(l => l.signal === 'creation').length },
+                { key: 'cession', label: '💰 Cessions', color: C.cyan, count: workflowLeads.filter(l => l.signal === 'cession').length },
+                { key: 'holding', label: '🏛️ Holdings', color: C.purple, count: workflowLeads.filter(l => l.signal === 'holding').length },
+                { key: 'dividendes', label: '💎 Dividendes', color: C.gold, count: workflowLeads.filter(l => l.signal === 'dividendes').length },
+                { key: 'senior', label: '👴 55+', color: C.indigo, count: workflowLeads.filter(l => l.signal === 'senior').length },
+              ].map(col => (
+                <div key={col.key} style={{ background: C.surface1, borderRadius: 8, padding: 10, border: `1px solid ${C.line}` }}>
+                  <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 9, fontWeight: 600, color: C.textLo, textTransform: 'uppercase', marginBottom: 8, display: 'flex', justifyContent: 'space-between', letterSpacing: '0.1em' }}>
+                    <span>{col.label}</span>
+                    <span style={{ background: C.surface2, padding: '2px 6px', borderRadius: 8, fontSize: 8 }}>{col.count}</span>
+                  </div>
+                  {workflowLeads.filter(l => l.signal === col.key).length === 0 ? (
+                    <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.textVlo, padding: '12px 0', textAlign: 'center' }}>Lance un workflow</div>
+                  ) : (
+                    workflowLeads.filter(l => l.signal === col.key).map(lead => (
+                      <PipelineCard
+                        key={lead.id}
+                        nom={lead.nom}
+                        siret={lead.siren ?? '—'}
+                        info={`${lead.forme} · ${lead.ville}`}
+                        score={lead.score}
+                        scoreColor={lead.scoreColor}
+                        scoreBg={lead.scoreColor + '15'}
+                        urgence={lead.urgence}
+                        borderColor={col.color}
+                      />
+                    ))
+                  )}
                 </div>
-                {MOCK_PIPELINE.creations.map(c => (
-                  <PipelineCard key={c.id} {...c} borderColor={C.green} />
-                ))}
-              </div>
-
-              {/* Cessions */}
-              <div style={{ background: C.surface1, borderRadius: 8, padding: 10, border: `1px solid ${C.line}` }}>
-                <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 9, fontWeight: 600, color: C.textLo, textTransform: 'uppercase', marginBottom: 8, display: 'flex', justifyContent: 'space-between', letterSpacing: '0.1em' }}>
-                  <span>💰 Cessions</span>
-                  <span style={{ background: C.surface2, padding: '2px 6px', borderRadius: 8, fontSize: 8 }}>8</span>
-                </div>
-                {MOCK_PIPELINE.cessions.map(c => (
-                  <PipelineCard key={c.id} {...c} borderColor={C.cyan} />
-                ))}
-              </div>
-
-              {/* Holdings */}
-              <div style={{ background: C.surface1, borderRadius: 8, padding: 10, border: `1px solid ${C.line}` }}>
-                <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 9, fontWeight: 600, color: C.textLo, textTransform: 'uppercase', marginBottom: 8, display: 'flex', justifyContent: 'space-between', letterSpacing: '0.1em' }}>
-                  <span>🏛️ Holdings</span>
-                  <span style={{ background: C.surface2, padding: '2px 6px', borderRadius: 8, fontSize: 8 }}>5</span>
-                </div>
-                {MOCK_PIPELINE.holdings.map(c => (
-                  <PipelineCard key={c.id} {...c} borderColor={C.purple} />
-                ))}
-              </div>
-
-              {/* Dividendes */}
-              <div style={{ background: C.surface1, borderRadius: 8, padding: 10, border: `1px solid ${C.line}` }}>
-                <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 9, fontWeight: 600, color: C.textLo, textTransform: 'uppercase', marginBottom: 8, display: 'flex', justifyContent: 'space-between', letterSpacing: '0.1em' }}>
-                  <span>💎 Dividendes</span>
-                  <span style={{ background: C.surface2, padding: '2px 6px', borderRadius: 8, fontSize: 8 }}>31</span>
-                </div>
-                {MOCK_PIPELINE.dividendes.map(c => (
-                  <PipelineCard key={c.id} {...c} borderColor={C.gold} />
-                ))}
-              </div>
-
-              {/* Dirigeants 55+ */}
-              <div style={{ background: C.surface1, borderRadius: 8, padding: 10, border: `1px solid ${C.line}` }}>
-                <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 9, fontWeight: 600, color: C.textLo, textTransform: 'uppercase', marginBottom: 8, display: 'flex', justifyContent: 'space-between', letterSpacing: '0.1em' }}>
-                  <span>👴 55+</span>
-                  <span style={{ background: C.surface2, padding: '2px 6px', borderRadius: 8, fontSize: 8 }}>12</span>
-                </div>
-                {MOCK_PIPELINE.seniors.map(c => (
-                  <PipelineCard key={c.id} {...c} borderColor={C.indigo} />
-                ))}
-              </div>
+              ))}
             </div>
           )}
 
           {/* TABLEAU */}
           {acqTab === 'tableau' && (
             <Panel accent={C.indigo}>
-              <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 10, color: C.textLo, padding: '20px', textAlign: 'center' }}>
-                Tableau des 150 leads · À implémenter
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <PanelTitle title={workflowLeads.length > 0 ? `Leads workflow (${workflowLeads.length})` : 'Tableau leads'} accent={C.indigo} />
+                {workflowStats && (
+                  <span style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.textLo }}>
+                    {lastWorkflowType === 'hebdomadaire' ? 'Workflow hebdo' : 'Workflow mensuel'} · {new Date(workflowStats.dateExecution).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                )}
               </div>
+              {workflowLeads.length === 0 ? (
+                <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.textLo, padding: '20px', textAlign: 'center' }}>
+                  Lance un workflow pour voir les leads ici
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 2, maxHeight: 500, overflowY: 'auto' }}>
+                  {workflowLeads.map(lead => (
+                    <div key={lead.id} onClick={() => setSelectedProspect({ id: lead.id, nom: lead.nom, siren: lead.siren, ville: lead.ville, codePostal: lead.codePostal, signal: lead.signal, signalLabel: lead.signalLabel, score: lead.score, scoreColor: lead.scoreColor, source: 'Data.gouv' })} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', background: C.surface2, borderRadius: 7, borderLeft: `3px solid ${lead.scoreColor}`, cursor: 'pointer' }}>
+                      {lead.urgence && (
+                        <span style={{ background: C.cyan, color: '#fff', padding: '1px 5px', borderRadius: 5, fontSize: 7, fontWeight: 700, flexShrink: 0 }}>⚡</span>
+                      )}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 11, color: C.textHi, fontWeight: 600, marginBottom: 1 }}>{lead.nom}</div>
+                        <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.textLo }}>
+                          {lead.forme} · {lead.ville}{lead.codePostal ? ` (${lead.codePostal})` : ''}{lead.dateCreation ? ` · Créé ${new Date(lead.dateCreation).toLocaleDateString('fr-FR')}` : ''}
+                        </div>
+                      </div>
+                      <span style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, padding: '2px 7px', borderRadius: 6, background: lead.scoreColor + '20', color: lead.scoreColor, border: `1px solid ${lead.scoreColor}40`, whiteSpace: 'nowrap' as const }}>
+                        {lead.signalLabel}
+                      </span>
+                      <span style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, padding: '2px 6px', borderRadius: 6, background: lead.scoreColor + '15', color: lead.scoreColor, fontWeight: 700 }}>
+                        {lead.score}/10
+                      </span>
+                      <button
+                        onClick={e => { e.stopPropagation(); addLeadToCRM(lead) }}
+                        disabled={addingLead === lead.id}
+                        style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, padding: '4px 8px', borderRadius: 5, border: `1px solid #4ade8040`, background: '#0a140a', color: C.green, cursor: addingLead === lead.id ? 'not-allowed' : 'pointer', flexShrink: 0 }}
+                      >
+                        {addingLead === lead.id ? '...' : '+ CRM'}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </Panel>
           )}
 
           {/* WORKFLOW */}
           {acqTab === 'prospection' && (
             <div style={{ maxWidth: 800, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {/* Error banner */}
+              {workflowError && (
+                <div style={{ background: '#1a0d0d', border: `1px solid #ff647060`, borderRadius: 8, padding: '10px 14px', fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: '#ff6470', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span>⚠️</span>
+                  <span>{workflowError}</span>
+                </div>
+              )}
               {/* Title */}
               <div style={{ textAlign: 'center' }}>
                 <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 18, color: C.gold, fontWeight: 600, marginBottom: 4, letterSpacing: '0.06em' }}>PROSPECTION AUTOMATISÉE</div>
@@ -435,9 +520,27 @@ export default function ChefsEntreprisePage() {
 
                 <div style={{ background: C.surface2, borderRadius: 7, padding: 10, marginBottom: 12, display: 'flex', flexDirection: 'column', gap: 5 }}>
                   {[
-                    { label: 'Dernière exécution :', val: 'Lundi 21 avril 2026 - 8h30', color: C.green },
-                    { label: 'Prochaine exécution :', val: 'Lundi 28 avril 2026 - 8h00', color: C.gold },
-                    { label: 'Signaux détectés :', val: '31 leads (23 créations + 8 cessions)', color: C.textHi },
+                    {
+                      label: 'Dernière exécution :',
+                      val: lastWorkflowType === 'hebdomadaire' && workflowStats
+                        ? new Date(workflowStats.dateExecution).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })
+                        : '—',
+                      color: C.green,
+                    },
+                    {
+                      label: 'Prochaine exécution :',
+                      val: lastWorkflowType === 'hebdomadaire' && workflowStats
+                        ? new Date(workflowStats.prochaine).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })
+                        : 'Lundi prochain 8h00',
+                      color: C.gold,
+                    },
+                    {
+                      label: 'Signaux détectés :',
+                      val: lastWorkflowType === 'hebdomadaire' && workflowStats
+                        ? `${workflowStats.total} leads (${workflowStats.creations ?? 0} créations + ${workflowStats.cessions ?? 0} cessions)`
+                        : '—',
+                      color: C.textHi,
+                    },
                   ].map(r => (
                     <div key={r.label} style={{ display: 'flex', justifyContent: 'space-between' }}>
                       <span style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.textLo }}>{r.label}</span>
@@ -460,8 +563,12 @@ export default function ChefsEntreprisePage() {
                   </div>
                 </div>
 
-                <button style={{ width: '100%', padding: 12, background: `linear-gradient(135deg,#1a1400,#2a2200)`, border: `1px solid ${C.gold}`, color: C.gold, borderRadius: 7, fontFamily: 'Oswald,sans-serif', fontSize: 12, fontWeight: 700, cursor: 'pointer', letterSpacing: '0.1em' }}>
-                  🚀 LANCER WORKFLOW HEBDOMADAIRE
+                <button
+                  onClick={() => runWorkflow('hebdomadaire')}
+                  disabled={workflowLoading !== null}
+                  style={{ width: '100%', padding: 12, background: `linear-gradient(135deg,#1a1400,#2a2200)`, border: `1px solid ${C.gold}`, color: C.gold, borderRadius: 7, fontFamily: 'Oswald,sans-serif', fontSize: 12, fontWeight: 700, cursor: workflowLoading !== null ? 'not-allowed' : 'pointer', letterSpacing: '0.1em', opacity: workflowLoading !== null ? 0.6 : 1 }}
+                >
+                  {workflowLoading === 'hebdomadaire' ? '⏳ ANALYSE EN COURS...' : '🚀 LANCER WORKFLOW HEBDOMADAIRE'}
                 </button>
               </Panel>
 
@@ -474,9 +581,27 @@ export default function ChefsEntreprisePage() {
 
                 <div style={{ background: C.surface2, borderRadius: 7, padding: 10, marginBottom: 12, display: 'flex', flexDirection: 'column', gap: 5 }}>
                   {[
-                    { label: 'Dernière exécution :', val: 'Lundi 7 avril 2026 - 8h30', color: C.green },
-                    { label: 'Prochaine exécution :', val: 'Lundi 5 mai 2026 - 8h00', color: C.purple },
-                    { label: 'Signaux détectés :', val: '48 leads (5 holdings + 31 dividendes + 12 dirigeants 55+)', color: C.textHi },
+                    {
+                      label: 'Dernière exécution :',
+                      val: lastWorkflowType === 'mensuel' && workflowStats
+                        ? new Date(workflowStats.dateExecution).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })
+                        : '—',
+                      color: C.green,
+                    },
+                    {
+                      label: 'Prochaine exécution :',
+                      val: lastWorkflowType === 'mensuel' && workflowStats
+                        ? new Date(workflowStats.prochaine).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })
+                        : '1er lundi du mois 8h00',
+                      color: C.purple,
+                    },
+                    {
+                      label: 'Signaux détectés :',
+                      val: lastWorkflowType === 'mensuel' && workflowStats
+                        ? `${workflowStats.total} leads (${workflowStats.holdings ?? 0} holdings + ${workflowStats.dividendes ?? 0} dividendes + ${workflowStats.seniors ?? 0} dirigeants 55+)`
+                        : '—',
+                      color: C.textHi,
+                    },
                   ].map(r => (
                     <div key={r.label} style={{ display: 'flex', justifyContent: 'space-between' }}>
                       <span style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.textLo }}>{r.label}</span>
@@ -504,8 +629,12 @@ export default function ChefsEntreprisePage() {
                   </div>
                 </div>
 
-                <button style={{ width: '100%', padding: 12, background: `linear-gradient(135deg,#140d1e,#1e0d2e)`, border: `1px solid ${C.purple}`, color: C.purple, borderRadius: 7, fontFamily: 'Oswald,sans-serif', fontSize: 12, fontWeight: 700, cursor: 'pointer', letterSpacing: '0.1em' }}>
-                  🚀 LANCER WORKFLOW MENSUEL
+                <button
+                  onClick={() => runWorkflow('mensuel')}
+                  disabled={workflowLoading !== null}
+                  style={{ width: '100%', padding: 12, background: `linear-gradient(135deg,#140d1e,#1e0d2e)`, border: `1px solid ${C.purple}`, color: C.purple, borderRadius: 7, fontFamily: 'Oswald,sans-serif', fontSize: 12, fontWeight: 700, cursor: workflowLoading !== null ? 'not-allowed' : 'pointer', letterSpacing: '0.1em', opacity: workflowLoading !== null ? 0.6 : 1 }}
+                >
+                  {workflowLoading === 'mensuel' ? '⏳ ANALYSE EN COURS...' : '🚀 LANCER WORKFLOW MENSUEL'}
                 </button>
               </Panel>
 
@@ -537,6 +666,31 @@ export default function ChefsEntreprisePage() {
             </div>
           )}
         </>
+      )}
+
+      {selectedProspect && (
+        <ProspectCard
+          prospect={selectedProspect}
+          onClose={() => setSelectedProspect(null)}
+          onAddToCRM={async (p) => {
+            await fetch('/api/prospects', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                full_name: p.nom,
+                company: p.entreprise ?? '',
+                city: p.ville ?? '',
+                phone: p.telephone ?? '',
+                email: p.email ?? '',
+                source: 'chefs_entreprise',
+                notes: p.signalLabel ? `Signal: ${p.signalLabel}` : '',
+              }),
+            })
+            const res = await fetch('/api/prospects?source=chefs_entreprise&limit=50')
+            const data = await res.json()
+            if (data.success) setChefs(data.data ?? [])
+          }}
+        />
       )}
     </>
   )
