@@ -47,9 +47,11 @@ export default function ProspectCard({ prospect, onClose, onAddToCRM }: Props) {
     async function load() {
       try {
         const params = new URLSearchParams()
-        if (prospect.siren) params.set('siren', prospect.siren)
-        params.set('nom', prospect.nom)
+        if (prospect.siren)      params.set('siren',      prospect.siren)
+        if (prospect.nom)        params.set('nom',         prospect.nom)
         if (prospect.entreprise) params.set('entreprise', prospect.entreprise)
+        if (prospect.metier)     params.set('metier',     prospect.metier)
+        if (prospect.ville)      params.set('ville',      prospect.ville)
         const res = await fetch(`/api/enrichissement?${params}`)
         const data = await res.json()
         if (data.success) setEnrich(data.data)
@@ -57,7 +59,7 @@ export default function ProspectCard({ prospect, onClose, onAddToCRM }: Props) {
       finally { setEnrichLoading(false) }
     }
     load()
-  }, [prospect.siren, prospect.nom, prospect.entreprise])
+  }, [prospect.siren, prospect.nom, prospect.entreprise, prospect.metier, prospect.ville])
 
   const telephone = prospect.telephone ?? enrich?.telephone ?? null
   const email = prospect.email ?? enrich?.email ?? null
@@ -111,8 +113,19 @@ export default function ProspectCard({ prospect, onClose, onAddToCRM }: Props) {
 
         {/* Contact enrichi */}
         <div style={{ background: C.surface1, borderRadius: 10, padding: 12, marginBottom: 16, border: `1px solid ${C.lineSoft}` }}>
-          <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 10, fontWeight: 500, color: C.textLo, textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 10 }}>
-            Contact {enrichLoading && <span style={{ color: C.indigo, fontSize: 9 }}>· chargement…</span>}
+          <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 10, fontWeight: 500, color: C.textLo, textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span>Contact</span>
+            {enrichLoading && <span style={{ color: C.indigo, fontSize: 9 }}>· chargement…</span>}
+            {!enrichLoading && enrich && (
+              <span style={{
+                fontSize: 7, padding: '1px 6px', borderRadius: 5, fontFamily: 'JetBrains Mono,monospace',
+                background: enrich.source === 'pappers' ? C.gold + '20' : enrich.source === 'google_places' ? '#0a1f0a' : C.surface2,
+                color: enrich.source === 'pappers' ? C.gold : enrich.source === 'google_places' ? C.green : C.textVlo,
+                border: `1px solid ${enrich.source === 'pappers' ? C.gold + '40' : enrich.source === 'google_places' ? C.green + '40' : C.lineSoft}`,
+              }}>
+                {enrich.source === 'pappers' ? 'Pappers' : enrich.source === 'google_places' ? 'Google' : 'Généré'}
+              </span>
+            )}
           </div>
           <ContactRow icon="📞" label="Téléphone" value={telephone} fallbackUrl={pagesJaunesUrl} fallbackLabel="Pages Jaunes" />
           <ContactRow icon="✉" label="Email" value={email} />
