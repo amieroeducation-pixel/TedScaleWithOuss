@@ -69,7 +69,9 @@ $secretsArg = (
   "WHATSAPP_ACCESS_TOKEN",
   "CRON_SECRET",
   "GOOGLE_CLIENT_ID",
-  "GOOGLE_CLIENT_SECRET"
+  "GOOGLE_CLIENT_SECRET",
+  "PAPPERS_API_KEY",
+  "GOOGLE_PLACES_API_KEY"
 ) | Where-Object { $envVars.ContainsKey($_) } | ForEach-Object {
   "$_=$($envVars[$_])"
 }
