@@ -1,17 +1,18 @@
 import { NextResponse } from 'next/server'
 
 export type ApiResponse<T> = {
+  success: boolean
   data: T | null
   error: string | null
 }
 
 export function apiSuccess<T>(data: T, status = 200) {
-  return NextResponse.json<ApiResponse<T>>({ data, error: null }, { status })
+  return NextResponse.json<ApiResponse<T>>({ success: true, data, error: null }, { status })
 }
 
 export function apiError(message: string, status = 500) {
   console.error(`[API Error] ${message}`)
-  return NextResponse.json<ApiResponse<null>>({ data: null, error: message }, { status })
+  return NextResponse.json<ApiResponse<null>>({ success: false, data: null, error: message }, { status })
 }
 
 export function apiUnauthorized() {
