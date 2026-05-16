@@ -35,15 +35,27 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   }
 
   if (playbookId === 'b2-rdv') {
-    const fiche = await runPreparationRdv({ runId: run.id, ...body })
-    await supabase.from('playbook_runs').update({ status: 'completed', completed_at: new Date().toISOString(), prospects_found: 1 }).eq('id', run.id)
-    return NextResponse.json({ runId: run.id, fiche })
+    ;(async () => {
+      try {
+        const fiche = await runPreparationRdv({ runId: run.id, ...body })
+        await supabase.from('playbook_runs').update({ status: 'completed', completed_at: new Date().toISOString(), prospects_found: 1 }).eq('id', run.id)
+      } catch (err: any) {
+        await supabase.from('playbook_runs').update({ status: 'failed', error: err.message }).eq('id', run.id)
+      }
+    })()
+    return NextResponse.json({ runId: run.id, status: 'running' })
   }
 
   if (playbookId === 'b4-cartographie') {
-    const carto = await runCartographieHolding({ runId: run.id, ...body })
-    await supabase.from('playbook_runs').update({ status: 'completed', completed_at: new Date().toISOString(), prospects_found: 1 }).eq('id', run.id)
-    return NextResponse.json({ runId: run.id, cartographie: carto })
+    ;(async () => {
+      try {
+        await runCartographieHolding({ runId: run.id, ...body })
+        await supabase.from('playbook_runs').update({ status: 'completed', completed_at: new Date().toISOString(), prospects_found: 1 }).eq('id', run.id)
+      } catch (err: any) {
+        await supabase.from('playbook_runs').update({ status: 'failed', error: err.message }).eq('id', run.id)
+      }
+    })()
+    return NextResponse.json({ runId: run.id, status: 'running' })
   }
 
   const engine = ENGINES[playbookId]

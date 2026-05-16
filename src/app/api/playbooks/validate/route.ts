@@ -14,6 +14,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Missing prospectIds or action' }, { status: 400 })
   }
 
+  if (!['validate', 'reject'].includes(action)) {
+    return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
+  }
+
   const newStatus = action === 'validate' ? 'validated' : 'rejected'
 
   const { error } = await supabase
@@ -34,8 +38,8 @@ export async function POST(req: NextRequest) {
       .in('id', prospectIds)
 
     for (const pp of playProspects ?? []) {
-      const messageField = `message_j0_${pp.selected_variant}` as keyof typeof pp
-      const message = pp[messageField] as string
+      const messageField = `message_j0_${variant}` as keyof typeof pp
+      const message = pp[messageField] as string ?? ''
 
       const { data: newProspect } = await supabase
         .from('prospects')
