@@ -1,4 +1,6 @@
 // src/app/api/playbooks/[id]/run/route.ts
+export const dynamic = 'force-dynamic'
+
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { runCessionsBodacc, runCreationsRecentes, runHoldings, runDividendes, runDirigeants55 } from '@/lib/playbooks/engine-a'
