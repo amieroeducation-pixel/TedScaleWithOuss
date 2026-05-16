@@ -50,6 +50,36 @@ export const PREWRITTEN_MESSAGES: Record<SignalType, { j0: [string, string, stri
   },
 }
 
+export const LINKEDIN_SIGNAL_CONTEXT: Record<string, {
+  context: string
+  angles: [string, string, string]
+}> = {
+  cession: {
+    context: "Ce dirigeant a annoncé ou réalisé une cession d'entreprise récemment.",
+    angles: ['fiscalité du produit de cession', 'réinvestissement et structuration post-cession', 'transmission familiale et protection du capital'],
+  },
+  promotion: {
+    context: "Ce profil vient d'être promu ou a changé de poste vers un rôle de direction.",
+    angles: ['revalorisation de rémunération et prévoyance dirigeant', 'optimisation du nouveau package (BSPCE, stock-options)', 'protection patrimoniale personnelle en tant que cadre dirigeant'],
+  },
+  levee_fonds: {
+    context: "Cette entreprise vient de réaliser une levée de fonds.",
+    angles: ["diversification du patrimoine personnel hors de l'entreprise", 'structuration entre patrimoine pro et perso', 'protection du dirigeant fondateur en phase de croissance'],
+  },
+  creation_holding: {
+    context: "Ce dirigeant vient de créer ou restructurer une holding.",
+    angles: ['optimisation de la remontée de dividendes', 'structuration IS et patrimoine via la holding', 'préparation de la transmission capitalistique'],
+  },
+  retraite: {
+    context: "Ce profil prépare activement son départ à la retraite.",
+    angles: ["bilan retraite et optimisation des droits acquis", "transmission progressive de l'entreprise", 'gestion du capital post-activité professionnelle'],
+  },
+  recrutement: {
+    context: "Cette entreprise recrute massivement, signe de forte croissance.",
+    angles: ['prévoyance collective et épargne salariale en phase de croissance', 'protection du dirigeant face aux risques opérationnels', 'structuration patrimoniale pour une cession future'],
+  },
+}
+
 export function buildMessages(params: {
   signalType: SignalType
   prenom: string
@@ -90,6 +120,37 @@ Contraintes : maximum 5 lignes, référence naturelle à l'événement, aucun ja
 Réponds uniquement avec le message.`,
       },
     ],
+  })
+  const block = response.content[0]
+  return block.type === 'text' ? block.text.trim() : ''
+}
+
+export async function generateLinkedinMessage(params: {
+  signal_gojiberry: string
+  signal_description: string
+  prenom: string
+  societe: string
+  angle: string
+}): Promise<string> {
+  const { signal_gojiberry, signal_description, prenom, societe, angle } = params
+  const signalCtx = LINKEDIN_SIGNAL_CONTEXT[signal_gojiberry]
+  const context = signalCtx?.context ?? `Signal LinkedIn détecté : ${signal_description}`
+
+  const response = await client.messages.create({
+    model: 'claude-sonnet-4-6',
+    max_tokens: 150,
+    messages: [{
+      role: 'user',
+      content: `Tu es un expert en gestion de patrimoine avec 15 ans d'expérience. Rédige un message LinkedIn de premier contact.
+Prénom : ${prenom}
+Société : ${societe}
+Contexte : ${context}
+Description précise du signal : ${signal_description}
+Angle patrimonial à aborder (implicitement) : ${angle}
+Objectif : obtenir un échange informel de 20 minutes.
+Règles absolues : maximum 5 lignes, référence naturelle à l'événement, aucun jargon financier, ton pair-à-pair chaleureux, jamais de produits financiers mentionnés.
+Réponds uniquement avec le message, sans guillemets ni préambule.`,
+    }],
   })
   const block = response.content[0]
   return block.type === 'text' ? block.text.trim() : ''
