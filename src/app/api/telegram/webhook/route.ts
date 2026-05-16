@@ -5,10 +5,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { sendStatusReport, sendTelegramMessage } from '@/lib/telegram/bot'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 export async function POST(req: NextRequest) {
   const webhookSecret = process.env.TELEGRAM_WEBHOOK_SECRET
@@ -32,7 +34,7 @@ export async function POST(req: NextRequest) {
     const [action, runId] = (callback.data as string).split(':')
 
     if (action === 'validate_all' && runId) {
-      const { data: prospects } = await supabase
+      const { data: prospects } = await getSupabase()
         .from('playbook_prospects')
         .select('id')
         .eq('run_id', runId)
@@ -50,7 +52,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === 'reject_all' && runId) {
-      await supabase
+      await getSupabase()
         .from('playbook_prospects')
         .update({ status: 'rejected' })
         .eq('run_id', runId)

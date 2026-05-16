@@ -7,10 +7,12 @@ import { runCessionsBodacc, runCreationsRecentes, runHoldings, runDividendes, ru
 import { runSurveillanceBook, runDetectionLiquidite, runPreparationRdv, runCartographieHolding } from '@/lib/playbooks/engine-b'
 import { sendPlaybookReport } from '@/lib/telegram/bot'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 const ENGINES: Record<string, (runId: string, body?: any) => Promise<number>> = {
   'a1-creations': runCreationsRecentes,
@@ -26,7 +28,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const { id: playbookId } = await params
   const body = await req.json().catch(() => ({}))
 
-  const { data: run, error: runError } = await supabase
+  const { data: run, error: runError } = await getSupabase()
     .from('playbook_runs')
     .insert({ playbook_id: playbookId, status: 'running' })
     .select()
@@ -40,9 +42,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     ;(async () => {
       try {
         const fiche = await runPreparationRdv({ runId: run.id, ...body })
-        await supabase.from('playbook_runs').update({ status: 'completed', completed_at: new Date().toISOString(), prospects_found: 1 }).eq('id', run.id)
+        await getSupabase().from('playbook_runs').update({ status: 'completed', completed_at: new Date().toISOString(), prospects_found: 1 }).eq('id', run.id)
       } catch (err: any) {
-        await supabase.from('playbook_runs').update({ status: 'failed', error: err.message }).eq('id', run.id)
+        await getSupabase().from('playbook_runs').update({ status: 'failed', error: err.message }).eq('id', run.id)
       }
     })()
     return NextResponse.json({ runId: run.id, status: 'running' })
@@ -52,9 +54,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     ;(async () => {
       try {
         await runCartographieHolding({ runId: run.id, ...body })
-        await supabase.from('playbook_runs').update({ status: 'completed', completed_at: new Date().toISOString(), prospects_found: 1 }).eq('id', run.id)
+        await getSupabase().from('playbook_runs').update({ status: 'completed', completed_at: new Date().toISOString(), prospects_found: 1 }).eq('id', run.id)
       } catch (err: any) {
-        await supabase.from('playbook_runs').update({ status: 'failed', error: err.message }).eq('id', run.id)
+        await getSupabase().from('playbook_runs').update({ status: 'failed', error: err.message }).eq('id', run.id)
       }
     })()
     return NextResponse.json({ runId: run.id, status: 'running' })
@@ -62,21 +64,21 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   const engine = ENGINES[playbookId]
   if (!engine) {
-    await supabase.from('playbook_runs').update({ status: 'failed', error: 'Unknown playbook' }).eq('id', run.id)
+    await getSupabase().from('playbook_runs').update({ status: 'failed', error: 'Unknown playbook' }).eq('id', run.id)
     return NextResponse.json({ error: 'Unknown playbook' }, { status: 400 })
   }
 
   ;(async () => {
     try {
       const count = await engine(run.id)
-      await supabase
+      await getSupabase()
         .from('playbook_runs')
         .update({ status: 'completed', completed_at: new Date().toISOString(), prospects_found: count })
         .eq('id', run.id)
 
       await sendPlaybookReport({ playbookId, runId: run.id, prospectsFound: count })
     } catch (err: any) {
-      await supabase
+      await getSupabase()
         .from('playbook_runs')
         .update({ status: 'failed', error: err.message })
         .eq('id', run.id)

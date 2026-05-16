@@ -1,10 +1,12 @@
 // src/lib/playbooks/engine-b.ts
 import { createClient } from '@supabase/supabase-js'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 const PAPPERS_KEY = process.env.PAPPERS_API_KEY!
 
 // ── B1 — SURVEILLANCE BOOK ────────────────────────────────────────────────────
@@ -73,7 +75,7 @@ export async function runSurveillanceBook(runId: string) {
 
   alerts.sort((a, b) => b.score - a.score)
   if (alerts.length > 0) {
-    await supabase.from('playbook_prospects').insert(alerts)
+    await getSupabase().from('playbook_prospects').insert(alerts)
   }
   return alerts.length
 }
@@ -144,7 +146,7 @@ export async function runDetectionLiquidite(runId: string) {
 
   prospects.sort((a, b) => b.score - a.score)
   if (prospects.length > 0) {
-    await supabase.from('playbook_prospects').insert(prospects)
+    await getSupabase().from('playbook_prospects').insert(prospects)
   }
   return prospects.length
 }
@@ -176,7 +178,7 @@ export async function runPreparationRdv(params: {
     } catch {}
   }
 
-  await supabase.from('playbook_prospects').insert({
+  await getSupabase().from('playbook_prospects').insert({
     run_id: runId,
     playbook_id: 'b2-rdv',
     signal_type: 'cession',
@@ -217,7 +219,7 @@ export async function runCartographieHolding(params: {
     return null
   }
 
-  await supabase.from('playbook_prospects').insert({
+  await getSupabase().from('playbook_prospects').insert({
     run_id: runId,
     playbook_id: 'b4-cartographie',
     signal_type: 'holding',

@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { C } from '@/lib/theme'
 import ProspectCard, { type ProspectCardData } from '@/components/prospects/ProspectCard'
+import CreateSessionModal from '@/components/calling/CreateSessionModal'
 
 // --- TYPES ---
 type ProspectStatus = 'Non contacté' | 'En cours' | 'Converti' | 'Perdu'
@@ -33,18 +34,27 @@ const METIERS = [
   { value: 'dentiste', label: 'Dentiste' },
   { value: 'infirmier', label: 'Infirmier libéral' },
   { value: 'kinesitherapeute', label: 'Kinésithérapeute' },
+  { value: 'kinesiologue', label: 'Kinésiologue' },
+  { value: 'naturopathe', label: 'Naturopathe' },
+  { value: 'acupuncteur', label: 'Acupuncteur' },
+  { value: 'homeopathe', label: 'Homéopathe' },
   { value: 'pharmacien', label: 'Pharmacien' },
   { value: 'avocat', label: 'Avocat' },
   { value: 'notaire', label: 'Notaire' },
   { value: 'expert_comptable', label: 'Expert-comptable' },
+  { value: 'commissaire_comptes', label: 'Commissaire aux comptes' },
   { value: 'architecte', label: 'Architecte' },
   { value: 'veterinaire', label: 'Vétérinaire' },
   { value: 'osteopathe', label: 'Ostéopathe' },
   { value: 'psychologue', label: 'Psychologue' },
+  { value: 'psychotherapeute', label: 'Psychothérapeute' },
   { value: 'sage_femme', label: 'Sage-femme' },
   { value: 'orthophoniste', label: 'Orthophoniste' },
   { value: 'podologue', label: 'Podologue' },
   { value: 'chiropracteur', label: 'Chiropracteur' },
+  { value: 'dieteticien', label: 'Diététicien' },
+  { value: 'ergotherapeute', label: 'Ergothérapeute' },
+  { value: 'orthoptiste', label: 'Orthoptiste' },
 ]
 
 const BASE_PROSPECTS: Prospect[] = [
@@ -175,6 +185,48 @@ export default function TnsPage() {
   const [prospects, setProspects] = useState<Prospect[]>(BASE_PROSPECTS)
   const [selectedProspect, setSelectedProspect] = useState<ProspectCardData | null>(null)
   const [hasUserProspects, setHasUserProspects] = useState(false)
+  const [contactedPhones, setContactedPhones] = useState<Set<string>>(new Set())
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
+  const [showCreateSession, setShowCreateSession] = useState(false)
+
+  function toggleSelect(id: number) {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  function toggleAll() {
+    if (selectedIds.size === searchResults.length) setSelectedIds(new Set())
+    else setSelectedIds(new Set(searchResults.map(r => r.id)))
+  }
+
+  const selectedContacts = searchResults.filter(r => selectedIds.has(r.id))
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('tns_contacted_phones')
+      if (stored) setContactedPhones(new Set(JSON.parse(stored) as string[]))
+    } catch { /* ignore */ }
+  }, [])
+
+  function handleContacted(phone: string, contacted: boolean) {
+    const norm = phone.replace(/[\s.\-]/g, '')
+    setContactedPhones(prev => {
+      const next = new Set(prev)
+      if (contacted) next.add(norm)
+      else next.delete(norm)
+      try { localStorage.setItem('tns_contacted_phones', JSON.stringify([...next])) } catch { /* ignore */ }
+      return next
+    })
+  }
+
+  function isPhoneContacted(phone: string | null | undefined): boolean {
+    if (!phone) return false
+    return contactedPhones.has(phone.replace(/[\s.\-]/g, ''))
+  }
 
   const stats = {
     total: prospects.length,
@@ -372,8 +424,22 @@ export default function TnsPage() {
       {showResults && (
         <Panel accent={C.indigo}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <PanelTitle title={`Résultats (${searchResults.length})`} accent={C.indigo} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <PanelTitle title={`Résultats (${searchResults.length})`} accent={C.indigo} />
+              <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.textLo, cursor: 'pointer' }}>
+                <input type="checkbox" checked={selectedIds.size === searchResults.length && searchResults.length > 0} onChange={toggleAll} style={{ accentColor: C.indigo }} />
+                Tout sélectionner
+              </label>
+            </div>
             <div style={{ display: 'flex', gap: 6 }}>
+              {selectedIds.size > 0 && (
+                <button
+                  onClick={() => setShowCreateSession(true)}
+                  style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, padding: '5px 10px', borderRadius: 5, border: `1px solid ${C.green}40`, background: '#0a140a', color: C.green, cursor: 'pointer', fontWeight: 600 }}
+                >
+                  🚀 Session d&apos;appels ({selectedIds.size})
+                </button>
+              )}
               <button onClick={exportCSV} style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, padding: '5px 10px', borderRadius: 5, border: `1px solid ${C.indigo}40`, background: C.surface2, color: C.indigo, cursor: 'pointer' }}>
                 📥 Export CSV
               </button>
@@ -388,7 +454,14 @@ export default function TnsPage() {
           </div>
           <div style={{ maxHeight: 300, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 1 }}>
             {searchResults.map(r => (
-              <div key={r.id} onClick={() => setSelectedProspect({ id: r.id, nom: r.nom, entreprise: r.entreprise, siren: r.siren, metier: r.metier, ville: r.ville, codePostal: r.codePostal, adresse: r.adresse, telephone: r.telephone, email: r.email, score: r.score, source: r.source, googleUrl: r.googleUrl, mapsUrl: r.mapsUrl })} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', background: C.surface2, borderRadius: 7, border: `1px solid ${C.lineSoft}`, cursor: 'pointer' }}>
+              <div key={r.id} onClick={() => setSelectedProspect({ id: r.id, nom: r.nom, entreprise: r.entreprise, siren: r.siren, metier: r.metier, ville: r.ville, codePostal: r.codePostal, adresse: r.adresse, telephone: r.telephone, email: r.email, score: r.score, source: r.source, googleUrl: r.googleUrl, mapsUrl: r.mapsUrl })} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', background: selectedIds.has(r.id) ? `${C.indigo}15` : C.surface2, borderRadius: 7, border: `1px solid ${selectedIds.has(r.id) ? C.indigo + '60' : C.lineSoft}`, cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={selectedIds.has(r.id)}
+                  onChange={() => toggleSelect(r.id)}
+                  onClick={e => e.stopPropagation()}
+                  style={{ accentColor: C.indigo, flexShrink: 0 }}
+                />
                 <div style={{ width: 30, height: 30, borderRadius: 8, background: C.surface3, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Oswald,sans-serif', fontSize: 10, color: C.indigo, fontWeight: 600, flexShrink: 0 }}>{r.initials}</div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 11, color: C.textHi, fontWeight: 500 }}>{r.nom}</div>
@@ -397,17 +470,17 @@ export default function TnsPage() {
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'flex-end', flexShrink: 0 }}>
                   {r.telephone ? (
-                    <a href={`tel:${r.telephone}`} style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, padding: '3px 8px', borderRadius: 5, border: `1px solid #4ade8040`, background: '#0a140a', color: C.green, textDecoration: 'none', fontWeight: 600 }}>
+                    <a href={`tel:${r.telephone}`} onClick={(e) => e.stopPropagation()} style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, padding: '3px 8px', borderRadius: 5, border: `1px solid #4ade8040`, background: '#0a140a', color: C.green, textDecoration: 'none', fontWeight: 600 }}>
                       📞 {r.telephone}
                     </a>
                   ) : (
                     <div style={{ display: 'flex', gap: 3 }}>
                       {r.pagesJaunesUrl && (
-                        <a href={r.pagesJaunesUrl} target="_blank" rel="noopener noreferrer" style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 7, padding: '3px 7px', borderRadius: 5, border: `1px solid #f5a62340`, background: '#1a1000', color: '#f5a623', textDecoration: 'none' }}>
+                        <a href={r.pagesJaunesUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 7, padding: '3px 7px', borderRadius: 5, border: `1px solid #f5a62340`, background: '#1a1000', color: '#f5a623', textDecoration: 'none' }}>
                           PJ
                         </a>
                       )}
-                      <a href={r.googleUrl} target="_blank" rel="noopener noreferrer" style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 7, padding: '3px 7px', borderRadius: 5, border: `1px solid ${C.indigo}40`, background: C.surface3, color: C.indigo, textDecoration: 'none' }}>
+                      <a href={r.googleUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 7, padding: '3px 7px', borderRadius: 5, border: `1px solid ${C.indigo}40`, background: C.surface3, color: C.indigo, textDecoration: 'none' }}>
                         🔍
                       </a>
                     </div>
@@ -415,7 +488,10 @@ export default function TnsPage() {
                   {r.email && <span style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 7, color: C.textLo }}>{r.email}</span>}
                 </div>
                 <ScoreDot score={r.score} />
-                <StatusBadge status={r.status} />
+                {isPhoneContacted(r.telephone)
+                  ? <span style={{ fontSize: 8, padding: '2px 7px', borderRadius: 5, background: '#0a1f0a', color: C.green, border: `1px solid ${C.green}40`, fontFamily: 'JetBrains Mono,monospace', fontWeight: 600, whiteSpace: 'nowrap' as const }}>✓ Contacté</span>
+                  : <StatusBadge status={r.status} />
+                }
               </div>
             ))}
           </div>
@@ -455,7 +531,7 @@ export default function TnsPage() {
         {hasUserProspects ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             {filtered.map(p => (
-              <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 10px', background: C.surface2, borderRadius: 8, border: `1px solid ${C.lineSoft}` }}>
+              <div key={p.id} onClick={() => setSelectedProspect({ id: p.id, nom: p.nom, metier: p.metier, ville: p.ville, telephone: p.telephone, score: p.score, source: p.source })} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 10px', background: C.surface2, borderRadius: 8, border: `1px solid ${C.lineSoft}`, cursor: 'pointer' }}>
                 {/* Avatar */}
                 <div style={{
                   width: 32, height: 32, borderRadius: 8, flexShrink: 0,
@@ -498,10 +574,38 @@ export default function TnsPage() {
         )}
       </Panel>
 
+      {showCreateSession && (
+        <CreateSessionModal
+          contacts={selectedContacts.map(r => ({
+            siren: r.siren,
+            nom: r.nom,
+            entreprise: r.entreprise,
+            metier: r.metier,
+            ville: r.ville,
+            telephone: r.telephone ?? '',
+            email: r.email,
+            adresse: r.adresse,
+            source: r.source,
+          }))}
+          metier={metier}
+          metierLabel={METIERS.find(m => m.value === metier)?.label ?? metier}
+          ville={ville}
+          source="tns"
+          onClose={() => setShowCreateSession(false)}
+          onCreated={() => {
+            setShowCreateSession(false)
+            setSelectedIds(new Set())
+            window.location.href = '/today'
+          }}
+        />
+      )}
+
       {selectedProspect && (
         <ProspectCard
           prospect={selectedProspect}
           onClose={() => setSelectedProspect(null)}
+          isContacted={isPhoneContacted(selectedProspect.telephone)}
+          onContacted={handleContacted}
           onAddToCRM={async (p) => {
             await fetch('/api/prospects', {
               method: 'POST',

@@ -11,7 +11,6 @@ type TokenRow = {
 async function getValidToken(supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>, userId: string, row: TokenRow): Promise<string | null> {
   const { google_calendar_access_token, google_calendar_refresh_token, google_calendar_token_expiry } = row
 
-  // Access token still valid (with 60s buffer)
   if (google_calendar_access_token && google_calendar_token_expiry && Date.now() < google_calendar_token_expiry - 60_000) {
     return google_calendar_access_token
   }
@@ -60,10 +59,9 @@ export async function GET(request: NextRequest) {
   const accessToken = await getValidToken(supabase, user.id, settings as TokenRow)
   if (!accessToken) return apiError('Token Google Calendar invalide — reconnectez-vous depuis les Paramètres', 401)
 
-  // Plage par défaut : semaine en cours (lun → dim)
   const { searchParams } = new URL(request.url)
   const now = new Date()
-  const dayOfWeek = now.getDay() === 0 ? 6 : now.getDay() - 1 // 0=lun, 6=dim
+  const dayOfWeek = now.getDay() === 0 ? 6 : now.getDay() - 1
   const monday = new Date(now)
   monday.setDate(now.getDate() - dayOfWeek)
   monday.setHours(0, 0, 0, 0)
@@ -81,7 +79,7 @@ export async function GET(request: NextRequest) {
       timeMax,
       singleEvents: 'true',
       orderBy: 'startTime',
-      maxResults: '50',
+      maxResults: '100',
     }),
     { headers: { Authorization: `Bearer ${accessToken}` } }
   )
@@ -103,8 +101,90 @@ export async function GET(request: NextRequest) {
       end: end?.dateTime ?? end?.date ?? null,
       allDay: !start?.dateTime,
       location: (e.location as string | undefined) ?? null,
+      description: (e.description as string | undefined) ?? null,
     }
   })
 
   return apiSuccess({ events, connected: true })
+}
+
+export async function POST(request: NextRequest) {
+  const supabase = await createSupabaseServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return apiUnauthorized()
+
+  const { data: settings } = await supabase
+    .from('user_settings')
+    .select('google_calendar_refresh_token, google_calendar_access_token, google_calendar_token_expiry')
+    .eq('id', user.id)
+    .single()
+
+  if (!settings?.google_calendar_refresh_token) {
+    return apiError('Google Calendar non connecté', 401)
+  }
+
+  const accessToken = await getValidToken(supabase, user.id, settings as TokenRow)
+  if (!accessToken) return apiError('Token Google Calendar invalide — reconnectez-vous depuis les Paramètres', 401)
+
+  const body = await request.json() as {
+    title: string
+    start: string
+    end: string
+    allDay?: boolean
+    location?: string
+    description?: string
+  }
+
+  if (!body.title || !body.start || !body.end) {
+    return apiError('Champs requis manquants : title, start, end', 400)
+  }
+
+  const eventPayload = body.allDay
+    ? {
+        summary: body.title,
+        location: body.location ?? undefined,
+        description: body.description ?? undefined,
+        start: { date: body.start.split('T')[0] },
+        end: { date: body.end.split('T')[0] },
+      }
+    : {
+        summary: body.title,
+        location: body.location ?? undefined,
+        description: body.description ?? undefined,
+        start: { dateTime: body.start, timeZone: 'Europe/Paris' },
+        end: { dateTime: body.end, timeZone: 'Europe/Paris' },
+      }
+
+  const createRes = await fetch(
+    'https://www.googleapis.com/calendar/v3/calendars/primary/events',
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(eventPayload),
+    }
+  )
+
+  if (!createRes.ok) {
+    const err = await createRes.json().catch(() => ({}))
+    return apiError((err as { error?: { message?: string } }).error?.message ?? 'Erreur création événement', 502)
+  }
+
+  const created = await createRes.json() as Record<string, unknown>
+  const startObj = created.start as { dateTime?: string; date?: string } | undefined
+  const endObj = created.end as { dateTime?: string; date?: string } | undefined
+
+  return apiSuccess({
+    event: {
+      id: created.id as string,
+      title: (created.summary as string | undefined) ?? body.title,
+      start: startObj?.dateTime ?? startObj?.date ?? body.start,
+      end: endObj?.dateTime ?? endObj?.date ?? body.end,
+      allDay: !startObj?.dateTime,
+      location: (created.location as string | undefined) ?? null,
+      description: (created.description as string | undefined) ?? null,
+    }
+  })
 }

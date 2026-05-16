@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { C } from '@/lib/theme'
+import CallingSessionPanel from '@/components/calling/CallingSessionPanel'
 
 // ─── Types Weekly Signal ────────────────────────────────────────────────────
 type RelanceRow = {
@@ -430,14 +431,6 @@ export default function TodayPage() {
   const rdv1Pct    = Math.round((rdv1 / 5)       * 100)
   const rdv2Pct    = Math.round((rdv2 / 3)       * 100)
 
-  // Script tabs
-  const [scriptTab, setScriptTab] = useState<'tns' | 'chef' | 'particulier'>('tns')
-  const scripts: Record<string, string> = {
-    tns: `Bonjour, je suis [Prénom] du cabinet [Nom].\n\nJe contacte les professionnels indépendants pour un audit patrimonial gratuit...\n\n→ Êtes-vous ouvert à un échange de 20 minutes cette semaine ?`,
-    chef: `Bonjour, je suis [Prénom] du cabinet [Nom].\n\nNous accompagnons les chefs d'entreprise dans l'optimisation de leur rémunération et fiscalité...\n\n→ Seriez-vous disponible pour une présentation rapide ?`,
-    particulier: `Bonjour, je suis [Prénom] du cabinet [Nom].\n\nNous aidons les particuliers à optimiser leur épargne et préparer leur retraite...\n\n→ Un échange de 15 minutes vous conviendrait-il ?`,
-  }
-
   // Relances
   const [relances, setRelances] = useState<Relance[]>([])
   const [showRelanceModal, setShowRelanceModal] = useState(false)
@@ -761,63 +754,8 @@ export default function TodayPage() {
             </div>
           </div>
 
-          {/* Script d'appel */}
-          <div style={{ background: C.surface1, border: `0.5px solid ${C.line}`, borderRadius: 8, padding: 14, marginBottom: 16 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-              <div style={{ fontSize: 10, fontWeight: 600, color: C.textHi }}>Script d'appel</div>
-              <div style={{ display: 'flex', gap: 4 }}>
-                {(['tns','chef','particulier'] as const).map(s => (
-                  <button
-                    key={s}
-                    onClick={() => setScriptTab(s)}
-                    style={{
-                      fontSize: 8, padding: '3px 8px', borderRadius: 10,
-                      background: scriptTab === s ? '#1a1400' : C.surface1,
-                      color: scriptTab === s ? C.gold : C.textLo,
-                      border: `0.5px solid ${scriptTab === s ? `${C.gold}40` : C.line}`,
-                      cursor: 'pointer',
-                    }}
-                  >{s === 'tns' ? 'TNS' : s === 'chef' ? 'Chef' : 'Particulier'}</button>
-                ))}
-              </div>
-            </div>
-            <div style={{ fontSize: 10, color: C.text, lineHeight: 1.7, padding: 12, background: C.bgMid, borderRadius: 5, border: `0.5px solid ${C.lineSoft}`, minHeight: 120, whiteSpace: 'pre-wrap' }}>
-              {scripts[scriptTab]}
-            </div>
-          </div>
-
-          {/* Objections */}
-          <div style={{ background: C.surface1, border: `0.5px solid ${C.line}`, borderRadius: 8, padding: 14, marginBottom: 16 }}>
-            <div style={{ fontSize: 10, fontWeight: 600, color: C.textHi, marginBottom: 6 }}>Objections &amp; Réponses</div>
-            <div style={{ fontSize: 8, color: C.textMid, marginBottom: 8 }}>Top 5 objections avec réponses types</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {[
-                { obj: 'Je n\'ai pas le temps', rep: 'Justement, notre audit vous fera gagner du temps sur le long terme. 20 minutes suffisent.' },
-                { obj: 'Je travaille déjà avec quelqu\'un', rep: 'Parfait, un second avis est toujours utile. Nous offrons un diagnostic complémentaire gratuit.' },
-                { obj: 'Ce n\'est pas le bon moment', rep: 'Quand serait un bon moment pour vous ? Je m\'adapte à votre agenda.' },
-                { obj: 'Ça ne m\'intéresse pas', rep: 'Je comprends. Puis-je vous demander ce qui vous permettrait d\'être intéressé ?' },
-                { obj: 'C\'est trop cher', rep: 'Notre consultation initiale est entièrement gratuite. Vous n\'avez rien à perdre.' },
-              ].map(({ obj, rep }, i) => (
-                <div key={i} style={{ background: C.bgMid, border: `0.5px solid ${C.line}`, borderRadius: 6, padding: '8px 10px' }}>
-                  <div style={{ fontSize: 8, color: C.cyan, fontWeight: 600, marginBottom: 3 }}>❓ {obj}</div>
-                  <div style={{ fontSize: 8, color: C.textMid, lineHeight: 1.5 }}>💬 {rep}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Liste appels ONOFF */}
-          <div style={{ background: C.surface1, border: `0.5px solid ${C.line}`, borderRadius: 8, padding: 14 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-              <div style={{ fontSize: 10, fontWeight: 600, color: C.textHi }}>Liste d'appels ONOFF</div>
-              <div style={{ display: 'flex', gap: 4 }}>
-                {['TNS','Chefs','Particuliers'].map(f => (
-                  <button key={f} style={{ fontSize: 8, padding: '3px 8px', borderRadius: 10, background: f === 'TNS' ? '#1a1400' : C.surface1, color: f === 'TNS' ? C.gold : C.textLo, border: `0.5px solid ${f === 'TNS' ? `${C.gold}40` : C.line}`, cursor: 'pointer' }}>{f}</button>
-                ))}
-              </div>
-            </div>
-            <div style={{ color: C.textLo, fontSize: 9, fontStyle: 'italic' }}>Liste générée dynamiquement depuis vos contacts ONOFF.</div>
-          </div>
+          {/* Session d'appels — remplace Script hardcodé + Objections + Liste ONOFF */}
+          <CallingSessionPanel />
         </div>
       )}
 

@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 import { C } from '@/lib/theme'
 import { useUserSettings, UserSettings } from '@/hooks/useUserSettings'
 
-type Tab = 'general' | 'kpi' | 'notifications' | 'integrations' | 'sections' | 'mobile' | 'sequences' | 'triggers'
+type Tab = 'general' | 'kpi' | 'notifications' | 'integrations' | 'sections' | 'mobile' | 'sequences' | 'triggers' | 'scripts'
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'general', label: 'Général' },
@@ -16,6 +16,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'mobile', label: '📱 Mobile' },
   { id: 'sequences', label: '🔗 Séquences' },
   { id: 'triggers', label: '⚡ Triggers' },
+  { id: 'scripts', label: '📞 Scripts' },
 ]
 
 const MONTHS_SHORT = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc']
@@ -1321,6 +1322,213 @@ function TabMobile() {
   )
 }
 
+// ─── TAB SCRIPTS & OBJECTIONS ─────────────────────────────────────────────────
+type CallScript = { id: string; metier: string; titre: string; contenu: string; is_default: boolean }
+type CallObjection = { id: string; metier: string; question: string; reponse: string; ordre: number }
+
+const METIERS_LIST = [
+  { value: 'medecin_generaliste', label: 'Médecin généraliste' },
+  { value: 'kinesitherapeute', label: 'Kinésithérapeute' },
+  { value: 'dentiste', label: 'Chirurgien dentiste' },
+  { value: 'avocat', label: 'Avocat' },
+  { value: 'expert_comptable', label: 'Expert comptable' },
+  { value: 'notaire', label: 'Notaire' },
+  { value: 'osteopathe', label: 'Ostéopathe' },
+  { value: 'infirmier', label: 'Infirmier libéral' },
+  { value: 'pharmacien', label: 'Pharmacien' },
+  { value: 'architecte', label: 'Architecte' },
+]
+
+function TabScripts() {
+  const [scriptsMetier, setScriptsMetier] = useState('medecin_generaliste')
+  const [scripts, setScripts] = useState<CallScript[]>([])
+  const [objections, setObjections] = useState<CallObjection[]>([])
+  const [scriptsLoading, setScriptsLoading] = useState(false)
+  const [newScript, setNewScript] = useState({ titre: '', contenu: '' })
+  const [newObj, setNewObj] = useState({ question: '', reponse: '' })
+  const [showNewScript, setShowNewScript] = useState(false)
+  const [showNewObj, setShowNewObj] = useState(false)
+
+  useEffect(() => {
+    setScriptsLoading(true)
+    Promise.all([
+      fetch(`/api/call-scripts?metier=${scriptsMetier}`).then(r => r.json()),
+      fetch(`/api/call-objections?metier=${scriptsMetier}`).then(r => r.json()),
+    ]).then(([s, o]) => {
+      setScripts(s.data ?? [])
+      setObjections(o.data ?? [])
+      setScriptsLoading(false)
+    }).catch(() => setScriptsLoading(false))
+  }, [scriptsMetier])
+
+  async function saveScript() {
+    if (!newScript.titre || !newScript.contenu) return
+    const res = await fetch('/api/call-scripts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ metier: scriptsMetier, ...newScript, is_default: scripts.length === 0 }),
+    })
+    const data = await res.json()
+    if (data.success) { setScripts(p => [...p, data.data]); setNewScript({ titre: '', contenu: '' }); setShowNewScript(false) }
+  }
+
+  async function deleteScript(id: string) {
+    const res = await fetch(`/api/call-scripts/${id}`, { method: 'DELETE' })
+    const data = await res.json()
+    if (data.success) setScripts(p => p.filter(s => s.id !== id))
+    else alert(data.error)
+  }
+
+  async function setDefaultScript(id: string) {
+    await fetch(`/api/call-scripts/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_default: true }),
+    })
+    setScripts(p => p.map(s => ({ ...s, is_default: s.id === id })))
+  }
+
+  async function saveObjection() {
+    if (!newObj.question || !newObj.reponse) return
+    const res = await fetch('/api/call-objections', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ metier: scriptsMetier, ...newObj, ordre: objections.length }),
+    })
+    const data = await res.json()
+    if (data.success) { setObjections(p => [...p, data.data]); setNewObj({ question: '', reponse: '' }); setShowNewObj(false) }
+  }
+
+  async function deleteObjection(id: string) {
+    await fetch(`/api/call-objections/${id}`, { method: 'DELETE' })
+    setObjections(p => p.filter(o => o.id !== id))
+  }
+
+  return (
+    <div>
+      {/* Sélecteur de métier */}
+      <div style={{ marginBottom: 16 }}>
+        <label style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.textLo, display: 'block', marginBottom: 6 }}>Métier</label>
+        <select
+          value={scriptsMetier}
+          onChange={e => setScriptsMetier(e.target.value)}
+          style={{ padding: '7px 10px', background: C.surface1, border: `1px solid ${C.line}`, borderRadius: 6, color: C.textHi, fontSize: 10, fontFamily: 'JetBrains Mono,monospace' }}
+        >
+          {METIERS_LIST.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+        </select>
+      </div>
+
+      {scriptsLoading ? (
+        <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.textLo }}>Chargement...</div>
+      ) : (
+        <>
+          {/* Scripts */}
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+              <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 12, fontWeight: 600, color: C.textHi }}>Scripts d&apos;appel</div>
+              <button onClick={() => setShowNewScript(s => !s)} style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, padding: '4px 10px', borderRadius: 5, background: `${C.indigo}15`, border: `1px solid ${C.indigo}40`, color: C.indigo, cursor: 'pointer' }}>
+                + Nouveau script
+              </button>
+            </div>
+
+            {showNewScript && (
+              <div style={{ background: C.surface1, borderRadius: 8, padding: 12, border: `1px solid ${C.lineSoft}`, marginBottom: 10 }}>
+                <input
+                  placeholder="Titre du script"
+                  value={newScript.titre}
+                  onChange={e => setNewScript(p => ({ ...p, titre: e.target.value }))}
+                  style={{ width: '100%', padding: '7px 10px', background: C.surface2, border: `1px solid ${C.line}`, borderRadius: 5, color: C.textHi, fontSize: 10, fontFamily: 'JetBrains Mono,monospace', marginBottom: 8, boxSizing: 'border-box' }}
+                />
+                <textarea
+                  placeholder="Contenu du script..."
+                  value={newScript.contenu}
+                  onChange={e => setNewScript(p => ({ ...p, contenu: e.target.value }))}
+                  rows={5}
+                  style={{ width: '100%', padding: '7px 10px', background: C.surface2, border: `1px solid ${C.line}`, borderRadius: 5, color: C.textHi, fontSize: 10, fontFamily: 'JetBrains Mono,monospace', resize: 'vertical', boxSizing: 'border-box' }}
+                />
+                <button onClick={saveScript} style={{ marginTop: 8, padding: '6px 14px', borderRadius: 5, background: '#0a1f0a', border: `1px solid ${C.green}40`, color: C.green, fontFamily: 'JetBrains Mono,monospace', fontSize: 9, cursor: 'pointer' }}>
+                  Enregistrer
+                </button>
+              </div>
+            )}
+
+            {scripts.map(s => (
+              <div key={s.id} style={{ background: C.surface1, borderRadius: 7, padding: '10px 12px', marginBottom: 6, border: `1px solid ${s.is_default ? C.gold + '40' : C.lineSoft}` }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 11, color: C.textHi, fontWeight: 500 }}>
+                    {s.titre}
+                    {s.is_default && <span style={{ marginLeft: 8, fontSize: 7, color: C.gold, border: `1px solid ${C.gold}40`, borderRadius: 4, padding: '1px 5px', fontFamily: 'JetBrains Mono,monospace' }}>ACTIF</span>}
+                  </div>
+                  <div style={{ display: 'flex', gap: 5 }}>
+                    {!s.is_default && (
+                      <button onClick={() => setDefaultScript(s.id)} style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 7, padding: '3px 7px', borderRadius: 4, background: '#1a1400', border: `1px solid ${C.gold}40`, color: C.gold, cursor: 'pointer' }}>
+                        Activer
+                      </button>
+                    )}
+                    <button onClick={() => deleteScript(s.id)} style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 7, padding: '3px 7px', borderRadius: 4, background: '#1a0d0d', border: `1px solid #ff647040`, color: '#ff6470', cursor: 'pointer' }}>
+                      Suppr.
+                    </button>
+                  </div>
+                </div>
+                <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.textLo, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+                  {s.contenu.slice(0, 200)}{s.contenu.length > 200 ? '...' : ''}
+                </div>
+              </div>
+            ))}
+            {scripts.length === 0 && <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.textLo, fontStyle: 'italic' }}>Aucun script pour ce métier</div>}
+          </div>
+
+          {/* Objections */}
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+              <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 12, fontWeight: 600, color: C.textHi }}>Objections &amp; Réponses</div>
+              <button onClick={() => setShowNewObj(s => !s)} style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, padding: '4px 10px', borderRadius: 5, background: `${C.cyan}15`, border: `1px solid ${C.cyan}40`, color: C.cyan, cursor: 'pointer' }}>
+                + Nouvelle objection
+              </button>
+            </div>
+
+            {showNewObj && (
+              <div style={{ background: C.surface1, borderRadius: 8, padding: 12, border: `1px solid ${C.lineSoft}`, marginBottom: 10 }}>
+                <input
+                  placeholder="L'objection du prospect..."
+                  value={newObj.question}
+                  onChange={e => setNewObj(p => ({ ...p, question: e.target.value }))}
+                  style={{ width: '100%', padding: '7px 10px', background: C.surface2, border: `1px solid ${C.line}`, borderRadius: 5, color: C.textHi, fontSize: 10, fontFamily: 'JetBrains Mono,monospace', marginBottom: 8, boxSizing: 'border-box' }}
+                />
+                <textarea
+                  placeholder="Votre réponse type..."
+                  value={newObj.reponse}
+                  onChange={e => setNewObj(p => ({ ...p, reponse: e.target.value }))}
+                  rows={3}
+                  style={{ width: '100%', padding: '7px 10px', background: C.surface2, border: `1px solid ${C.line}`, borderRadius: 5, color: C.textHi, fontSize: 10, fontFamily: 'JetBrains Mono,monospace', resize: 'vertical', boxSizing: 'border-box' }}
+                />
+                <button onClick={saveObjection} style={{ marginTop: 8, padding: '6px 14px', borderRadius: 5, background: '#0a1f1a', border: `1px solid ${C.cyan}40`, color: C.cyan, fontFamily: 'JetBrains Mono,monospace', fontSize: 9, cursor: 'pointer' }}>
+                  Enregistrer
+                </button>
+              </div>
+            )}
+
+            {objections.map(o => (
+              <div key={o.id} style={{ background: C.surface1, borderRadius: 7, padding: '8px 12px', marginBottom: 6, border: `1px solid ${C.lineSoft}` }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.cyan, fontWeight: 600, marginBottom: 3 }}>❓ {o.question}</div>
+                    <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.textMid, lineHeight: 1.5 }}>💬 {o.reponse}</div>
+                  </div>
+                  <button onClick={() => deleteObjection(o.id)} style={{ marginLeft: 10, fontFamily: 'JetBrains Mono,monospace', fontSize: 7, padding: '3px 7px', borderRadius: 4, background: '#1a0d0d', border: `1px solid #ff647040`, color: '#ff6470', cursor: 'pointer', flexShrink: 0 }}>
+                    ✕
+                  </button>
+                </div>
+              </div>
+            ))}
+            {objections.length === 0 && <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.textLo, fontStyle: 'italic' }}>Aucune objection pour ce métier</div>}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
 // ─── PAGE ─────────────────────────────────────────────────────────────────────
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<Tab>('general')
@@ -1383,6 +1591,7 @@ export default function SettingsPage() {
       {activeTab === 'mobile' && <TabMobile />}
       {activeTab === 'sequences' && <TabSequences />}
       {activeTab === 'triggers' && <TabTriggers />}
+      {activeTab === 'scripts' && <TabScripts />}
     </>
   )
 }

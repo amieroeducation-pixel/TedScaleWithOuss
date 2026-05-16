@@ -2,13 +2,15 @@
 import { createClient } from '@supabase/supabase-js'
 import { getPlaybook } from '@/lib/playbooks/config'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 async function getChatId(): Promise<string | null> {
-  const { data } = await supabase
+  const { data } = await getSupabase()
     .from('telegram_config')
     .select('chat_id')
     .eq('notifications_enabled', true)
@@ -67,17 +69,18 @@ export async function sendPlaybookReport(params: {
 }
 
 export async function sendStatusReport() {
-  const { count: pendingCount } = await supabase
+  const sb = getSupabase()
+  const { count: pendingCount } = await sb
     .from('playbook_prospects')
     .select('id', { count: 'exact', head: true })
     .eq('status', 'pending')
 
-  const { count: inSequenceCount } = await supabase
+  const { count: inSequenceCount } = await sb
     .from('playbook_prospects')
     .select('id', { count: 'exact', head: true })
     .eq('status', 'in_sequence')
 
-  const { count: crmCount } = await supabase
+  const { count: crmCount } = await sb
     .from('playbook_prospects')
     .select('id', { count: 'exact', head: true })
     .eq('status', 'crm')

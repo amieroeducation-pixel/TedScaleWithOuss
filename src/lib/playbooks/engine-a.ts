@@ -3,10 +3,12 @@ import { scoreProspect } from './scoring'
 import { buildMessages } from './message-generator'
 import { createClient } from '@supabase/supabase-js'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 const PAPPERS_KEY = process.env.PAPPERS_API_KEY!
 
@@ -78,7 +80,7 @@ export async function runCessionsBodacc(runId: string) {
 
   prospects.sort((a, b) => b.score - a.score)
   if (prospects.length > 0) {
-    await supabase.from('playbook_prospects').insert(prospects)
+    await getSupabase().from('playbook_prospects').insert(prospects)
   }
   return prospects.length
 }
@@ -144,7 +146,7 @@ export async function runCreationsRecentes(runId: string) {
   allProspects.sort((a, b) => b.score - a.score)
   const top50 = allProspects.slice(0, 50)
   if (top50.length > 0) {
-    await supabase.from('playbook_prospects').insert(top50)
+    await getSupabase().from('playbook_prospects').insert(top50)
   }
   return top50.length
 }
@@ -212,7 +214,7 @@ export async function runHoldings(runId: string) {
 
   prospects.sort((a, b) => b.score - a.score)
   if (prospects.length > 0) {
-    await supabase.from('playbook_prospects').insert(prospects)
+    await getSupabase().from('playbook_prospects').insert(prospects)
   }
   return prospects.length
 }
@@ -265,7 +267,7 @@ export async function runDividendes(runId: string) {
 
   prospects.sort((a, b) => b.score - a.score)
   if (prospects.length > 0) {
-    await supabase.from('playbook_prospects').insert(prospects)
+    await getSupabase().from('playbook_prospects').insert(prospects)
   }
   return prospects.length
 }
@@ -330,7 +332,7 @@ export async function runDirigeants55(runId: string) {
 
   prospects.sort((a, b) => b.score - a.score)
   if (prospects.length > 0) {
-    await supabase.from('playbook_prospects').insert(prospects)
+    await getSupabase().from('playbook_prospects').insert(prospects)
   }
   return prospects.length
 }
