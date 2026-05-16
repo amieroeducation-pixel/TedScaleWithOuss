@@ -1,7 +1,7 @@
 // src/app/(dashboard)/playbooks/[id]/page.tsx
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { getPlaybook } from '@/lib/playbooks/config'
 import ProspectValidationRow from '@/components/playbooks/ProspectValidationRow'
@@ -19,7 +19,7 @@ export default function PlaybookDetailPage() {
     // playbook inconnu
   }
 
-  async function loadRuns() {
+  const loadRuns = useCallback(async () => {
     const res = await fetch(`/api/playbooks/${id}/runs`)
     const data = await res.json()
     setRuns(data.runs ?? [])
@@ -27,25 +27,27 @@ export default function PlaybookDetailPage() {
       setSelectedRun(data.runs[0])
       setProspects(data.runs[0].playbook_prospects ?? [])
     }
-  }
+  }, [id])
 
-  useEffect(() => { loadRuns() }, [id])
+  useEffect(() => { loadRuns() }, [loadRuns])
 
   async function handleValidate(prospectId: string, variant: 'a' | 'b' | 'c') {
-    await fetch('/api/playbooks/validate', {
+    const res = await fetch('/api/playbooks/validate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prospectIds: [prospectId], action: 'validate', variant, runId: selectedRun?.id }),
     })
+    if (!res.ok) return
     setProspects(prev => prev.map(p => p.id === prospectId ? { ...p, status: 'validated' } : p))
   }
 
   async function handleReject(prospectId: string) {
-    await fetch('/api/playbooks/validate', {
+    const res = await fetch('/api/playbooks/validate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prospectIds: [prospectId], action: 'reject', runId: selectedRun?.id }),
     })
+    if (!res.ok) return
     setProspects(prev => prev.map(p => p.id === prospectId ? { ...p, status: 'rejected' } : p))
   }
 

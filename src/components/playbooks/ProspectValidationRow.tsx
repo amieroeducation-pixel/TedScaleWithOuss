@@ -31,7 +31,9 @@ const SIGNAL_BADGE: Record<string, { emoji: string; color: string }> = {
 
 export default function ProspectValidationRow({ prospect, onValidate, onReject }: Props) {
   const badge = SIGNAL_BADGE[prospect.signal_type] ?? { emoji: '📋', color: 'bg-gray-100 text-gray-700' }
-  const [selectedVariant, setSelectedVariant] = useState<'a' | 'b' | 'c'>('a')
+  const [selectedVariant, setSelectedVariant] = useState<'a' | 'b' | 'c'>(
+    (['a', 'b', 'c'].includes(prospect.selected_variant) ? prospect.selected_variant : 'a') as 'a' | 'b' | 'c'
+  )
   const messages: Record<string, string> = {
     a: prospect.message_j0_a,
     b: prospect.message_j0_b,
