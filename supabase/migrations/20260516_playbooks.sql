@@ -62,3 +62,11 @@ ALTER TABLE prospects ADD COLUMN IF NOT EXISTS playbook_prospect_id UUID;
 CREATE INDEX idx_playbook_prospects_run ON playbook_prospects(run_id);
 CREATE INDEX idx_playbook_prospects_status ON playbook_prospects(status);
 CREATE INDEX idx_playbook_runs_playbook ON playbook_runs(playbook_id);
+
+-- Fonction pour incrémenter le compteur de prospects validés
+CREATE OR REPLACE FUNCTION increment_validated(run_id UUID, count INT)
+RETURNS VOID AS $$
+  UPDATE playbook_runs
+  SET prospects_validated = prospects_validated + count
+  WHERE id = run_id;
+$$ LANGUAGE SQL;
