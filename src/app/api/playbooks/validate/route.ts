@@ -68,6 +68,29 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Outbound LinkedIn : si prospect c1-linkedin, envoyer le message validé via Make.com → Gojiberry
+    const makecomUrl = process.env.MAKECOM_LINKEDIN_SEND_WEBHOOK
+    if (makecomUrl) {
+      const linkedinProspects = (playProspects ?? []).filter(
+        (pp: any) => pp.playbook_id === 'c1-linkedin' && pp.signal_data?.linkedin_url
+      )
+      for (const pp of linkedinProspects) {
+        const messageField = `message_j0_${variant}` as keyof typeof pp
+        const chosenMessage = pp[messageField] as string ?? ''
+        await fetch(makecomUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            linkedin_url: pp.signal_data.linkedin_url,
+            message: chosenMessage,
+            prenom: (pp.dirigeant_name as string)?.split(' ')[0] ?? '',
+            societe: pp.company_name ?? '',
+            signal_gojiberry: pp.signal_data?.signal_gojiberry ?? '',
+          }),
+        }).catch(() => {}) // non-bloquant : ne pas faire échouer la validation si Make.com est KO
+      }
+    }
+
     if (runId) {
       await getSupabase().rpc('increment_validated', { run_id: runId, count: prospectIds.length })
     }

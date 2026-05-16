@@ -75,7 +75,8 @@ $secretsArg = (
   "TELEGRAM_BOT_TOKEN",
   "TELEGRAM_CHAT_ID",
   "ANTHROPIC_API_KEY",
-  "LINKEDIN_WEBHOOK_SECRET"
+  "LINKEDIN_WEBHOOK_SECRET",
+  "MAKECOM_LINKEDIN_SEND_WEBHOOK"
 ) | Where-Object { $envVars.ContainsKey($_) } | ForEach-Object {
   "$_=$($envVars[$_])"
 }
