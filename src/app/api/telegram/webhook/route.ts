@@ -9,6 +9,14 @@ const supabase = createClient(
 )
 
 export async function POST(req: NextRequest) {
+  const webhookSecret = process.env.TELEGRAM_WEBHOOK_SECRET
+  if (webhookSecret) {
+    const token = req.headers.get('x-telegram-bot-api-secret-token')
+    if (token !== webhookSecret) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+  }
+
   const body = await req.json()
 
   const message = body.message
