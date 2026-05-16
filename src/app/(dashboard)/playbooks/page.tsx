@@ -27,10 +27,15 @@ export default function PlaybooksPage() {
   async function handleRun(playbookId: string) {
     setRunningIds(prev => new Set(prev).add(playbookId))
     try {
-      await fetch(`/api/playbooks/${playbookId}/run`, { method: 'POST', body: '{}', headers: { 'Content-Type': 'application/json' } })
-      setTimeout(() => {
+      const res = await fetch(`/api/playbooks/${playbookId}/run`, { method: 'POST', body: '{}', headers: { 'Content-Type': 'application/json' } })
+      if (!res.ok) throw new Error('Run failed')
+      // Recharger le dernier run après 4 secondes pour refléter l'état réel
+      setTimeout(async () => {
+        const runsRes = await fetch(`/api/playbooks/${playbookId}/runs`)
+        const data = await runsRes.json()
+        setLastRuns(prev => ({ ...prev, [playbookId]: data.runs?.[0] ?? null }))
         setRunningIds(prev => { const s = new Set(prev); s.delete(playbookId); return s })
-      }, 3000)
+      }, 4000)
     } catch {
       setRunningIds(prev => { const s = new Set(prev); s.delete(playbookId); return s })
     }

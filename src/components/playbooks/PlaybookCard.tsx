@@ -53,7 +53,7 @@ export default function PlaybookCard({ playbook, lastRun, onRun, isRunning }: Pl
         </div>
 
         <button
-          onClick={() => onRun(playbook.id)}
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); onRun(playbook.id) }}
           disabled={isRunning}
           className="ml-4 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
         >
