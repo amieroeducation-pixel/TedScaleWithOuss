@@ -43,6 +43,7 @@ export default function PlaybooksPage() {
 
   const familyA = PLAYBOOKS.filter(p => p.family === 'A')
   const familyB = PLAYBOOKS.filter(p => p.family === 'B')
+  const familyC = PLAYBOOKS.filter(p => p.family === 'C')
 
   return (
     <div className="space-y-8 p-6">
@@ -75,6 +76,24 @@ export default function PlaybooksPage() {
         </h2>
         <div className="space-y-3">
           {familyB.map(p => (
+            <Link key={p.id} href={`/playbooks/${p.id}`} className="block">
+              <PlaybookCard
+                playbook={p}
+                lastRun={lastRuns[p.id]}
+                onRun={(id) => { handleRun(id) }}
+                isRunning={runningIds.has(p.id)}
+              />
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      <section>
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-green-600">
+          Famille C — LinkedIn Gojiberry
+        </h2>
+        <div className="space-y-3">
+          {familyC.map(p => (
             <Link key={p.id} href={`/playbooks/${p.id}`} className="block">
               <PlaybookCard
                 playbook={p}
