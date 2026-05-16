@@ -12,6 +12,7 @@ const PAPPERS_KEY = process.env.PAPPERS_API_KEY!
 // ── B1 — SURVEILLANCE BOOK ────────────────────────────────────────────────────
 
 export async function runSurveillanceBook(runId: string) {
+  const supabase = getSupabase()
   const { data: clientsData } = await supabase
     .from('prospects')
     .select('company_name, metadata')
