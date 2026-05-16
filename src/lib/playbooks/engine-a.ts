@@ -220,11 +220,16 @@ export async function runHoldings(runId: string) {
 // ── A4 — DIVIDENDES ───────────────────────────────────────────────────────────
 
 export async function runDividendes(runId: string) {
-  const res = await fetch(
-    `https://api.pappers.fr/v2/recherche?api_token=${PAPPERS_KEY}&dividendes_min=150000&effectif_max=50&page=1&par_page=50`
-  )
-  const data = await res.json()
-  const results: any[] = data.resultats ?? []
+  let results: any[] = []
+  try {
+    const res = await fetch(
+      `https://api.pappers.fr/v2/recherche?api_token=${PAPPERS_KEY}&dividendes_min=150000&effectif_max=50&page=1&par_page=50`
+    )
+    const data = await res.json()
+    results = data.resultats ?? []
+  } catch {
+    return 0
+  }
 
   const prospects = []
   for (const r of results) {
@@ -269,18 +274,26 @@ export async function runDividendes(runId: string) {
 
 export async function runDirigeants55(runId: string) {
   const anneeMax = new Date().getFullYear() - 55
-  const res = await fetch(
-    `https://api.pappers.fr/v2/recherche?api_token=${PAPPERS_KEY}&annee_naissance_dirigeant_max=${anneeMax}&chiffre_affaires_min=500000&chiffre_affaires_max=10000000&page=1&par_page=50`
-  )
-  const data = await res.json()
-  const results: any[] = data.resultats ?? []
+  let results: any[] = []
+  try {
+    const res = await fetch(
+      `https://api.pappers.fr/v2/recherche?api_token=${PAPPERS_KEY}&annee_naissance_dirigeant_max=${anneeMax}&chiffre_affaires_min=500000&chiffre_affaires_max=10000000&page=1&par_page=50`
+    )
+    const data = await res.json()
+    results = data.resultats ?? []
+  } catch {
+    return 0
+  }
 
-  const SECTEURS_CIBLES = ['industrie', 'services', 'santé', 'commerce de gros', 'médical']
+  const SECTEURS_CIBLES_NORMALIZED = ['industrie', 'services', 'sante', 'commerce de gros', 'medical']
   const prospects = []
 
   for (const r of results) {
-    const secteur = (r.libelle_code_naf ?? '').toLowerCase()
-    if (!SECTEURS_CIBLES.some(s => secteur.includes(s))) continue
+    const secteur = (r.libelle_code_naf ?? '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/\p{Diacritic}/gu, '')
+    if (!SECTEURS_CIBLES_NORMALIZED.some(s => secteur.includes(s))) continue
 
     const societe = r.nom_entreprise ?? 'N/C'
     const siren = r.siren ?? ''
@@ -292,7 +305,7 @@ export async function runDirigeants55(runId: string) {
     const anneeCreation = r.date_creation ? new Date(r.date_creation).getFullYear() : 0
     const anneesExistence = anneeCreation > 0 ? new Date().getFullYear() - anneeCreation : undefined
 
-    if (anneesExistence !== undefined && anneesExistence < 10) continue
+    if (!anneesExistence || anneesExistence < 10) continue
 
     const score = scoreProspect({ signalType: 'dirigeant_55', caEstime: ca, localisation })
     const messages = buildMessages({ signalType: 'dirigeant_55', prenom, societe, anneesExistence })
