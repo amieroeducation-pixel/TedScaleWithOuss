@@ -44,13 +44,13 @@ export async function POST(req: NextRequest) {
       const { data: newProspect } = await supabase
         .from('prospects')
         .insert({
-          company_name: pp.company_name,
-          contact_name: pp.dirigeant_name,
-          source: 'playbook',
+          full_name: pp.dirigeant_name ?? pp.company_name ?? 'Inconnu',
+          company: pp.company_name,
+          source: 'autre',
           signal_type: pp.signal_type,
           playbook_id: pp.playbook_id,
           playbook_prospect_id: pp.id,
-          metadata: { siren: pp.siren, score: pp.score, message_j0: message, signal_data: pp.signal_data },
+          notes: JSON.stringify({ siren: pp.siren, score: pp.score, message_j0: message, signal_data: pp.signal_data }),
         })
         .select()
         .single()
