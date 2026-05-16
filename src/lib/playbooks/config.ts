@@ -9,6 +9,7 @@ export type PlaybookId =
   | 'b2-rdv'
   | 'b3-liquidite'
   | 'b4-cartographie'
+  | 'c1-linkedin'
 
 export type SignalType =
   | 'creation'
@@ -129,6 +130,17 @@ export const PLAYBOOKS: PlaybookConfig[] = [
     urgencyDays: 0,
     sequenceSlug: '',
     isOnDemand: true,
+  },
+  {
+    id: 'c1-linkedin',
+    name: 'LinkedIn Gojiberry',
+    family: 'C',
+    description: 'Signaux LinkedIn détectés par Gojiberry (cessions, promotions, levées de fonds) — via Make.com',
+    signalType: 'linkedin',
+    scheduleDescription: 'Temps réel via webhook Make.com',
+    urgencyDays: 2,
+    sequenceSlug: 'linkedin',
+    isOnDemand: false,
   },
 ]
 
