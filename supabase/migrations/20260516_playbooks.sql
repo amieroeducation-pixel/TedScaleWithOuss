@@ -1,19 +1,19 @@
 -- supabase/migrations/20260516_playbooks.sql
 
-CREATE TABLE playbook_runs (
+CREATE TABLE IF NOT EXISTS playbook_runs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   playbook_id TEXT NOT NULL,
-  started_at TIMESTAMPTZ DEFAULT NOW(),
+  started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   completed_at TIMESTAMPTZ,
-  status TEXT DEFAULT 'running',
+  status TEXT NOT NULL DEFAULT 'running' CHECK (status IN ('running', 'completed', 'failed', 'cancelled')),
   prospects_found INTEGER DEFAULT 0,
   prospects_validated INTEGER DEFAULT 0,
   error TEXT
 );
 
-CREATE TABLE playbook_prospects (
+CREATE TABLE IF NOT EXISTS playbook_prospects (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  run_id UUID REFERENCES playbook_runs(id) ON DELETE CASCADE,
+  run_id UUID NOT NULL REFERENCES playbook_runs(id) ON DELETE CASCADE,
   playbook_id TEXT NOT NULL,
   signal_type TEXT NOT NULL,
   score INTEGER NOT NULL DEFAULT 0,
@@ -27,7 +27,7 @@ CREATE TABLE playbook_prospects (
   message_j0_a TEXT,
   message_j0_b TEXT,
   message_j0_c TEXT,
-  selected_variant TEXT DEFAULT 'a',
+  selected_variant TEXT DEFAULT 'a' CHECK (selected_variant IN ('a', 'b', 'c')),
   status TEXT DEFAULT 'pending',
   prospect_id UUID,
   sequence_id TEXT,
@@ -35,14 +35,14 @@ CREATE TABLE playbook_prospects (
   validated_at TIMESTAMPTZ
 );
 
-CREATE TABLE telegram_config (
+CREATE TABLE IF NOT EXISTS telegram_config (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   chat_id TEXT NOT NULL,
   notifications_enabled BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE TABLE sequence_versions (
+CREATE TABLE IF NOT EXISTS sequence_versions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   sequence_slug TEXT NOT NULL,
   step TEXT NOT NULL,
