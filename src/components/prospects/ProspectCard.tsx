@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { C } from '@/lib/theme'
 
 export type ProspectCardData = {
@@ -21,12 +22,15 @@ export type ProspectCardData = {
   source?: string
   googleUrl?: string
   mapsUrl?: string
+  signal_type?: string
+  metadata?: Record<string, string>
 }
 
 type EnrichData = {
   telephone: string | null
   email: string | null
   website: string | null
+  nomDirigeant: string | null
   linkedinUrl: string
   pagesJaunesUrl: string | null
   pappersUrl: string | null
@@ -37,11 +41,14 @@ type Props = {
   prospect: ProspectCardData
   onClose: () => void
   onAddToCRM?: (prospect: ProspectCardData) => void
+  isContacted?: boolean
+  onContacted?: (phone: string, contacted: boolean) => void
 }
 
-export default function ProspectCard({ prospect, onClose, onAddToCRM }: Props) {
+export default function ProspectCard({ prospect, onClose, onAddToCRM, isContacted, onContacted }: Props) {
   const [enrich, setEnrich] = useState<EnrichData | null>(null)
   const [enrichLoading, setEnrichLoading] = useState(true)
+  const [contacted, setContacted] = useState(isContacted ?? false)
 
   useEffect(() => {
     async function load() {
@@ -70,10 +77,10 @@ export default function ProspectCard({ prospect, onClose, onAddToCRM }: Props) {
   const initials = prospect.nom.split(' ').map((w: string) => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase() || '??'
   const scoreColor = prospect.scoreColor ?? C.gold
 
-  return (
+  const modal = (
     <div
       onClick={onClose}
-      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.72)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.72)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
     >
       <div
         onClick={(e) => e.stopPropagation()}
@@ -91,6 +98,28 @@ export default function ProspectCard({ prospect, onClose, onAddToCRM }: Props) {
             <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 16, fontWeight: 600, color: C.textHi, marginBottom: 2 }}>{prospect.nom}</div>
             {prospect.entreprise && <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 10, color: C.textMid }}>{prospect.entreprise}</div>}
             {prospect.metier && <div style={{ fontSize: 11, color: C.textLo, marginTop: 2 }}>{prospect.metier}</div>}
+            {!enrichLoading && enrich?.nomDirigeant && enrich.nomDirigeant !== prospect.nom && (
+              <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.cyan, marginTop: 3 }}>Dir. : {enrich.nomDirigeant}</div>
+            )}
+            {prospect.signal_type && (
+              <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
+                ({
+                  cession: 'bg-red-100 text-red-800',
+                  holding: 'bg-blue-100 text-blue-800',
+                  dividendes: 'bg-yellow-100 text-yellow-800',
+                  dirigeant_55: 'bg-purple-100 text-purple-800',
+                  creation: 'bg-green-100 text-green-800',
+                } as Record<string, string>)[prospect.signal_type] ?? 'bg-gray-100 text-gray-700'
+              }`} style={{ marginTop: 4 }}>
+                {({
+                  cession: '🔴 Cession',
+                  holding: '🏗️ Holding',
+                  dividendes: '💰 Dividendes',
+                  dirigeant_55: '👔 Dirigeant 55+',
+                  creation: '🟢 Création',
+                } as Record<string, string>)[prospect.signal_type] ?? prospect.signal_type}
+              </span>
+            )}
           </div>
           {prospect.score !== undefined && (
             <div style={{ textAlign: 'right' }}>
@@ -110,6 +139,14 @@ export default function ProspectCard({ prospect, onClose, onAddToCRM }: Props) {
           {prospect.signalLabel && <InfoRow label="Signal" value={prospect.signalLabel} accent={scoreColor} />}
           {prospect.source && <InfoRow label="Source" value={prospect.source} />}
         </div>
+
+        {/* Message J+0 */}
+        {prospect.metadata?.message_j0 && (
+          <div className="mt-2 rounded-lg bg-blue-50 p-3 text-sm text-gray-700 italic" style={{ marginBottom: 16 }}>
+            <p className="mb-1 text-xs font-medium text-blue-600">Message J+0 préparé :</p>
+            {prospect.metadata.message_j0}
+          </div>
+        )}
 
         {/* Contact enrichi */}
         <div style={{ background: C.surface1, borderRadius: 10, padding: 12, marginBottom: 16, border: `1px solid ${C.lineSoft}` }}>
@@ -139,7 +176,19 @@ export default function ProspectCard({ prospect, onClose, onAddToCRM }: Props) {
         </div>
 
         {/* Actions */}
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' as const }}>
+          {telephone && (
+            <button
+              onClick={() => {
+                const next = !contacted
+                setContacted(next)
+                if (onContacted) onContacted(telephone, next)
+              }}
+              style={{ flex: 1, padding: '10px 0', borderRadius: 8, background: contacted ? '#0a1f0a' : `linear-gradient(90deg,${C.green}22,${C.surface3})`, border: `1px solid ${C.green}66`, color: C.green, fontFamily: 'Oswald,sans-serif', fontSize: 11, fontWeight: 600, cursor: 'pointer', letterSpacing: '0.1em', minWidth: 140 }}
+            >
+              {contacted ? '✓ CONTACTÉ' : '📞 MARQUER CONTACTÉ'}
+            </button>
+          )}
           {onAddToCRM && (
             <button
               onClick={() => { onAddToCRM(prospect); onClose() }}
@@ -158,6 +207,7 @@ export default function ProspectCard({ prospect, onClose, onAddToCRM }: Props) {
       </div>
     </div>
   )
+  return createPortal(modal, document.body)
 }
 
 function InfoRow({ label, value, accent, span }: { label: string; value: string; accent?: string; span?: boolean }) {
