@@ -40,6 +40,7 @@ const NAV_SECTIONS = [
   {
     label: 'Outils',
     items: [
+      { id: 'playbooks', href: '/playbooks', label: '⚡ Playbooks' },
       { id: 'sequences', href: '/sequences', label: 'Séquences' },
       { id: 'simulator', href: '/simulator', label: 'Simulateur' },
       { id: 'commerce', href: '/commerce', label: 'Commerce' },
