@@ -72,12 +72,12 @@ export async function POST(req: NextRequest) {
     const makecomUrl = process.env.MAKECOM_LINKEDIN_SEND_WEBHOOK
     if (makecomUrl) {
       const linkedinProspects = (playProspects ?? []).filter(
-        (pp: any) => pp.playbook_id === 'c1-linkedin' && pp.signal_data?.linkedin_url
+        (pp) => pp.playbook_id === 'c1-linkedin' && pp.signal_data?.linkedin_url
       )
       for (const pp of linkedinProspects) {
         const messageField = `message_j0_${variant}` as keyof typeof pp
         const chosenMessage = pp[messageField] as string ?? ''
-        await fetch(makecomUrl, {
+        void fetch(makecomUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
