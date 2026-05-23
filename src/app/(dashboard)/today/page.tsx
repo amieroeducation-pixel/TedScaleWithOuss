@@ -1,5 +1,7 @@
 'use client'
 
+export const dynamic = 'force-dynamic'
+
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { C } from '@/lib/theme'
 import CallingSessionPanel from '@/components/calling/CallingSessionPanel'
@@ -429,6 +431,8 @@ export default function TodayPage() {
   const { celebrate } = useCelebrations()
   const [tab, setTab] = useState<TodayTab>('prospection')
   const [clock, setClock] = useState('--:--')
+  const [displayDate, setDisplayDate] = useState('')
+  useEffect(() => { setDisplayDate(todayFrDate()) }, [])
 
   // ─── Ambiance musicale — une seule fois par heure ────────────────────────
   useEffect(() => {
@@ -753,7 +757,7 @@ export default function TodayPage() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
         <div>
-          <div style={{ fontSize: 14, fontWeight: 600, color: C.textHi, textTransform: 'capitalize' as const }}>{todayFrDate()}</div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: C.textHi, textTransform: 'capitalize' as const }}>{displayDate}</div>
           <div style={{ fontSize: 9, color: C.textLo, marginTop: 2 }}>Vue du jour · Productivité &amp; Actions</div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -959,7 +963,7 @@ export default function TodayPage() {
             <div style={{ minWidth: 0 }}>
               <div style={{ background: C.surface1, border: `0.5px solid ${C.line}`, borderRadius: 8, padding: 14 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                  <div style={{ fontSize: 10, fontWeight: 600, color: C.textHi, textTransform: 'capitalize' as const }}>Agenda · {todayFrDate()}</div>
+                  <div style={{ fontSize: 10, fontWeight: 600, color: C.textHi, textTransform: 'capitalize' as const }}>Agenda · {displayDate}</div>
                   <button
                     onClick={() => setShowAgendaModal(true)}
                     style={{ fontSize: 8, padding: '5px 10px', borderRadius: 5, border: `0.5px solid ${C.indigo}40`, background: '#0d1a2e', color: C.indigo, cursor: 'pointer', fontWeight: 500 }}
