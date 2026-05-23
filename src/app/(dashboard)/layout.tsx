@@ -61,12 +61,42 @@ const NAV_SECTIONS = [
 const ribbon = 'linear-gradient(90deg,#c84048 0%,#ff6470 25%,#f5e8c8 55%,#7a92e8 80%,#5c70b8 100%)'
 
 function StarballSVG() {
+  const starPath = (cx: number, cy: number, R: number): string => {
+    const r = R * 0.38
+    let d = ''
+    for (let k = 0; k < 5; k++) {
+      const oa = ((k * 72 - 90) * Math.PI) / 180
+      const ia = ((k * 72 - 54) * Math.PI) / 180
+      d += (k === 0 ? 'M' : 'L') + (cx + R * Math.cos(oa)).toFixed(2) + ',' + (cy + R * Math.sin(oa)).toFixed(2)
+      d += 'L' + (cx + r * Math.cos(ia)).toFixed(2) + ',' + (cy + r * Math.sin(ia)).toFixed(2)
+    }
+    return d + 'Z'
+  }
+
+  const stars: Array<{ cx: number; cy: number; R: number; color: string; opacity: number }> = [
+    { cx: 18, cy: 5,  R: 2.9, color: '#ffffff', opacity: 0.95 },
+    { cx: 27, cy: 9,  R: 2.2, color: '#e8c878', opacity: 0.85 },
+    { cx: 31, cy: 18, R: 2.5, color: '#ffffff', opacity: 0.90 },
+    { cx: 27, cy: 27, R: 2.2, color: '#e8c878', opacity: 0.85 },
+    { cx: 18, cy: 31, R: 2.9, color: '#ffffff', opacity: 0.95 },
+    { cx: 9,  cy: 27, R: 2.2, color: '#e8c878', opacity: 0.85 },
+    { cx: 5,  cy: 18, R: 2.5, color: '#ffffff', opacity: 0.90 },
+    { cx: 9,  cy: 9,  R: 2.2, color: '#e8c878', opacity: 0.85 },
+    { cx: 18, cy: 18, R: 4.5, color: '#ffffff', opacity: 1.00 },
+  ]
+
   return (
-    <svg width={32} height={32} viewBox="0 0 36 36" fill="none" style={{ filter: 'drop-shadow(0 0 10px rgba(255,100,112,0.6))', flexShrink: 0 }}>
-      <circle cx={18} cy={18} r={17} fill="#14193d" stroke="#3a4690" strokeWidth={1} />
-      <circle cx={18} cy={18} r={13} fill="#11163a" opacity={0.7} />
-      <path d="M18 7l2.35 7.23h7.6l-6.15 4.47 2.35 7.23L18 21.46l-6.15 4.47 2.35-7.23-6.15-4.47h7.6z" fill="#ffffff" opacity={0.9} />
-      <path d="M18 5l1.4 4.3h4.52l-3.66 2.66 1.4 4.3L18 13.6l-3.66 2.66 1.4-4.3-3.66-2.66h4.52z" fill="#ff6470" opacity={0.5} />
+    <svg
+      width={36}
+      height={36}
+      viewBox="0 0 36 36"
+      fill="none"
+      style={{ filter: 'drop-shadow(0 0 8px rgba(232,200,120,0.55))', flexShrink: 0 }}
+    >
+      <circle cx={18} cy={18} r={16.5} fill="#0a0e22" fillOpacity={0.85} stroke="#3a4690" strokeWidth={0.5} />
+      {stars.map((s, i) => (
+        <path key={i} d={starPath(s.cx, s.cy, s.R)} fill={s.color} fillOpacity={s.opacity} />
+      ))}
     </svg>
   )
 }
@@ -151,10 +181,10 @@ export default function DashboardLayout({
           display: 'flex',
           flexDirection: 'column',
           flexShrink: 0,
-          position: 'sticky',
+          position: 'fixed',
+          left: 0,
           top: 0,
           height: '100vh',
-          overflowY: 'auto',
           zIndex: 10,
         }}>
 
@@ -196,13 +226,13 @@ export default function DashboardLayout({
           </div>
 
           {/* Navigation */}
-          <nav style={{ padding: '8px 0', flex: 1, overflowY: 'auto' }}>
+          <nav style={{ padding: '4px 0', flex: 1, overflow: 'hidden' }}>
             {NAV_SECTIONS.map((section) => (
               <div key={section.label}>
                 <div style={{
                   fontSize: 8,
                   color: '#3a4885',
-                  padding: '10px 12px 3px',
+                  padding: '7px 12px 2px',
                   letterSpacing: '0.12em',
                   textTransform: 'uppercase',
                   fontFamily: "'JetBrains Mono', monospace",
@@ -222,7 +252,7 @@ export default function DashboardLayout({
                         display: 'flex',
                         alignItems: 'center',
                         gap: 7,
-                        padding: '5px 12px',
+                        padding: '4px 12px',
                         fontSize: 11,
                         fontWeight: isActive ? 500 : 400,
                         color: isActive ? '#ffe89a' : 'rgba(255,216,102,0.65)',
@@ -355,6 +385,7 @@ export default function DashboardLayout({
           minWidth: 0,
           position: 'relative',
           zIndex: 1,
+          marginLeft: 185,
         }}>
 
           {/* Prismatic ribbon at very top */}
