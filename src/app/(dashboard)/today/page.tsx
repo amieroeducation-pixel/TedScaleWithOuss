@@ -1,8 +1,25 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { C } from '@/lib/theme'
 import CallingSessionPanel from '@/components/calling/CallingSessionPanel'
+import { useCelebrations } from '@/hooks/useCelebrations'
+
+// ─── Objectifs du jour ────────────────────────────────────────────────────────
+interface TodayTargets { contacts: number; calls: number; rdv1: number; rdv2: number }
+const DEFAULT_TARGETS: TodayTargets = { contacts: 10, calls: 20, rdv1: 5, rdv2: 3 }
+const TARGETS_DAY_KEY  = () => `today_targets_${new Date().toDateString()}`
+const TARGETS_DEF_KEY  = 'today_targets_default'
+
+function loadStoredTargets(): TodayTargets {
+  try {
+    const day = localStorage.getItem(TARGETS_DAY_KEY())
+    if (day) return { ...DEFAULT_TARGETS, ...JSON.parse(day) }
+    const def = localStorage.getItem(TARGETS_DEF_KEY)
+    if (def) return { ...DEFAULT_TARGETS, ...JSON.parse(def) }
+  } catch { /* ignore */ }
+  return DEFAULT_TARGETS
+}
 
 // ─── Types Weekly Signal ────────────────────────────────────────────────────
 type RelanceRow = {
@@ -43,10 +60,62 @@ interface Relance {
   id: number; name: string; priority: 1 | 2 | 3; status: RelanceStatus; note?: string
 }
 
-const BLOCK_DURATION = 45 * 60 // 45 minutes in seconds
+const BLOCK_DURATION = 52 * 60 // 52 minutes in seconds
+
+const TIMER_KEY = () => `today_timer_${new Date().toDateString()}`
+
+function loadTimer(): { timerSec: number; running: boolean; startedAt: number } {
+  try {
+    const s = localStorage.getItem(TIMER_KEY())
+    if (s) return JSON.parse(s)
+  } catch { /* ignore */ }
+  return { timerSec: 0, running: false, startedAt: 0 }
+}
+
+function saveTimer(timerSec: number, running: boolean, startedAt: number) {
+  try { localStorage.setItem(TIMER_KEY(), JSON.stringify({ timerSec, running, startedAt })) } catch { /* ignore */ }
+}
 
 function pad(n: number) { return String(n).padStart(2, '0') }
 function formatSeconds(s: number) { return `${pad(Math.floor(s / 60))}:${pad(s % 60)}` }
+
+// ─── Agenda helpers ────────────────────────────────────────────────────────
+function todayFrDate() {
+  return new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+}
+
+function todayDateKey() {
+  return new Date().toISOString().split('T')[0]
+}
+
+type AgendaEventType = 'rdv' | 'bloc' | 'tache' | 'sport' | 'autre'
+
+interface AgendaEvent {
+  id: string
+  time: string
+  title: string
+  type: AgendaEventType
+}
+
+const AGENDA_COLORS: Record<AgendaEventType, { bg: string; border: string; text: string }> = {
+  rdv:   { bg: '#0d1a2e', border: C.indigo, text: C.indigo },
+  bloc:  { bg: '#0d1a0d', border: C.green,  text: C.green },
+  tache: { bg: '#1a1400', border: C.gold,   text: C.gold },
+  sport: { bg: '#1a0d0d', border: C.warn,   text: C.warn },
+  autre: { bg: C.surface1, border: C.line,  text: C.textMid },
+}
+
+function loadAgenda(): AgendaEvent[] {
+  try {
+    const s = localStorage.getItem(`today_agenda_${todayDateKey()}`)
+    if (s) return JSON.parse(s)
+  } catch { /* ignore */ }
+  return []
+}
+
+function saveAgenda(events: AgendaEvent[]) {
+  try { localStorage.setItem(`today_agenda_${todayDateKey()}`, JSON.stringify(events)) } catch { /* ignore */ }
+}
 
 // ─── Block timer indicator ─────────────────────────────────────────────────
 function BlockIndicator({ done }: { done: boolean }) {
@@ -357,8 +426,31 @@ function VideoPlayer() {
 
 // ─── Main page ────────────────────────────────────────────────────────────
 export default function TodayPage() {
+  const { celebrate } = useCelebrations()
   const [tab, setTab] = useState<TodayTab>('prospection')
   const [clock, setClock] = useState('--:--')
+
+  // ─── Ambiance musicale — une seule fois par heure ────────────────────────
+  useEffect(() => {
+    const KEY = 'ldc_last_played'
+    const ONE_HOUR = 60 * 60 * 1000
+    const last = parseInt(localStorage.getItem(KEY) ?? '0', 10)
+    if (Date.now() - last < ONE_HOUR) return
+    localStorage.setItem(KEY, String(Date.now()))
+    const audio = new Audio('/sounds/ldc-theme.mp3')
+    audio.volume = 0.4
+    audio.play().catch(() => {})
+    return () => { audio.pause(); audio.src = '' }
+  }, [])
+
+  // ─── Objectifs configurables ──────────────────────────────────────────────
+  const [targets, setTargets] = useState<TodayTargets>(DEFAULT_TARGETS)
+  const [showTargetModal, setShowTargetModal] = useState(false)
+  const [targetForm, setTargetForm] = useState<TodayTargets>(DEFAULT_TARGETS)
+  const celebratedAllRef = useRef(false)
+  const [showEndDay, setShowEndDay] = useState(false)
+  const [endDaySaving, setEndDaySaving] = useState(false)
+  const [endDaySaved, setEndDaySaved] = useState(false)
 
   // ─── Weekly Signal state ──────────────────────────────────────────────────
   const [signal, setSignal] = useState<SignalResp | null>(null)
@@ -387,11 +479,49 @@ export default function TodayPage() {
     return () => clearInterval(id)
   }, [])
 
-  // Block timer
+  // Block timer — blocks completed persistent via localStorage (reset each day)
   const [timerSec, setTimerSec] = useState(0)
   const [timerRunning, setTimerRunning] = useState(false)
-  const [blocksCompleted, setBlocksCompleted] = useState(3)
+  const [blocksCompleted, setBlocksCompleted] = useState(0)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  useEffect(() => {
+    const key = `blocks_${new Date().toDateString()}`
+    const stored = localStorage.getItem(key)
+    if (stored) setBlocksCompleted(Math.min(parseInt(stored, 10), 6))
+  }, [])
+
+  useEffect(() => {
+    const stored = loadTimer()
+    if (stored.running && stored.startedAt > 0) {
+      const elapsed = Math.floor((Date.now() - stored.startedAt) / 1000)
+      const resumeSec = Math.min(stored.timerSec + elapsed, BLOCK_DURATION - 1)
+      setTimerSec(resumeSec)
+    } else {
+      setTimerSec(stored.timerSec)
+    }
+  }, [])
+
+  useEffect(() => {
+    const t = loadStoredTargets()
+    setTargets(t)
+    setTargetForm(t)
+  }, [])
+
+  // ─── Agenda éditable ────────────────────────────────────────────────────────
+  const [agendaEvents, setAgendaEvents] = useState<AgendaEvent[]>([])
+  const [showAgendaModal, setShowAgendaModal] = useState(false)
+  const [agendaForm, setAgendaForm] = useState({ time: '09:00', title: '', type: 'rdv' as AgendaEventType })
+
+  // Chargement des compteurs du jour au montage
+  useEffect(() => {
+    const c = loadCounters()
+    setContacts(c.contacts)
+    setCalls(c.calls)
+    setRdv1(c.rdv1)
+    setRdv2(c.rdv2)
+    setAgendaEvents(loadAgenda())
+  }, [])
 
   const startTimer = () => {
     if (timerRunning) return
@@ -401,9 +531,20 @@ export default function TodayPage() {
         if (s + 1 >= BLOCK_DURATION) {
           clearInterval(timerRef.current!)
           setTimerRunning(false)
-          setBlocksCompleted(b => Math.min(b + 1, 6))
+          setBlocksCompleted(b => {
+            const next = Math.min(b + 1, 6)
+            localStorage.setItem(`blocks_${new Date().toDateString()}`, String(next))
+            setTimeout(() => {
+              if (next >= 6) celebrate('objectif_journee', '6 / 6 BLOCS !')
+              else if (next === 5) celebrate('objectif_blocs', 'ENCORE UN !')
+              else celebrate('appel_passe')
+            }, 0)
+            return next
+          })
+          saveTimer(0, false, 0)
           return 0
         }
+        saveTimer(s + 1, true, Date.now() - (s + 1) * 1000)
         return s + 1
       })
     }, 1000)
@@ -412,24 +553,108 @@ export default function TodayPage() {
   const pauseTimer = () => {
     if (timerRef.current) clearInterval(timerRef.current)
     setTimerRunning(false)
+    setTimerSec(s => { saveTimer(s, false, 0); return s })
   }
 
   const completeBlock = () => {
     pauseTimer()
     setTimerSec(0)
-    setBlocksCompleted(b => Math.min(b + 1, 6))
+    saveTimer(0, false, 0)
+    setBlocksCompleted(b => {
+      const next = Math.min(b + 1, 6)
+      localStorage.setItem(`blocks_${new Date().toDateString()}`, String(next))
+      setTimeout(() => {
+        if (next >= 6) celebrate('objectif_journee', '6 / 6 BLOCS !')
+        else if (next === 5) celebrate('objectif_blocs', 'ENCORE UN !')
+        else celebrate('appel_passe')
+      }, 0)
+      return next
+    })
   }
 
-  // Counters
-  const [contacts, setContacts] = useState(6)
-  const [calls, setCalls] = useState(14)
-  const [rdv1, setRdv1] = useState(3)
-  const [rdv2, setRdv2] = useState(2)
+  // Counters — persistés en localStorage par jour
+  const COUNTERS_KEY = `today_counters_${new Date().toDateString()}`
+  function loadCounters() {
+    try { const s = localStorage.getItem(COUNTERS_KEY); if (s) return JSON.parse(s) } catch { /* ignore */ }
+    return { contacts: 0, calls: 0, rdv1: 0, rdv2: 0 }
+  }
+  const [contacts, setContacts] = useState(0)
+  const [calls, setCalls] = useState(0)
+  const [rdv1, setRdv1] = useState(0)
+  const [rdv2, setRdv2] = useState(0)
 
-  const contactPct = Math.round((contacts / 10) * 100)
-  const callPct    = Math.round((calls / 20)     * 100)
-  const rdv1Pct    = Math.round((rdv1 / 5)       * 100)
-  const rdv2Pct    = Math.round((rdv2 / 3)       * 100)
+  const contactPct = Math.round((contacts / targets.contacts) * 100)
+  const callPct    = Math.round((calls    / targets.calls)    * 100)
+  const rdv1Pct    = Math.round((rdv1     / targets.rdv1)     * 100)
+  const rdv2Pct    = Math.round((rdv2     / targets.rdv2)     * 100)
+
+  // Sauvegarde des compteurs à chaque changement
+  useEffect(() => {
+    try { localStorage.setItem(COUNTERS_KEY, JSON.stringify({ contacts, calls, rdv1, rdv2 })) } catch { /* ignore */ }
+  }, [contacts, calls, rdv1, rdv2])
+
+  // ─── Wrapped setters — déclenchent une célébration quand l'objectif est atteint ──
+  const setContactsW = useCallback((fn: (v: number) => number) => {
+    setContacts(v => fn(v))
+  }, [])
+
+  const setCallsW = useCallback((fn: (v: number) => number) => {
+    setCalls(v => {
+      const next = fn(v)
+      if (v < targets.calls && next >= targets.calls)
+        setTimeout(() => celebrate('objectif_blocs', 'OBJECTIF APPELS !'), 50)
+      return next
+    })
+  }, [targets.calls, celebrate])
+
+  const setRdv1W = useCallback((fn: (v: number) => number) => {
+    setRdv1(v => {
+      const next = fn(v)
+      if (v < targets.rdv1 && next >= targets.rdv1)
+        setTimeout(() => celebrate('r1', 'OBJECTIF R1 !'), 50)
+      return next
+    })
+  }, [targets.rdv1, celebrate])
+
+  const setRdv2W = useCallback((fn: (v: number) => number) => {
+    setRdv2(v => {
+      const next = fn(v)
+      if (v < targets.rdv2 && next >= targets.rdv2)
+        setTimeout(() => celebrate('r2', 'OBJECTIF R2 !'), 50)
+      return next
+    })
+  }, [targets.rdv2, celebrate])
+
+  // ─── Journée parfaite — tous les objectifs atteints ──────────────────────
+  useEffect(() => {
+    if (
+      contacts >= targets.contacts &&
+      calls    >= targets.calls &&
+      rdv1     >= targets.rdv1 &&
+      rdv2     >= targets.rdv2 &&
+      !celebratedAllRef.current
+    ) {
+      celebratedAllRef.current = true
+      setTimeout(() => celebrate('journee_parfaite', 'JOURNÉE PARFAITE !'), 300)
+    }
+  }, [contacts, calls, rdv1, rdv2, targets, celebrate])
+
+  // Reset quand les cibles changent
+  useEffect(() => { celebratedAllRef.current = false }, [targets])
+
+  // ─── Sauvegarde des objectifs ─────────────────────────────────────────────
+  const saveTargetsToday = () => {
+    localStorage.setItem(TARGETS_DAY_KEY(), JSON.stringify(targetForm))
+    setTargets(targetForm)
+    setShowTargetModal(false)
+  }
+
+  const saveTargetsDefault = () => {
+    localStorage.setItem(TARGETS_DEF_KEY, JSON.stringify(targetForm))
+    localStorage.setItem(TARGETS_DAY_KEY(), JSON.stringify(targetForm))
+    setTargets(targetForm)
+    setShowTargetModal(false)
+  }
 
   // Relances
   const [relances, setRelances] = useState<Relance[]>([])
@@ -478,12 +703,17 @@ export default function TodayPage() {
     objectif: number,
     plusLabel: string,
     fontSize: number,
-  ) => (
+    emoji: string = '🔥',
+  ) => {
+    const done = pct >= 100
+    return (
     <div>
-      <div style={{ fontSize: 8, color: C.textLo, marginBottom: 6, fontWeight: 500 }}>{label}</div>
+      <div style={{ fontSize: 8, color: done ? color : C.textLo, marginBottom: 6, fontWeight: done ? 600 : 500 }}>
+        {label}{done ? ` ${emoji}` : ''}
+      </div>
       <div style={{ textAlign: 'center', margin: '8px 0' }}>
-        <div style={{ fontSize: fontSize, fontWeight: 600, color }}>{value}</div>
-        <div style={{ fontSize: 8, color: C.textLo }}>/ objectif {objectif}</div>
+        <div style={{ fontSize: fontSize, fontWeight: 600, color, ...(done ? { filter: `drop-shadow(0 0 8px ${color}90)` } : {}) }}>{value}</div>
+        <div style={{ fontSize: 8, color: done ? color : C.textLo }}>{done ? '✓ objectif atteint' : `/ objectif ${objectif}`}</div>
       </div>
       <div style={{ display: 'flex', gap: 3 }}>
         <button
@@ -499,7 +729,22 @@ export default function TodayPage() {
         <div style={{ width: `${Math.min(pct, 100)}%`, height: '100%', background: color, borderRadius: 10, transition: 'width 0.3s' }} />
       </div>
     </div>
-  )
+    )
+  }
+
+  async function handleEndDay() {
+    setEndDaySaving(true)
+    try {
+      await fetch('/api/today/kpis', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contacts, calls, rdv1, rdv2, blocks: blocksCompleted }),
+      })
+      setEndDaySaved(true)
+      celebrate('objectif_journee', 'JOURNÉE TERMINÉE !')
+    } catch { /* ignore */ }
+    finally { setEndDaySaving(false) }
+  }
 
   return (
     <div style={{ background: C.bgDeep, minHeight: '100vh', padding: 16, color: C.text, fontFamily: 'JetBrains Mono, monospace' }}>
@@ -508,10 +753,18 @@ export default function TodayPage() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
         <div>
-          <div style={{ fontSize: 14, fontWeight: 600, color: C.textHi }}>Vendredi 25 avril 2026</div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: C.textHi, textTransform: 'capitalize' as const }}>{todayFrDate()}</div>
           <div style={{ fontSize: 9, color: C.textLo, marginTop: 2 }}>Vue du jour · Productivité &amp; Actions</div>
         </div>
-        <div style={{ fontSize: 24, color: C.gold, fontWeight: 300 }}>{clock}</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <button
+            onClick={() => setShowEndDay(true)}
+            style={{ fontSize: 8, padding: '6px 12px', borderRadius: 6, border: `1px solid ${C.gold}55`, background: '#1a1400', color: C.gold, cursor: 'pointer', fontWeight: 600, letterSpacing: 0.5 }}
+          >
+            ✓ Fin de journée
+          </button>
+          <div style={{ fontSize: 24, color: C.gold, fontWeight: 300 }}>{clock}</div>
+        </div>
       </div>
 
       {/* ─── WEEKLY SIGNAL ─────────────────────────────────────────────── */}
@@ -634,14 +887,14 @@ export default function TodayPage() {
           {/* KPI row */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8, marginBottom: 16 }}>
             {([
-              { label: 'Nouveaux contacts', value: `${contacts}/10`,       sub: 'Prospects ajoutés aujourd\'hui', subColor: C.gold  },
-              { label: 'Appels effectués',  value: `${calls} calls`,       sub: 'Objectif 20/jour',               subColor: C.green },
-              { label: 'Blocs production',  value: `${blocksCompleted}/6`, sub: `${Math.round((blocksCompleted / 6) * 100)}% · Production normale`, subColor: C.textMid },
-              { label: 'Temps productif',   value: `${blocksCompleted}×45min`, sub: '3 blocs × 45min',            subColor: C.gold  },
-            ] as Array<{ label: string; value: string; sub: string; subColor: string }>).map(({ label, value, sub, subColor }) => (
-              <div key={label} style={{ background: C.surface1, border: `0.5px solid ${C.line}`, borderRadius: 8, padding: 12 }}>
-                <div style={{ fontSize: 9, color: C.textMid, marginBottom: 4 }}>{label}</div>
-                <div style={{ fontSize: 18, fontWeight: 700, color: C.textHi, marginBottom: 4 }}>{value}</div>
+              { label: 'Nouveaux contacts', value: `${contacts}/${targets.contacts}`,  sub: 'Prospects ajoutés aujourd\'hui', subColor: C.gold,    done: contacts >= targets.contacts },
+              { label: 'Appels effectués',  value: `${calls} calls`,                   sub: `Objectif ${targets.calls}/jour`, subColor: C.green,   done: calls >= targets.calls },
+              { label: 'Blocs production',  value: `${blocksCompleted}/6`,             sub: `${Math.round((blocksCompleted / 6) * 100)}% · Production normale`, subColor: C.textMid, done: blocksCompleted >= 6 },
+              { label: 'Temps productif',   value: `${blocksCompleted}×52min`,         sub: '3 blocs × 52min',               subColor: C.gold,    done: false },
+            ] as Array<{ label: string; value: string; sub: string; subColor: string; done: boolean }>).map(({ label, value, sub, subColor, done }) => (
+              <div key={label} style={{ background: C.surface1, border: `0.5px solid ${done ? subColor + '60' : C.line}`, borderRadius: 8, padding: 12 }}>
+                <div style={{ fontSize: 9, color: done ? subColor : C.textMid, marginBottom: 4, fontWeight: done ? 600 : 400 }}>{label}{done ? ' 🔥' : ''}</div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: C.textHi, marginBottom: 4, ...(done ? { filter: `drop-shadow(0 0 6px ${subColor}80)` } : {}) }}>{value}</div>
                 <div style={{ fontSize: 9, color: subColor }}>{sub}</div>
               </div>
             ))}
@@ -652,7 +905,7 @@ export default function TodayPage() {
             {/* LEFT COLUMN */}
             <div style={{ minWidth: 0 }}>
               <div style={{ background: C.surface1, border: `0.5px solid ${C.line}`, borderRadius: 8, padding: 14 }}>
-                <div style={{ fontSize: 10, fontWeight: 600, color: C.textHi, marginBottom: 12 }}>Chronomètre de production · Blocs 45min</div>
+                <div style={{ fontSize: 10, fontWeight: 600, color: C.textHi, marginBottom: 12 }}>Chronomètre de production · Blocs 52min</div>
 
                 {/* Timer display */}
                 <div style={{ textAlign: 'center', margin: '15px 0 10px' }}>
@@ -685,16 +938,16 @@ export default function TodayPage() {
                 {/* Objectifs du jour */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 16, paddingTop: 14, borderTop: `0.5px solid ${C.line}` }}>
                   <div style={{ fontSize: 9, color: C.textMid, fontWeight: 500 }}>Objectifs du jour</div>
-                  <button style={{ fontSize: 8, padding: '5px 10px', borderRadius: 4, border: `0.5px solid ${C.gold}40`, background: '#1a1400', color: C.gold, cursor: 'pointer', fontWeight: 500 }}>⚙️ Paramétrer</button>
+                  <button onClick={() => { setTargetForm(targets); setShowTargetModal(true) }} style={{ fontSize: 8, padding: '5px 10px', borderRadius: 4, border: `0.5px solid ${C.gold}40`, background: '#1a1400', color: C.gold, cursor: 'pointer', fontWeight: 500 }}>⚙️ Paramétrer</button>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 10 }}>
-                  {counterRow('Nouveaux contacts', contacts, setContacts, contactPct, C.gold, '#1a1400', `${C.gold}40`, 10, '+ Contact', 36)}
-                  {counterRow('Appels effectués', calls, setCalls, callPct, C.indigo, '#0d1a2e', `${C.indigo}40`, 20, '+ Appel', 36)}
+                  {counterRow('Nouveaux contacts', contacts, setContactsW, contactPct, C.gold,    '#1a1400', `${C.gold}40`,    targets.contacts, '+ Contact', 36, '🔥')}
+                  {counterRow('Appels effectués', calls,    setCallsW,    callPct,    C.indigo,  '#0d1a2e', `${C.indigo}40`,  targets.calls,    '+ Appel',   36, '🔥')}
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 12 }}>
-                  {counterRow('RDV R1 posés', rdv1, setRdv1, rdv1Pct, C.green, '#0d1a0d', `${C.green}40`, 5, '+ RDV R1', 28)}
-                  {counterRow('RDV R2 posés', rdv2, setRdv2, rdv2Pct, '#b07aee', '#1a0d1a', '#b07aee40', 3, '+ RDV R2', 28)}
+                  {counterRow('RDV R1 posés', rdv1, setRdv1W, rdv1Pct, C.green,   '#0d1a0d', `${C.green}40`,   targets.rdv1, '+ RDV R1', 28, '🚀')}
+                  {counterRow('RDV R2 posés', rdv2, setRdv2W, rdv2Pct, '#b07aee', '#1a0d1a', '#b07aee40',      targets.rdv2, '+ RDV R2', 28, '🚀')}
                 </div>
 
                 {/* Audio player */}
@@ -705,48 +958,39 @@ export default function TodayPage() {
             {/* RIGHT COLUMN — Agenda */}
             <div style={{ minWidth: 0 }}>
               <div style={{ background: C.surface1, border: `0.5px solid ${C.line}`, borderRadius: 8, padding: 14 }}>
-                <div style={{ fontSize: 10, fontWeight: 600, color: C.textHi, marginBottom: 12 }}>Agenda du jour · Vendredi 25 avril</div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '50px 1fr', gap: 0, border: `0.5px solid ${C.surface2}`, borderRadius: 7, overflow: 'hidden', background: C.surface1 }}>
-                  {/* 8h */}
-                  <div style={{ background: C.surface2, padding: 4, textAlign: 'center', fontSize: 8, color: C.textVlo, borderRight: `0.5px solid ${C.line}`, borderBottom: `0.5px solid ${C.lineSoft}` }}>8h</div>
-                  <div style={{ background: C.bgMid, minHeight: 40, borderBottom: `0.5px solid ${C.lineSoft}`, padding: 4 }} />
-
-                  {/* 9h — Prospection TNS */}
-                  <div style={{ background: C.surface2, padding: 4, textAlign: 'center', fontSize: 8, color: C.textVlo, borderRight: `0.5px solid ${C.line}`, borderBottom: `0.5px solid ${C.lineSoft}` }}>9h</div>
-                  <div style={{ background: C.bgMid, minHeight: 40, borderBottom: `0.5px solid ${C.lineSoft}`, padding: 4, position: 'relative' }}>
-                    <div style={{ position: 'absolute', top: 2, left: 2, right: 2, height: 58, background: '#1a1400', borderLeft: `2px solid ${C.gold}`, borderRadius: 3, padding: '3px 5px' }}>
-                      <div style={{ fontSize: 7, color: C.textLo }}>9h00-10h30</div>
-                      <div style={{ fontSize: 8, color: C.text, fontWeight: 500 }}>Prospection TNS</div>
-                    </div>
-                  </div>
-
-                  {/* 10h */}
-                  <div style={{ background: C.surface2, padding: 4, textAlign: 'center', fontSize: 8, color: C.textVlo, borderRight: `0.5px solid ${C.line}`, borderBottom: `0.5px solid ${C.lineSoft}` }}>10h</div>
-                  <div style={{ background: C.bgMid, minHeight: 40, borderBottom: `0.5px solid ${C.lineSoft}`, padding: 4 }} />
-
-                  {/* 11h — RDV 2 Dr. Martin */}
-                  <div style={{ background: C.surface2, padding: 4, textAlign: 'center', fontSize: 8, color: C.textVlo, borderRight: `0.5px solid ${C.line}`, borderBottom: `0.5px solid ${C.lineSoft}` }}>11h</div>
-                  <div style={{ background: C.bgMid, minHeight: 40, borderBottom: `0.5px solid ${C.lineSoft}`, padding: 4, position: 'relative' }}>
-                    <div style={{ position: 'absolute', top: 2, left: 2, right: 2, height: 38, background: '#0d1a2e', borderLeft: `2px solid ${C.indigo}`, borderRadius: 3, padding: '3px 5px' }}>
-                      <div style={{ fontSize: 7, color: C.textLo }}>11h00-12h00</div>
-                      <div style={{ fontSize: 8, color: C.text, fontWeight: 500 }}>RDV 2</div>
-                      <div style={{ fontSize: 7, color: C.textMid }}>Dr. Martin</div>
-                    </div>
-                  </div>
-
-                  {/* 12h–17h */}
-                  {['12h','13h','14h','15h','16h'].map((h, i) => (
-                    <>
-                      <div key={`h${h}`} style={{ background: C.surface2, padding: 4, textAlign: 'center', fontSize: 8, color: C.textVlo, borderRight: `0.5px solid ${C.line}`, borderBottom: `0.5px solid ${C.lineSoft}` }}>{h}</div>
-                      <div key={`c${h}`} style={{ background: C.bgMid, minHeight: 40, borderBottom: `0.5px solid ${C.lineSoft}`, padding: 4 }} />
-                    </>
-                  ))}
-
-                  {/* 17h — last row no border-bottom */}
-                  <div style={{ background: C.surface2, padding: 4, textAlign: 'center', fontSize: 8, color: C.textVlo, borderRight: `0.5px solid ${C.line}` }}>17h</div>
-                  <div style={{ background: C.bgMid, minHeight: 40, padding: 4 }} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <div style={{ fontSize: 10, fontWeight: 600, color: C.textHi, textTransform: 'capitalize' as const }}>Agenda · {todayFrDate()}</div>
+                  <button
+                    onClick={() => setShowAgendaModal(true)}
+                    style={{ fontSize: 8, padding: '5px 10px', borderRadius: 5, border: `0.5px solid ${C.indigo}40`, background: '#0d1a2e', color: C.indigo, cursor: 'pointer', fontWeight: 500 }}
+                  >+ Événement</button>
                 </div>
+
+                {agendaEvents.length === 0 ? (
+                  <div style={{ fontSize: 9, color: C.textVlo, fontStyle: 'italic', textAlign: 'center', padding: '24px 0' }}>
+                    Aucun événement · Clique &quot;+ Événement&quot; pour ajouter
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {[...agendaEvents].sort((a, b) => a.time.localeCompare(b.time)).map(ev => {
+                      const colors = AGENDA_COLORS[ev.type]
+                      return (
+                        <div key={ev.id} style={{ display: 'flex', alignItems: 'center', gap: 8, background: colors.bg, border: `0.5px solid ${colors.border}`, borderRadius: 6, padding: '6px 10px' }}>
+                          <span style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: colors.text, width: 36, flexShrink: 0 }}>{ev.time}</span>
+                          <span style={{ fontSize: 10, color: C.textHi, flex: 1 }}>{ev.title}</span>
+                          <button
+                            onClick={() => {
+                              const next = agendaEvents.filter(e => e.id !== ev.id)
+                              setAgendaEvents(next)
+                              saveAgenda(next)
+                            }}
+                            style={{ background: 'none', border: 'none', color: C.textVlo, cursor: 'pointer', fontSize: 10, padding: '0 2px' }}
+                          >✕</button>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
 
               {/* VideoPlayer — motivation */}
@@ -769,7 +1013,7 @@ export default function TodayPage() {
                 { label: 'Relances actives', value: relances.filter(r => r.status !== 'terminee').length, sub: 'Cette semaine', subColor: C.gold },
                 { label: 'Haute priorité',   value: relances.filter(r => r.priority === 3).length, sub: 'URGENT',         subColor: C.cyan },
                 { label: 'Appelées',          value: relances.filter(r => r.status === 'appelee').length, sub: 'Ce mois',   subColor: C.green },
-                { label: 'Temps estimé',      value: '45min',                                       sub: 'Total jour',    subColor: C.gold },
+                { label: 'Temps estimé',      value: '52min',                                       sub: 'Total jour',    subColor: C.gold },
               ] as Array<{ label: string; value: string | number; sub: string; subColor: string }>).map(({ label, value, sub, subColor }) => (
                 <div key={label} style={{ background: C.surface1, border: `0.5px solid ${C.line}`, borderRadius: 8, padding: 12 }}>
                   <div style={{ fontSize: 9, color: C.textMid, marginBottom: 4 }}>{label}</div>
@@ -830,6 +1074,66 @@ export default function TodayPage() {
         </div>
       )}
 
+      {/* ─── Modal objectifs du jour ─── */}
+      {showTargetModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 9998, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: C.bgMid, border: `1px solid ${C.gold}30`, borderRadius: 14, padding: 28, width: 340, boxShadow: `0 8px 40px rgba(0,0,0,0.6)` }}>
+            <div style={{ fontFamily: 'Oswald, sans-serif', fontSize: 14, fontWeight: 700, color: C.gold, marginBottom: 6, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+              ⚙ Objectifs du jour
+            </div>
+            <div style={{ fontSize: 8, color: C.textVlo, marginBottom: 20 }}>
+              Ajustez vos cibles selon votre journée
+            </div>
+
+            {([
+              { key: 'contacts' as const, label: 'Nouveaux contacts', color: C.gold   },
+              { key: 'calls'    as const, label: 'Appels effectués',  color: C.indigo },
+              { key: 'rdv1'     as const, label: 'RDV R1 posés',      color: C.green  },
+              { key: 'rdv2'     as const, label: 'RDV R2+ posés',     color: '#b07aee'},
+            ]).map(({ key, label, color }) => (
+              <div key={key} style={{ marginBottom: 14 }}>
+                <div style={{ fontSize: 8, color: C.textLo, marginBottom: 6 }}>{label}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <button
+                    onClick={() => setTargetForm(f => ({ ...f, [key]: Math.max(1, f[key] - 1) }))}
+                    style={{ width: 32, height: 32, borderRadius: 6, border: `0.5px solid ${C.line}`, background: C.surface1, color: C.textMid, cursor: 'pointer', fontSize: 16, lineHeight: 1 }}
+                  >−</button>
+                  <div style={{ flex: 1, textAlign: 'center', fontSize: 26, fontWeight: 700, color, fontVariantNumeric: 'tabular-nums' }}>
+                    {targetForm[key]}
+                  </div>
+                  <button
+                    onClick={() => setTargetForm(f => ({ ...f, [key]: f[key] + 1 }))}
+                    style={{ width: 32, height: 32, borderRadius: 6, border: `0.5px solid ${color}50`, background: `${color}12`, color, cursor: 'pointer', fontSize: 16, lineHeight: 1 }}
+                  >+</button>
+                  <div style={{ width: 60, height: 5, background: C.surface2, borderRadius: 10, overflow: 'hidden' }}>
+                    <div style={{ width: `${Math.min((targetForm[key] / 30) * 100, 100)}%`, height: '100%', background: color, borderRadius: 10 }} />
+                  </div>
+                </div>
+              </div>
+            ))}
+
+            <div style={{ display: 'flex', gap: 8, marginTop: 22 }}>
+              <button onClick={() => setShowTargetModal(false)}
+                style={{ flex: 1, padding: 9, borderRadius: 6, border: `0.5px solid ${C.line}`, background: C.surface1, color: C.textMid, fontSize: 9, cursor: 'pointer' }}>
+                Annuler
+              </button>
+              <button onClick={saveTargetsToday}
+                style={{ flex: 1, padding: 9, borderRadius: 6, border: `0.5px solid ${C.gold}40`, background: '#1a1400', color: C.gold, fontSize: 9, cursor: 'pointer', fontWeight: 600 }}>
+                Aujourd'hui
+              </button>
+              <button onClick={saveTargetsDefault}
+                style={{ flex: 1, padding: 9, borderRadius: 6, border: `0.5px solid ${C.indigo}40`, background: '#0d1020', color: C.indigo, fontSize: 9, cursor: 'pointer', fontWeight: 600 }}>
+                Par défaut
+              </button>
+            </div>
+            <div style={{ marginTop: 10, fontSize: 7, color: C.textVlo, textAlign: 'center', lineHeight: 1.5 }}>
+              "Aujourd'hui" · pour cette journée uniquement
+              <br />"Par défaut" · réutilisé les prochains jours
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ─── Relance modal ─── */}
       {showRelanceModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -879,6 +1183,91 @@ export default function TodayPage() {
                 style={{ flex: 2, padding: 10, background: '#0d1f0f', border: `1px solid ${C.green}`, borderRadius: 6, color: C.green, cursor: 'pointer', fontSize: 10, fontWeight: 600 }}
               >Créer la relance</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal agenda */}
+      {showAgendaModal && (
+        <div onClick={() => setShowAgendaModal(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: C.bgMid, border: `1px solid ${C.indigo}30`, borderRadius: 14, padding: 24, width: '100%', maxWidth: 380 }}>
+            <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 14, fontWeight: 600, color: C.indigo, marginBottom: 18 }}>📅 Nouvel événement</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
+              <div>
+                <label style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.textLo, display: 'block', marginBottom: 5 }}>Heure</label>
+                <input type="time" value={agendaForm.time} onChange={e => setAgendaForm(f => ({ ...f, time: e.target.value }))}
+                  style={{ width: '100%', padding: '8px 10px', background: C.surface1, border: `1px solid ${C.line}`, borderRadius: 6, color: C.textHi, fontSize: 12, boxSizing: 'border-box' as const }} />
+              </div>
+              <div>
+                <label style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.textLo, display: 'block', marginBottom: 5 }}>Type</label>
+                <select value={agendaForm.type} onChange={e => setAgendaForm(f => ({ ...f, type: e.target.value as AgendaEventType }))}
+                  style={{ width: '100%', padding: '8px 10px', background: C.surface1, border: `1px solid ${C.line}`, borderRadius: 6, color: C.textHi, fontSize: 11 }}>
+                  <option value="rdv">🔵 RDV</option>
+                  <option value="bloc">🟢 Bloc production</option>
+                  <option value="tache">⚪ Tâche</option>
+                  <option value="sport">🔴 Sport</option>
+                  <option value="autre">⚫ Autre</option>
+                </select>
+              </div>
+            </div>
+            <div style={{ marginBottom: 18 }}>
+              <label style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.textLo, display: 'block', marginBottom: 5 }}>Titre *</label>
+              <input autoFocus type="text" value={agendaForm.title} onChange={e => setAgendaForm(f => ({ ...f, title: e.target.value }))} placeholder="Ex: RDV Dr. Martin, Bloc appels TNS..."
+                style={{ width: '100%', padding: '8px 10px', background: C.surface1, border: `1px solid ${C.line}`, borderRadius: 6, color: C.textHi, fontSize: 11, fontFamily: 'JetBrains Mono,monospace', boxSizing: 'border-box' as const }} />
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => setShowAgendaModal(false)} style={{ flex: 1, padding: 10, borderRadius: 8, background: C.surface1, border: `1px solid ${C.line}`, color: C.textLo, fontFamily: 'Oswald,sans-serif', fontSize: 11, cursor: 'pointer' }}>ANNULER</button>
+              <button
+                onClick={() => {
+                  if (!agendaForm.title.trim()) return
+                  const next = [...agendaEvents, { id: Date.now().toString(), time: agendaForm.time, title: agendaForm.title.trim(), type: agendaForm.type }]
+                  setAgendaEvents(next)
+                  saveAgenda(next)
+                  setAgendaForm(f => ({ ...f, title: '' }))
+                  setShowAgendaModal(false)
+                }}
+                disabled={!agendaForm.title.trim()}
+                style={{ flex: 2, padding: 10, borderRadius: 8, background: '#0d1a2e', border: `1px solid ${C.indigo}66`, color: C.indigo, fontFamily: 'Oswald,sans-serif', fontSize: 11, fontWeight: 600, cursor: agendaForm.title.trim() ? 'pointer' : 'not-allowed', opacity: agendaForm.title.trim() ? 1 : 0.6 }}
+              >AJOUTER</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal fin de journée */}
+      {showEndDay && (
+        <div onClick={() => { if (!endDaySaving) setShowEndDay(false) }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: C.bgMid, border: `1px solid ${C.gold}55`, borderRadius: 16, padding: 28, width: '100%', maxWidth: 380, position: 'relative' }}>
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: C.ribbon, borderRadius: '16px 16px 0 0' }} />
+            <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 18, fontWeight: 700, color: C.gold, marginBottom: 20, marginTop: 4 }}>Bilan de journée</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 24 }}>
+              {[
+                { label: 'Contacts', value: contacts, target: targets.contacts, color: C.green },
+                { label: 'Appels',   value: calls,    target: targets.calls,    color: C.cyan  },
+                { label: 'RDV R1',   value: rdv1,     target: targets.rdv1,     color: C.gold  },
+                { label: 'RDV R2',   value: rdv2,     target: targets.rdv2,     color: C.gold  },
+              ].map(({ label, value, target, color }) => (
+                <div key={label} style={{ background: C.surface1, border: `1px solid ${C.line}`, borderRadius: 8, padding: '12px 14px', textAlign: 'center' }}>
+                  <div style={{ fontSize: 9, color: C.textLo, marginBottom: 6, textTransform: 'uppercase' as const, letterSpacing: 1 }}>{label}</div>
+                  <div style={{ fontSize: 22, fontWeight: 700, color: value >= target ? color : C.textMid }}>{value}</div>
+                  <div style={{ fontSize: 8, color: C.textLo }}>/ {target}</div>
+                </div>
+              ))}
+            </div>
+            <div style={{ fontSize: 11, color: C.textMid, marginBottom: 20, textAlign: 'center' }}>
+              {blocksCompleted} bloc{blocksCompleted > 1 ? 's' : ''} de travail complété{blocksCompleted > 1 ? 's' : ''}
+            </div>
+            {endDaySaved ? (
+              <div style={{ textAlign: 'center', color: C.green, fontSize: 13, fontWeight: 600 }}>✓ Données sauvegardées</div>
+            ) : (
+              <button
+                onClick={handleEndDay}
+                disabled={endDaySaving}
+                style={{ width: '100%', padding: '12px 0', borderRadius: 8, border: `1px solid ${C.gold}`, background: `${C.gold}22`, color: C.gold, fontSize: 12, fontWeight: 700, cursor: endDaySaving ? 'not-allowed' : 'pointer', fontFamily: 'Oswald,sans-serif', letterSpacing: 1 }}
+              >
+                {endDaySaving ? '...' : 'SAUVEGARDER & TERMINER'}
+              </button>
+            )}
           </div>
         </div>
       )}

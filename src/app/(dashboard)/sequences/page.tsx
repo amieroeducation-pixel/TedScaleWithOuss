@@ -272,6 +272,10 @@ function SeqCard({ seq }: { seq: Sequence }) {
 
 export default function SequencesPage() {
   const [dbTemplates, setDbTemplates] = useState<{ id: string; name: string; pipeline_stage: string | null; auto_trigger: boolean }[]>([])
+  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [createName, setCreateName] = useState('')
+  const [createError, setCreateError] = useState<string | null>(null)
+  const [creating, setCreating] = useState(false)
 
   useEffect(() => {
     fetch('/api/crm/sequences/templates')
@@ -279,6 +283,28 @@ export default function SequencesPage() {
       .then(json => { if (json.success) setDbTemplates(json.data.templates) })
       .catch(() => {})
   }, [])
+
+  async function handleCreate() {
+    if (!createName.trim()) return
+    setCreating(true)
+    setCreateError(null)
+    try {
+      const res = await fetch('/api/crm/sequences/templates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: createName.trim() }),
+      })
+      const json = await res.json()
+      if (json.error) { setCreateError(json.error); return }
+      setDbTemplates(prev => [...prev, { id: json.data.template.id, name: json.data.template.name, pipeline_stage: null, auto_trigger: false }])
+      setShowCreateModal(false)
+      setCreateName('')
+      alert(`Séquence "${createName.trim()}" créée ! Allez dans Paramètres → Séquences pour y ajouter des étapes, puis utilisez-la depuis une fiche prospect.`)
+    } catch (e) {
+      setCreateError(e instanceof Error ? e.message : 'Erreur inconnue')
+    }
+    setCreating(false)
+  }
 
   return (
     <>
@@ -300,7 +326,10 @@ export default function SequencesPage() {
             }
           </div>
         </div>
-        <button style={{ fontFamily: 'Oswald,sans-serif', fontSize: 11, fontWeight: 500, color: C.bgDeep, background: `linear-gradient(90deg,${C.cyan},${C.indigo})`, border: 'none', borderRadius: 8, padding: '8px 16px', cursor: 'pointer', letterSpacing: '0.1em' }}>
+        <button
+          onClick={() => setShowCreateModal(true)}
+          style={{ fontFamily: 'Oswald,sans-serif', fontSize: 11, fontWeight: 500, color: C.bgDeep, background: `linear-gradient(90deg,${C.cyan},${C.indigo})`, border: 'none', borderRadius: 8, padding: '8px 16px', cursor: 'pointer', letterSpacing: '0.1em' }}
+        >
           + CRÉER SÉQUENCE
         </button>
       </div>
@@ -396,14 +425,50 @@ export default function SequencesPage() {
       {SEQ_PATRIMOINE.map(seq => <SeqCard key={seq.id} seq={seq} />)}
 
       {/* New sequence CTA */}
-      <div style={{
-        textAlign: 'center', padding: '14px 0',
-        border: `1.5px dashed ${C.line}`, borderRadius: 10,
-        fontFamily: 'Oswald,sans-serif', fontSize: 12, color: C.textLo,
-        cursor: 'pointer', letterSpacing: '0.1em', marginTop: 4,
-      }}>
+      <div
+        onClick={() => setShowCreateModal(true)}
+        style={{
+          textAlign: 'center', padding: '14px 0',
+          border: `1.5px dashed ${C.line}`, borderRadius: 10,
+          fontFamily: 'Oswald,sans-serif', fontSize: 12, color: C.textLo,
+          cursor: 'pointer', letterSpacing: '0.1em', marginTop: 4,
+        }}
+      >
         + Créer une nouvelle séquence
       </div>
+
+      {showCreateModal && (
+        <div onClick={() => setShowCreateModal(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: C.bgMid, border: `1px solid ${C.indigo}30`, borderRadius: 14, padding: 24, width: '100%', maxWidth: 420, position: 'relative' }}>
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: C.ribbon, borderRadius: '14px 14px 0 0' }} />
+            <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 14, fontWeight: 600, color: C.indigo, marginBottom: 8, marginTop: 4 }}>+ Créer une séquence</div>
+            <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.textLo, marginBottom: 18, lineHeight: 1.6 }}>
+              Crée un nom de séquence ici. Ensuite, dans <strong style={{ color: C.gold }}>Paramètres → Séquences</strong>, ouvre-la et ajoute les étapes (email J+0, WhatsApp J+2, etc.).
+            </div>
+            <div style={{ marginBottom: 18 }}>
+              <label style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.textLo, display: 'block', marginBottom: 5 }}>Nom de la séquence *</label>
+              <input
+                autoFocus type="text" value={createName}
+                onChange={e => setCreateName(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') handleCreate() }}
+                placeholder="Ex : Séquence Médecins Paris, Relance RDV 1..."
+                style={{ width: '100%', padding: '10px 12px', background: C.surface1, border: `1px solid ${C.line}`, borderRadius: 6, color: C.textHi, fontSize: 12, fontFamily: 'JetBrains Mono,monospace', boxSizing: 'border-box' as const }}
+              />
+            </div>
+            {createError && <div style={{ fontSize: 9, color: C.warn, marginBottom: 12, fontFamily: 'JetBrains Mono,monospace' }}>{createError}</div>}
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => setShowCreateModal(false)} style={{ flex: 1, padding: 10, borderRadius: 8, background: C.surface1, border: `1px solid ${C.line}`, color: C.textLo, fontFamily: 'Oswald,sans-serif', fontSize: 11, cursor: 'pointer' }}>ANNULER</button>
+              <button
+                onClick={handleCreate}
+                disabled={creating || !createName.trim()}
+                style={{ flex: 2, padding: 10, borderRadius: 8, background: '#0d1a2e', border: `1px solid ${C.indigo}66`, color: C.indigo, fontFamily: 'Oswald,sans-serif', fontSize: 11, fontWeight: 600, cursor: (creating || !createName.trim()) ? 'not-allowed' : 'pointer', opacity: (creating || !createName.trim()) ? 0.6 : 1 }}
+              >
+                {creating ? 'CRÉATION...' : '+ CRÉER'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }

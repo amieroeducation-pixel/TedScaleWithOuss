@@ -1057,8 +1057,18 @@ function TabSequences() {
 
   return (
     <SectionPanel title="SEQUENCES PAR STADE PIPELINE">
-      <div style={{ marginBottom: 12 }}>
+      <div style={{ marginBottom: 12, display: 'flex', gap: 8, flexWrap: 'wrap' as const }}>
         <SetBtn color={C.green} bg="#0d1a0d" onClick={() => setCreating(true)}>+ Nouveau template</SetBtn>
+        <SetBtn color={C.gold} bg="#1a1400" onClick={async () => {
+          const res = await fetch('/api/crm/sequences/seed-library', { method: 'POST' })
+          const { data, error: apiErr } = await res.json()
+          if (apiErr) { setError(apiErr); return }
+          setError(null)
+          await loadTemplates()
+          toast.success(data?.message ?? 'Bibliothèque importée')
+        }}>
+          📚 Importer bibliothèque (10 séquences)
+        </SetBtn>
       </div>
 
       {creating && (

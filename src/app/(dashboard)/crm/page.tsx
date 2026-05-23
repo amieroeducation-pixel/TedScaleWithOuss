@@ -287,13 +287,41 @@ function CardContent({ prospect, isDragging }: { prospect: Prospect; isDragging?
   )
 }
 
+// --- Calcul auto pression depuis séquences ---
+function computeAutoPressure(instances: SeqInstance[]): PressureLevel {
+  const active = instances.filter(i => i.status === 'active')
+  if (active.length === 0) return 'low'
+  const now = new Date()
+  let hasOverdue = false
+  let hasFailed = false
+  for (const inst of active) {
+    for (const step of inst.steps) {
+      if (step.status === 'failed') hasFailed = true
+      if (step.status === 'pending' && new Date(step.scheduled_at) < now) hasOverdue = true
+    }
+  }
+  if (active.length >= 2 && (hasFailed || hasOverdue)) return 'max'
+  if (hasFailed || hasOverdue) return 'high'
+  if (active.length >= 2) return 'high'
+  return 'medium'
+}
+
+const PRESSURE_META: Record<PressureLevel, { label: string; sub: string }> = {
+  low:    { label: 'À jour',   sub: 'Aucune urgence' },
+  medium: { label: 'À suivre', sub: 'Séquence active' },
+  high:   { label: 'Urgent',   sub: 'Relance requise' },
+  max:    { label: 'Critique', sub: 'Action immédiate' },
+}
+
 // --- DRAWER ---
-function ProspectDrawer({ prospect, onClose, onStageChange }: {
+function ProspectDrawer({ prospect, onClose, onStageChange, onPressureChange }: {
   prospect: Prospect
   onClose: () => void
   onStageChange: (id: string, stage: Stage) => void
+  onPressureChange: (id: string, pressure: PressureLevel) => void
 }) {
   const [localNotes, setLocalNotes] = useState(prospect.notes)
+  const [localPressure, setLocalPressure] = useState<PressureLevel>(prospect.pressure)
 
   // --- États séquences ---
   const [seqInstances, setSeqInstances] = useState<SeqInstance[]>([])
@@ -301,6 +329,39 @@ function ProspectDrawer({ prospect, onClose, onStageChange }: {
   const [seqLoading, setSeqLoading] = useState(false)
   const [seqStarting, setSeqStarting] = useState(false)
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('')
+
+  // --- États email manuel ---
+  const [showEmailModal, setShowEmailModal] = useState(false)
+  const [emailSubject, setEmailSubject] = useState('')
+  const [emailBody, setEmailBody] = useState('')
+  const [emailSending, setEmailSending] = useState(false)
+
+  async function handleSendEmail() {
+    if (!prospect.email || !emailSubject.trim() || !emailBody.trim()) return
+    setEmailSending(true)
+    try {
+      const res = await fetch('/api/crm/actions/email-manual', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prospect_id: prospect.id,
+          to_email: prospect.email,
+          to_name: prospect.nom,
+          subject: emailSubject.trim(),
+          body: emailBody.trim(),
+        }),
+      })
+      const json = await res.json()
+      if (json.error) { toast.error(json.error); return }
+      toast.success('Email envoyé via Brevo !')
+      setShowEmailModal(false)
+      setEmailSubject('')
+      setEmailBody('')
+    } catch {
+      toast.error("Erreur d'envoi")
+    }
+    setEmailSending(false)
+  }
 
   // --- Chargement instances + templates ---
   useEffect(() => {
@@ -455,6 +516,31 @@ function ProspectDrawer({ prospect, onClose, onStageChange }: {
         </div>
       </div>
 
+      {/* Niveau de pression */}
+      <div style={{ padding: '14px 20px', borderBottom: `1px solid ${C.line}` }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+          <div style={{ fontSize: 9, color: C.textLo, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1 }}>Niveau de pression</div>
+          {seqInstances.length > 0 && (() => {
+            const suggested = computeAutoPressure(seqInstances)
+            return suggested !== localPressure ? (
+              <button onClick={() => { setLocalPressure(suggested); onPressureChange(prospect.id, suggested) }}
+                style={{ fontSize: 7, padding: '2px 8px', borderRadius: 4, border: `1px solid ${PRESSURE_COLORS[suggested]}`, background: `${PRESSURE_COLORS[suggested]}18`, color: PRESSURE_COLORS[suggested], cursor: 'pointer' }}>
+                ⚡ Suggestion : {PRESSURE_META[suggested].label}
+              </button>
+            ) : null
+          })()}
+        </div>
+        <div style={{ display: 'flex', gap: 6 }}>
+          {(Object.keys(PRESSURE_META) as PressureLevel[]).map(level => (
+            <button key={level} onClick={() => { setLocalPressure(level); onPressureChange(prospect.id, level) }}
+              style={{ flex: 1, padding: '6px 4px', borderRadius: 6, border: `1px solid ${localPressure === level ? PRESSURE_COLORS[level] : C.line}`, background: localPressure === level ? `${PRESSURE_COLORS[level]}22` : C.surface2, color: localPressure === level ? PRESSURE_COLORS[level] : C.textLo, cursor: 'pointer', fontSize: 8, fontWeight: localPressure === level ? 700 : 400 }}>
+              <div>{PRESSURE_META[level].label}</div>
+              <div style={{ fontSize: 7, opacity: 0.7 }}>{PRESSURE_META[level].sub}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Notes */}
       <div style={{ padding: '16px 20px', borderBottom: `1px solid ${C.line}`, flex: 1 }}>
         <div style={{ fontSize: 9, color: C.textLo, marginBottom: 8, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1 }}>Notes</div>
@@ -487,10 +573,15 @@ function ProspectDrawer({ prospect, onClose, onStageChange }: {
             }}
           >
             {seqTemplates.length === 0
-              ? <option value="">Aucun template disponible</option>
+              ? <option value="">Aucun template — créer dans Paramètres</option>
               : seqTemplates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)
             }
           </select>
+          {seqTemplates.length === 0 && (
+            <div style={{ fontSize: 9, color: C.textLo, marginTop: 6 }}>
+              → <a href="/settings" style={{ color: C.indigo, textDecoration: 'none' }}>Paramètres → Séquences</a> pour créer un template
+            </div>
+          )}
           <button
             onClick={handleStartSequence}
             disabled={seqStarting || seqTemplates.length === 0}
@@ -629,7 +720,10 @@ function ProspectDrawer({ prospect, onClose, onStageChange }: {
             onClick={() => window.open(`https://linkedin.com/search/results/people/?keywords=${encodeURIComponent(prospect.nom)}`, '_blank')}
             style={{ padding: '9px 0', borderRadius: 7, border: '1px solid #0A66C2', background: 'rgba(10,102,194,0.1)', color: '#0A66C2', fontWeight: 600, fontSize: 11, cursor: 'pointer' }}
           >🔗 LinkedIn</button>
-          <button style={{ padding: '9px 0', borderRadius: 7, border: `1px solid ${C.indigo}`, background: C.indigo + '1a', color: C.indigo, fontWeight: 600, fontSize: 11, cursor: 'pointer' }}>
+          <button
+            onClick={() => { if (!prospect.email) { toast.error('Email inconnu pour ce prospect'); return }; setShowEmailModal(true) }}
+            style={{ padding: '9px 0', borderRadius: 7, border: `1px solid ${C.indigo}`, background: C.indigo + '1a', color: C.indigo, fontWeight: 600, fontSize: 11, cursor: 'pointer' }}
+          >
             ✉️ Email Brevo
           </button>
           <button
@@ -638,6 +732,45 @@ function ProspectDrawer({ prospect, onClose, onStageChange }: {
           >📞 Appeler</button>
         </div>
       </div>
+
+      {showEmailModal && (
+        <div onClick={() => setShowEmailModal(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: C.bgMid, border: `1px solid ${C.indigo}40`, borderRadius: 14, padding: 24, width: '100%', maxWidth: 480, position: 'relative' }}>
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: C.ribbon, borderRadius: '14px 14px 0 0' }} />
+            <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 14, fontWeight: 600, color: C.indigo, marginBottom: 4, marginTop: 4 }}>✉️ Email Brevo</div>
+            <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.textLo, marginBottom: 18 }}>
+              À : <span style={{ color: C.textMid }}>{prospect.nom}</span> — <span style={{ color: C.indigo }}>{prospect.email}</span>
+            </div>
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.textLo, display: 'block', marginBottom: 5 }}>Objet *</label>
+              <input
+                autoFocus value={emailSubject} onChange={e => setEmailSubject(e.target.value)}
+                placeholder="Ex : Suite à notre échange..."
+                style={{ width: '100%', padding: '8px 10px', background: C.surface1, border: `1px solid ${C.line}`, borderRadius: 6, color: C.textHi, fontSize: 11, fontFamily: 'JetBrains Mono,monospace', boxSizing: 'border-box' as const }}
+              />
+            </div>
+            <div style={{ marginBottom: 18 }}>
+              <label style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.textLo, display: 'block', marginBottom: 5 }}>Message *</label>
+              <textarea
+                value={emailBody} onChange={e => setEmailBody(e.target.value)}
+                rows={6}
+                placeholder={`Bonjour ${prospect.nom.split(' ')[0]},\n\n...`}
+                style={{ width: '100%', padding: '8px 10px', background: C.surface1, border: `1px solid ${C.line}`, borderRadius: 6, color: C.textHi, fontSize: 11, fontFamily: 'JetBrains Mono,monospace', boxSizing: 'border-box' as const, resize: 'vertical' as const }}
+              />
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => setShowEmailModal(false)} style={{ flex: 1, padding: 10, borderRadius: 8, background: C.surface1, border: `1px solid ${C.line}`, color: C.textLo, fontFamily: 'Oswald,sans-serif', fontSize: 11, cursor: 'pointer' }}>ANNULER</button>
+              <button
+                onClick={handleSendEmail}
+                disabled={emailSending || !emailSubject.trim() || !emailBody.trim()}
+                style={{ flex: 2, padding: 10, borderRadius: 8, background: '#0d1a2e', border: `1px solid ${C.indigo}66`, color: C.indigo, fontFamily: 'Oswald,sans-serif', fontSize: 11, fontWeight: 600, cursor: 'pointer', opacity: (!emailSubject.trim() || !emailBody.trim()) ? 0.6 : 1 }}
+              >
+                {emailSending ? 'ENVOI...' : '✉️ ENVOYER'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -697,6 +830,10 @@ export default function CrmPage() {
   const [filter, setFilter] = useState<'Tous' | 'TNS' | 'Chefs' | '★★★★★'>('Tous')
   const [isLoading, setIsLoading] = useState(true)
   const [fetchError, setFetchError] = useState<string | null>(null)
+  const [showNewProspect, setShowNewProspect] = useState(false)
+  const [npForm, setNpForm] = useState({ full_name: '', profession: '', phone: '', email: '', city: '', source: 'autre', notes: '' })
+  const [npCreating, setNpCreating] = useState(false)
+  const [npError, setNpError] = useState<string | null>(null)
 
   // Fetch real prospects from DB
   const fetchProspects = useCallback(async () => {
@@ -752,6 +889,35 @@ export default function CrmPage() {
     }
   }
 
+  async function handleCreateProspect() {
+    if (!npForm.full_name.trim()) return
+    setNpCreating(true)
+    setNpError(null)
+    try {
+      const res = await fetch('/api/prospects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          full_name: npForm.full_name.trim(),
+          profession: npForm.profession,
+          phone: npForm.phone,
+          email: npForm.email,
+          city: npForm.city,
+          source: npForm.source,
+          notes: npForm.notes,
+        }),
+      })
+      const d = await res.json()
+      if (!d.success) throw new Error(d.error ?? 'Erreur création')
+      await fetchProspects()
+      setShowNewProspect(false)
+      setNpForm({ full_name: '', profession: '', phone: '', email: '', city: '', source: 'autre', notes: '' })
+    } catch (e) {
+      setNpError(e instanceof Error ? e.message : 'Erreur inconnue')
+    }
+    setNpCreating(false)
+  }
+
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
   const activeProspect = activeId ? prospects.find(p => p.id === activeId) : null
 
@@ -794,6 +960,21 @@ export default function CrmPage() {
     if (stage !== currentStage) persistMove(id, stage)
   }
 
+  function handlePressureChange(id: string, pressure: PressureLevel) {
+    setProspects(prev => prev.map(p => p.id === id ? { ...p, pressure } : p))
+    if (selectedProspect?.id === id) {
+      setSelectedProspect(prev => prev ? { ...prev, pressure } : null)
+    }
+    const isUUID = /^[0-9a-f-]{36}$/.test(id)
+    if (isUUID) {
+      fetch(`/api/prospects/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pressure }),
+      }).catch(() => {})
+    }
+  }
+
   const totalPipeline = filteredProspects.filter(p => !['Converti', 'Perdu'].includes(p.stage)).length
   const totalConverti = filteredProspects.filter(p => p.stage === 'Converti').length
   const totalPerdu    = filteredProspects.filter(p => p.stage === 'Perdu').length
@@ -819,11 +1000,10 @@ export default function CrmPage() {
           {filteredProspects.length} prospects · Cliquer sur une carte pour le profil complet
         </div>
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-          <button style={{
-            padding: '4px 10px', background: C.surface2,
-            border: `1px solid ${C.green}`, color: C.green,
-            borderRadius: 6, fontSize: 8, fontWeight: 600, cursor: 'pointer',
-          }}>➕ Nouveau prospect</button>
+          <button
+            onClick={() => setShowNewProspect(true)}
+            style={{ padding: '4px 10px', background: C.surface2, border: `1px solid ${C.green}`, color: C.green, borderRadius: 6, fontSize: 8, fontWeight: 600, cursor: 'pointer' }}
+          >➕ Nouveau prospect</button>
           <div style={{ display: 'flex', gap: 4 }}>
             {(['Tous', '★★★★★', 'TNS', 'Chefs'] as const).map(f => (
               <span key={f} onClick={() => setFilter(f)} style={{
@@ -915,8 +1095,127 @@ export default function CrmPage() {
             prospect={selectedProspect}
             onClose={() => setSelectedProspect(null)}
             onStageChange={handleStageChange}
+            onPressureChange={handlePressureChange}
           />
         </>
+      )}
+
+      {/* Modal nouveau prospect */}
+      {showNewProspect && (
+        <div
+          onClick={() => setShowNewProspect(false)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{ background: C.bgMid, border: `1px solid ${C.line}`, borderRadius: 14, padding: 24, width: '100%', maxWidth: 460, position: 'relative' }}
+          >
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: C.ribbon, borderRadius: '14px 14px 0 0' }} />
+            <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 14, fontWeight: 600, color: C.textHi, marginBottom: 18, marginTop: 6 }}>
+              Nouveau prospect
+            </div>
+
+            {/* Nom complet */}
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.textLo, display: 'block', marginBottom: 5 }}>Nom complet *</label>
+              <input
+                autoFocus
+                value={npForm.full_name}
+                onChange={e => setNpForm(f => ({ ...f, full_name: e.target.value }))}
+                placeholder="Dr. Prénom Nom"
+                style={{ width: '100%', padding: '8px 10px', background: C.surface1, border: `1px solid ${C.line}`, borderRadius: 6, color: C.textHi, fontSize: 11, fontFamily: 'JetBrains Mono,monospace', boxSizing: 'border-box' }}
+              />
+            </div>
+
+            {/* Profession + Ville */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
+              <div>
+                <label style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.textLo, display: 'block', marginBottom: 5 }}>Profession</label>
+                <input
+                  value={npForm.profession}
+                  onChange={e => setNpForm(f => ({ ...f, profession: e.target.value }))}
+                  placeholder="Kinésithérapeute"
+                  style={{ width: '100%', padding: '8px 10px', background: C.surface1, border: `1px solid ${C.line}`, borderRadius: 6, color: C.textHi, fontSize: 11, fontFamily: 'JetBrains Mono,monospace', boxSizing: 'border-box' }}
+                />
+              </div>
+              <div>
+                <label style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.textLo, display: 'block', marginBottom: 5 }}>Ville</label>
+                <input
+                  value={npForm.city}
+                  onChange={e => setNpForm(f => ({ ...f, city: e.target.value }))}
+                  placeholder="Paris 15e"
+                  style={{ width: '100%', padding: '8px 10px', background: C.surface1, border: `1px solid ${C.line}`, borderRadius: 6, color: C.textHi, fontSize: 11, fontFamily: 'JetBrains Mono,monospace', boxSizing: 'border-box' }}
+                />
+              </div>
+            </div>
+
+            {/* Téléphone + Email */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
+              <div>
+                <label style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.textLo, display: 'block', marginBottom: 5 }}>Téléphone</label>
+                <input
+                  value={npForm.phone}
+                  onChange={e => setNpForm(f => ({ ...f, phone: e.target.value }))}
+                  placeholder="06 12 34 56 78"
+                  style={{ width: '100%', padding: '8px 10px', background: C.surface1, border: `1px solid ${C.line}`, borderRadius: 6, color: C.textHi, fontSize: 11, fontFamily: 'JetBrains Mono,monospace', boxSizing: 'border-box' }}
+                />
+              </div>
+              <div>
+                <label style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.textLo, display: 'block', marginBottom: 5 }}>Email</label>
+                <input
+                  value={npForm.email}
+                  onChange={e => setNpForm(f => ({ ...f, email: e.target.value }))}
+                  placeholder="contact@cabinet.fr"
+                  style={{ width: '100%', padding: '8px 10px', background: C.surface1, border: `1px solid ${C.line}`, borderRadius: 6, color: C.textHi, fontSize: 11, fontFamily: 'JetBrains Mono,monospace', boxSizing: 'border-box' }}
+                />
+              </div>
+            </div>
+
+            {/* Source */}
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.textLo, display: 'block', marginBottom: 5 }}>Source</label>
+              <select
+                value={npForm.source}
+                onChange={e => setNpForm(f => ({ ...f, source: e.target.value }))}
+                style={{ width: '100%', padding: '8px 10px', background: C.surface1, border: `1px solid ${C.line}`, borderRadius: 6, color: C.textHi, fontSize: 10, fontFamily: 'JetBrains Mono,monospace' }}
+              >
+                <option value="autre">Autre</option>
+                <option value="tns">TNS (prospection)</option>
+                <option value="chefs_entreprise">Chef d&apos;entreprise</option>
+                <option value="recommandation">Recommandation</option>
+                <option value="linkedin">LinkedIn</option>
+                <option value="particuliers">Particulier</option>
+              </select>
+            </div>
+
+            {/* Notes */}
+            <div style={{ marginBottom: 18 }}>
+              <label style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.textLo, display: 'block', marginBottom: 5 }}>Notes</label>
+              <textarea
+                value={npForm.notes}
+                onChange={e => setNpForm(f => ({ ...f, notes: e.target.value }))}
+                placeholder="Premier contact, contexte..."
+                rows={2}
+                style={{ width: '100%', padding: '8px 10px', background: C.surface1, border: `1px solid ${C.line}`, borderRadius: 6, color: C.textHi, fontSize: 11, fontFamily: 'JetBrains Mono,monospace', boxSizing: 'border-box', resize: 'none' }}
+              />
+            </div>
+
+            {npError && <div style={{ fontSize: 9, color: '#ff6470', marginBottom: 12, fontFamily: 'JetBrains Mono,monospace' }}>{npError}</div>}
+
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => setShowNewProspect(false)} style={{ flex: 1, padding: 10, borderRadius: 8, background: C.surface1, border: `1px solid ${C.line}`, color: C.textLo, fontFamily: 'Oswald,sans-serif', fontSize: 11, cursor: 'pointer' }}>
+                ANNULER
+              </button>
+              <button
+                onClick={handleCreateProspect}
+                disabled={npCreating || !npForm.full_name.trim()}
+                style={{ flex: 2, padding: 10, borderRadius: 8, background: '#0a1f0a', border: `1px solid ${C.green}66`, color: C.green, fontFamily: 'Oswald,sans-serif', fontSize: 11, fontWeight: 600, cursor: (npCreating || !npForm.full_name.trim()) ? 'not-allowed' : 'pointer', opacity: (npCreating || !npForm.full_name.trim()) ? 0.6 : 1 }}
+              >
+                {npCreating ? 'CRÉATION...' : '➕ AJOUTER AU CRM'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   )
