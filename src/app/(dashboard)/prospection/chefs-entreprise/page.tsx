@@ -33,6 +33,7 @@ type WorkflowLead = {
   score: number
   scoreColor: string
   urgence: boolean
+  phone: string | null
 }
 
 type WorkflowStats = {
@@ -203,6 +204,7 @@ export default function ChefsEntreprisePage() {
           full_name: lead.nom,
           company: lead.nom,
           city: lead.ville,
+          phone: lead.phone ?? '',
           source: 'chefs_entreprise',
           tags: [lead.signal],
           notes: `Forme: ${lead.forme} · Création: ${lead.dateCreation ?? 'N/A'} · Signal: ${lead.signalLabel}`,

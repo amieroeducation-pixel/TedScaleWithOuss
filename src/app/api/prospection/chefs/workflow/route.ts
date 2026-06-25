@@ -20,6 +20,11 @@ type ApiResult = {
   categorie_entreprise?: string
 }
 
+type PappersEntreprise = {
+  siege?: { telephone?: string }
+  dirigeants?: Array<{ email?: string; telephone?: string }>
+}
+
 type Lead = {
   id: string
   siren: string | null
@@ -33,6 +38,7 @@ type Lead = {
   score: number
   scoreColor: string
   urgence: boolean
+  phone: string | null
 }
 
 async function searchEntreprises(params: Record<string, string>): Promise<ApiResult[]> {
@@ -56,7 +62,7 @@ async function searchEntreprises(params: Record<string, string>): Promise<ApiRes
   }
 }
 
-function toLead(e: ApiResult, signal: string, signalLabel: string, urgence: boolean): Lead {
+function toLead(e: ApiResult, signal: string, signalLabel: string, urgence: boolean, phone: string | null = null): Lead {
   return {
     id: e.siren ?? Math.random().toString(36).slice(2),
     siren: e.siren ?? null,
@@ -70,7 +76,21 @@ function toLead(e: ApiResult, signal: string, signalLabel: string, urgence: bool
     score: urgence ? 9 + Math.floor(Math.random() * 2) : 6 + Math.floor(Math.random() * 4),
     scoreColor: urgence ? '#00d4ff' : '#e8c878',
     urgence,
+    phone,
   }
+}
+
+async function enrichWithPhone(siren: string | undefined, pappersKey: string | undefined): Promise<string | null> {
+  if (!siren || !pappersKey) return null
+  try {
+    const res = await fetch(
+      `https://api.pappers.fr/v2/entreprise?api_token=${pappersKey}&siren=${siren}`,
+      { cache: 'no-store', signal: AbortSignal.timeout(4000) }
+    )
+    if (!res.ok) return null
+    const p = await res.json() as PappersEntreprise
+    return p.siege?.telephone ?? p.dirigeants?.[0]?.telephone ?? null
+  } catch { return null }
 }
 
 export async function POST(request: NextRequest) {
@@ -83,15 +103,17 @@ export async function POST(request: NextRequest) {
 
   const { type = 'hebdomadaire' } = body
 
+  const pappersKey = process.env.PAPPERS_API_KEY
+
   if (type === 'hebdomadaire') {
     const dateMin30 = new Date()
     dateMin30.setDate(dateMin30.getDate() - 30)
     const dateMin30Str = dateMin30.toISOString().split('T')[0]
 
     // Signal 1 : Créations récentes SAS/SASU/SARL < 30 jours en IDF
-    const creations: Lead[] = []
+    const creationsRaw: ApiResult[] = []
     for (const dept of ['75', '92', '78', '91']) {
-      if (creations.length >= 20) break
+      if (creationsRaw.length >= 20) break
       // Chercher SAS (5710) en IDF créées récemment
       const r1 = await searchEntreprises({
         q: 'entreprise',
@@ -111,8 +133,16 @@ export async function POST(request: NextRequest) {
         date_creation_min: dateMin30Str,
         departement: dept,
       })
-      creations.push(...[...r1, ...r2, ...r3].map(e => toLead(e, 'creation', 'Création récente', false)))
+      creationsRaw.push(...r1, ...r2, ...r3)
     }
+
+    // Enrichissement Pappers pour récupérer les téléphones
+    const creations: Lead[] = await Promise.all(
+      creationsRaw.map(async (e) => {
+        const phone = await enrichWithPhone(e.siren, pappersKey)
+        return toLead(e, 'creation', 'Création récente', false, phone)
+      })
+    )
 
     // Signal 2 : PME établies en IDF — profil cession probable
     const cessionsRaw = await searchEntreprises({
@@ -121,7 +151,12 @@ export async function POST(request: NextRequest) {
       departement: '75',
       categorie_entreprise: 'PME',
     })
-    const cessions = cessionsRaw.slice(0, 8).map(e => toLead(e, 'cession', 'Profil cession', true))
+    const cessions: Lead[] = await Promise.all(
+      cessionsRaw.slice(0, 8).map(async (e) => {
+        const phone = await enrichWithPhone(e.siren, pappersKey)
+        return toLead(e, 'cession', 'Profil cession', true, phone)
+      })
+    )
 
     const leads = [...creations.slice(0, 15), ...cessions]
     const stats = {
@@ -148,7 +183,12 @@ export async function POST(request: NextRequest) {
       holdingsRaw.push(...r, ...r2)
       if (holdingsRaw.length >= 15) break
     }
-    const holdings = holdingsRaw.slice(0, 12).map(e => toLead(e, 'holding', 'Holding patrimoniale', true))
+    const holdings: Lead[] = await Promise.all(
+      holdingsRaw.slice(0, 12).map(async (e) => {
+        const phone = await enrichWithPhone(e.siren, pappersKey)
+        return toLead(e, 'holding', 'Holding patrimoniale', true, phone)
+      })
+    )
 
     // Signal 4 : SAS/SASU établies > 5 ans — profil dividendes
     const dateMax5y = new Date()
@@ -165,7 +205,12 @@ export async function POST(request: NextRequest) {
       departement: '92',
       date_creation_max: dateMax5y.toISOString().split('T')[0],
     })
-    const dividendes = [...dividendesRaw1, ...dividendesRaw2].slice(0, 10).map(e => toLead(e, 'dividendes', 'Profil dividendes', false))
+    const dividendes: Lead[] = await Promise.all(
+      [...dividendesRaw1, ...dividendesRaw2].slice(0, 10).map(async (e) => {
+        const phone = await enrichWithPhone(e.siren, pappersKey)
+        return toLead(e, 'dividendes', 'Profil dividendes', false, phone)
+      })
+    )
 
     // Signal 5 : PME > 10 ans — dirigeant senior
     const dateMax10y = new Date()
@@ -177,7 +222,12 @@ export async function POST(request: NextRequest) {
       date_creation_max: dateMax10y.toISOString().split('T')[0],
       categorie_entreprise: 'PME',
     })
-    const seniors = seniorsRaw.slice(0, 8).map(e => toLead(e, 'senior', 'Dirigeant 55+', false))
+    const seniors: Lead[] = await Promise.all(
+      seniorsRaw.slice(0, 8).map(async (e) => {
+        const phone = await enrichWithPhone(e.siren, pappersKey)
+        return toLead(e, 'senior', 'Dirigeant 55+', false, phone)
+      })
+    )
 
     const leads = [...holdings, ...dividendes, ...seniors]
     const stats = {
