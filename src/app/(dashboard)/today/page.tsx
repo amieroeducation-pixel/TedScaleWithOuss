@@ -251,10 +251,59 @@ function AudioPlayer() {
 }
 
 // ─── Video player ─────────────────────────────────────────────────────────
+function getYouTubeEmbedUrl(url: string): string | null {
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
+    /youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/,
+  ]
+  for (const p of patterns) {
+    const m = url.match(p)
+    if (m) return `https://www.youtube.com/embed/${m[1]}`
+  }
+  return null
+}
+
+// IndexedDB helper for persisting local video files
+const VIDEO_DB_NAME = 'ted_videos'
+const VIDEO_STORE = 'files'
+
+function openVideoDB(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(VIDEO_DB_NAME, 1)
+    req.onupgradeneeded = () => { req.result.createObjectStore(VIDEO_STORE, { keyPath: 'id' }) }
+    req.onsuccess = () => resolve(req.result)
+    req.onerror = () => reject(req.error)
+  })
+}
+
+async function saveVideoFile(id: string, name: string, blob: Blob) {
+  const db = await openVideoDB()
+  const tx = db.transaction(VIDEO_STORE, 'readwrite')
+  tx.objectStore(VIDEO_STORE).put({ id, name, blob })
+  db.close()
+}
+
+async function loadVideoFiles(): Promise<Array<{ id: string; name: string; blob: Blob }>> {
+  const db = await openVideoDB()
+  return new Promise((resolve) => {
+    const tx = db.transaction(VIDEO_STORE, 'readonly')
+    const req = tx.objectStore(VIDEO_STORE).getAll()
+    req.onsuccess = () => { db.close(); resolve(req.result ?? []) }
+    req.onerror = () => { db.close(); resolve([]) }
+  })
+}
+
+async function deleteVideoFile(id: string) {
+  const db = await openVideoDB()
+  const tx = db.transaction(VIDEO_STORE, 'readwrite')
+  tx.objectStore(VIDEO_STORE).delete(id)
+  db.close()
+}
+
 function VideoPlayer() {
   const videoRef = useRef<HTMLVideoElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const [playlist, setPlaylist] = useState<Array<{ name: string; url: string; persisted?: boolean; dbId?: string }>>([])
+  const [playlist, setPlaylist] = useState<Array<{ name: string; url: string; persisted?: boolean; fileId?: string }>>([])
   const [currentIdx, setCurrentIdx] = useState(0)
   const [playing, setPlaying] = useState(false)
   const [progress, setProgress] = useState(0)
@@ -264,20 +313,19 @@ function VideoPlayer() {
   const [urlName, setUrlName] = useState('')
   const [showUrlForm, setShowUrlForm] = useState(false)
 
-  // Load saved videos from API on mount
+  // Load saved videos from IndexedDB on mount
   useEffect(() => {
     async function loadSavedVideos() {
       try {
-        const res = await fetch('/api/videos?section=today')
-        const json = await res.json()
-        if (json.success && json.data?.length > 0) {
-          const saved = json.data.map((v: { id: string; name: string; url: string }) => ({
-            name: v.name,
-            url: v.url,
+        const files = await loadVideoFiles()
+        if (files.length > 0) {
+          const saved = files.map(f => ({
+            name: f.name,
+            url: URL.createObjectURL(f.blob),
             persisted: true,
-            dbId: v.id,
+            fileId: f.id,
           }))
-          setPlaylist(prev => [...saved, ...prev])
+          setPlaylist(saved)
         }
       } catch { /* ignore */ }
     }
@@ -288,18 +336,7 @@ function VideoPlayer() {
     const url = urlInput.trim()
     if (!url || !url.startsWith('http')) return
     const name = urlName.trim() || 'Video'
-    // Persist to API
-    try {
-      const res = await fetch('/api/videos', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, url, section: 'today', position: playlist.length }),
-      })
-      const json = await res.json()
-      if (json.success && json.data) {
-        setPlaylist(prev => [...prev, { name, url, persisted: true, dbId: json.data.id }])
-      }
-    } catch { /* ignore */ }
+    setPlaylist(prev => [...prev, { name, url, persisted: false }])
     setUrlInput('')
     setUrlName('')
     setShowUrlForm(false)
@@ -307,11 +344,10 @@ function VideoPlayer() {
 
   const removeVideo = async (idx: number) => {
     const track = playlist[idx]
-    if (track?.persisted && track.dbId) {
-      try { await fetch(`/api/videos?id=${track.dbId}`, { method: 'DELETE' }) } catch { /* ignore */ }
-    } else if (!track?.persisted) {
-      URL.revokeObjectURL(track.url)
+    if (track?.persisted && track.fileId) {
+      await deleteVideoFile(track.fileId)
     }
+    URL.revokeObjectURL(track.url)
     setPlaylist(prev => prev.filter((_, i) => i !== idx))
     if (currentIdx >= idx && currentIdx > 0) setCurrentIdx(i => i - 1)
   }
@@ -322,9 +358,14 @@ function VideoPlayer() {
     return `${m}:${pad(sec)}`
   }
 
-  const loadFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const loadFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? [])
-    const newTracks = files.map(f => ({ name: f.name.replace(/\.[^.]+$/, ''), url: URL.createObjectURL(f) }))
+    const newTracks = await Promise.all(files.map(async (f) => {
+      const id = `vid_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+      const name = f.name.replace(/\.[^.]+$/, '')
+      await saveVideoFile(id, name, f)
+      return { name, url: URL.createObjectURL(f), persisted: true, fileId: id }
+    }))
     setPlaylist(prev => [...prev, ...newTracks])
     e.target.value = ''
   }
@@ -378,8 +419,11 @@ function VideoPlayer() {
     video.pause(); video.currentTime = 0; setPlaying(false)
   }
 
-  const clear = () => {
-    playlist.forEach(t => { if (!t.persisted) URL.revokeObjectURL(t.url) })
+  const clear = async () => {
+    for (const t of playlist) {
+      URL.revokeObjectURL(t.url)
+      if (t.persisted && t.fileId) await deleteVideoFile(t.fileId)
+    }
     stop(); setPlaylist([]); setCurrentIdx(0); setProgress(0); setTimeDisplay('0:00 / 0:00')
   }
 
@@ -396,9 +440,18 @@ function VideoPlayer() {
       <div style={{ background: C.bgDeep, border: `0.5px solid ${C.line}`, borderRadius: 6, padding: 12 }}>
         <input ref={fileInputRef} type="file" accept="video/mp4,video/webm,video/ogg,video/quicktime,video/3gpp,video/3gpp2" multiple style={{ display: 'none' }} onChange={loadFiles} />
 
-        {/* Zone vidéo — video toujours monté, ref toujours valide */}
+        {/* Zone vidéo — supporte YouTube (iframe) et fichiers locaux (video) */}
         <div style={{ width: '100%', height: 200, background: '#000', borderRadius: 5, marginBottom: 8, overflow: 'hidden', position: 'relative' }}>
-          <video ref={videoRef} style={{ width: '100%', height: '100%', objectFit: 'contain', display: hasTrack ? 'block' : 'none' }} />
+          {hasTrack && getYouTubeEmbedUrl(playlist[currentIdx]?.url ?? '') ? (
+            <iframe
+              src={getYouTubeEmbedUrl(playlist[currentIdx].url)!}
+              style={{ width: '100%', height: '100%', border: 'none' }}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+          ) : (
+            <video ref={videoRef} style={{ width: '100%', height: '100%', objectFit: 'contain', display: hasTrack ? 'block' : 'none' }} />
+          )}
           {!hasTrack && (
             <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, color: C.textVlo }}>
               Aucune vidéo chargée

@@ -68,11 +68,15 @@ export default function CallingSessionPanel() {
         if (detail.success) {
           const s: Session = detail.data
           setSession(s)
-          // Shuffle les contacts a_appeler avec un seed basé sur la date du jour
-          // pour varier les contacts présentés chaque jour
+          // Filtrer les contacts jamais appelés et les shuffle par jour
+          // pour ne pas toujours afficher les mêmes en premier
           const aAppeler = s.contacts.filter(c => c.statut_appel === 'a_appeler')
           const shuffled = dailyShuffle(aAppeler)
-          const first = shuffled[0] ?? s.contacts[0] ?? null
+          // Offset quotidien pour que chaque jour commence à un index différent
+          const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000)
+          const offset = shuffled.length > 0 ? dayOfYear % shuffled.length : 0
+          const rotated = [...shuffled.slice(offset), ...shuffled.slice(0, offset)]
+          const first = rotated[0] ?? s.contacts[0] ?? null
           setActiveContact(first)
           const [scriptRes, objRes] = await Promise.all([
             fetch(`/api/call-scripts?metier=${s.metier}`).then(r => r.json()),
