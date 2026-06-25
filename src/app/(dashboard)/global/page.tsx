@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { C } from '@/lib/theme'
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { saveLastSection } from '@/lib/navigation-state'
 
 type GlobalKpi = {
@@ -11,6 +12,23 @@ type GlobalKpi = {
 
 type GlobalTab = 'synthese' | 'planning' | 'rdvpris' | 'suivi'
 type SuiviPeriod = 'year' | 'month' | 'week'
+
+const WEEKLY_PERF_DATA = [
+  { semaine: 'S22', score: 62, rdv: 4, appels: 38 },
+  { semaine: 'S23', score: 71, rdv: 6, appels: 45 },
+  { semaine: 'S24', score: 58, rdv: 3, appels: 32 },
+  { semaine: 'S25', score: 79, rdv: 7, appels: 52 },
+  { semaine: 'S26', score: 85, rdv: 8, appels: 48 },
+  { semaine: 'S27', score: 73, rdv: 5, appels: 41 },
+]
+
+const OBJ_VS_REAL_DATA = [
+  { categorie: 'Appels', objectif: 50, realise: 41 },
+  { categorie: 'RDV R1', objectif: 5, realise: 4 },
+  { categorie: 'RDV R2', objectif: 3, realise: 3 },
+  { categorie: 'Propositions', objectif: 2, realise: 1 },
+  { categorie: 'Collecte (k)', objectif: 50, realise: 35 },
+]
 
 const MONTHS = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC']
 const MONTH_WEEKS = ['4s','4s','4s','4s','4s','4s','4s','4s','5s','4s','4s','5s']
@@ -209,11 +227,34 @@ function SuiviTabContent() {
         </div>
       </div>
 
-      <div style={{ background: C.bgMid, border: `1px solid ${C.line}`, borderRadius: 8, padding: 16, marginBottom: 16, color: C.textMid, fontSize: 9 }}>
-        Le graphique s'affichera ici.
+      {/* LineChart - Weekly Performance Trend */}
+      <div style={{ background: C.bgMid, border: `1px solid ${C.line}`, borderRadius: 8, padding: 16, marginBottom: 16 }}>
+        <div style={{ fontSize: 10, fontWeight: 600, color: C.gold, marginBottom: 12 }}>📈 Tendance performance hebdomadaire</div>
+        <ResponsiveContainer width="100%" height={220}>
+          <LineChart data={WEEKLY_PERF_DATA} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke={C.line} />
+            <XAxis dataKey="semaine" tick={{ fill: C.textLo, fontSize: 10 }} stroke={C.line} />
+            <YAxis tick={{ fill: C.textLo, fontSize: 10 }} stroke={C.line} />
+            <Tooltip contentStyle={{ background: C.surface2, border: `1px solid ${C.line}`, borderRadius: 6, fontSize: 11, color: C.text }} />
+            <Line type="monotone" dataKey="score" stroke={C.gold} strokeWidth={2} dot={{ fill: C.gold, r: 4 }} name="Score %" />
+            <Line type="monotone" dataKey="rdv" stroke={C.indigo} strokeWidth={2} dot={{ fill: C.indigo, r: 3 }} name="RDV" />
+          </LineChart>
+        </ResponsiveContainer>
       </div>
-      <div style={{ background: C.bgMid, border: `1px solid ${C.line}`, borderRadius: 8, padding: 16, color: C.textMid, fontSize: 9 }}>
-        Le tableau de comparaison s'affichera ici.
+
+      {/* BarChart - Objectifs vs Realise */}
+      <div style={{ background: C.bgMid, border: `1px solid ${C.line}`, borderRadius: 8, padding: 16 }}>
+        <div style={{ fontSize: 10, fontWeight: 600, color: C.gold, marginBottom: 12 }}>🎯 Objectifs vs Réalisé (semaine en cours)</div>
+        <ResponsiveContainer width="100%" height={220}>
+          <BarChart data={OBJ_VS_REAL_DATA} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke={C.line} />
+            <XAxis dataKey="categorie" tick={{ fill: C.textLo, fontSize: 9 }} stroke={C.line} />
+            <YAxis tick={{ fill: C.textLo, fontSize: 10 }} stroke={C.line} />
+            <Tooltip contentStyle={{ background: C.surface2, border: `1px solid ${C.line}`, borderRadius: 6, fontSize: 11, color: C.text }} />
+            <Bar dataKey="objectif" fill={C.gold} name="Objectif" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="realise" fill={C.indigo} name="Réalisé" radius={[4, 4, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
       </div>
     </div>
   )
@@ -274,9 +315,21 @@ export default function GlobalPage() {
       {/* ─── SYNTHESE ─── */}
       {tab === 'synthese' && (
         <div>
-          <div style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 14, fontWeight: 600, color: C.textHi, marginBottom: 8 }}>📊 Global - Vue Synthèse</div>
-            <div style={{ fontSize: 9, color: C.textMid }}>Suivi quotidien et hebdomadaire des 4 piliers de performance</div>
+          <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: C.textHi, marginBottom: 8 }}>📊 Global - Vue Synthèse</div>
+              <div style={{ fontSize: 9, color: C.textMid }}>Suivi quotidien et hebdomadaire des 4 piliers de performance</div>
+            </div>
+            <button
+              onClick={() => window.open('/api/export/rdv', '_blank')}
+              style={{
+                padding: '8px 14px', borderRadius: 6,
+                background: '#0d1a0d', border: `1px solid ${C.green}60`,
+                color: C.green, fontSize: 10, fontWeight: 600, cursor: 'pointer',
+              }}
+            >
+              📥 Export Excel RDV
+            </button>
           </div>
 
           {/* KPI row — données réelles */}
