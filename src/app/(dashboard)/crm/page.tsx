@@ -20,6 +20,7 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import { C } from '@/lib/theme'
 import { openWhatsApp, openLinkedIn } from '@/lib/sequences/client-actions'
+import ProspectEditForm from '@/components/prospects/ProspectEditForm'
 
 // --- TYPES ---
 type Stage = 'À contacter' | 'RDV1' | 'RDV2' | 'RDV3' | 'Converti' | 'Perdu'
@@ -314,14 +315,16 @@ const PRESSURE_META: Record<PressureLevel, { label: string; sub: string }> = {
 }
 
 // --- DRAWER ---
-function ProspectDrawer({ prospect, onClose, onStageChange, onPressureChange }: {
+function ProspectDrawer({ prospect, onClose, onStageChange, onPressureChange, onProspectUpdated }: {
   prospect: Prospect
   onClose: () => void
   onStageChange: (id: string, stage: Stage) => void
   onPressureChange: (id: string, pressure: PressureLevel) => void
+  onProspectUpdated: (id: string, fields: { full_name: string; phone: string; email: string; profession: string; city: string; company: string }) => void
 }) {
   const [localNotes, setLocalNotes] = useState(prospect.notes)
   const [localPressure, setLocalPressure] = useState<PressureLevel>(prospect.pressure)
+  const [editing, setEditing] = useState(false)
 
   // --- États séquences ---
   const [seqInstances, setSeqInstances] = useState<SeqInstance[]>([])
@@ -460,7 +463,15 @@ function ProspectDrawer({ prospect, onClose, onStageChange, onPressureChange }: 
               <div style={{ fontSize: 11, color: C.textLo }}>{prospect.profession} — {prospect.ville}</div>
             </div>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: C.textLo, fontSize: 18, cursor: 'pointer', padding: 4 }}>✕</button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <button onClick={() => setEditing(!editing)} style={{
+              background: editing ? `${C.gold}22` : 'none',
+              border: editing ? `1px solid ${C.gold}` : `1px solid ${C.line}`,
+              color: editing ? C.gold : C.textLo,
+              fontSize: 10, cursor: 'pointer', padding: '3px 8px', borderRadius: 5, fontWeight: 600,
+            }}>✏️ Modifier</button>
+            <button onClick={onClose} style={{ background: 'none', border: 'none', color: C.textLo, fontSize: 18, cursor: 'pointer', padding: 4 }}>✕</button>
+          </div>
         </div>
         <div style={{ marginTop: 12, display: 'flex', gap: 10, alignItems: 'center' }}>
           <div style={{
@@ -470,6 +481,26 @@ function ProspectDrawer({ prospect, onClose, onStageChange, onPressureChange }: 
           <div style={{ fontSize: 11, color: C.textLo }}>Source: {prospect.source}</div>
         </div>
       </div>
+
+      {/* Edit Form */}
+      {editing && (
+        <ProspectEditForm
+          prospectId={prospect.id}
+          initial={{
+            full_name: prospect.nom,
+            phone: prospect.telephone,
+            email: prospect.email,
+            profession: prospect.profession,
+            city: prospect.ville,
+            company: '',
+          }}
+          onSaved={(updated) => {
+            onProspectUpdated(prospect.id, updated)
+            setEditing(false)
+          }}
+          onCancel={() => setEditing(false)}
+        />
+      )}
 
       {/* Contact */}
       <div style={{ padding: '16px 20px', borderBottom: `1px solid ${C.line}` }}>
@@ -1096,6 +1127,27 @@ export default function CrmPage() {
             onClose={() => setSelectedProspect(null)}
             onStageChange={handleStageChange}
             onPressureChange={handlePressureChange}
+            onProspectUpdated={(id, fields) => {
+              setProspects(prev => prev.map(p => p.id === id ? {
+                ...p,
+                nom: fields.full_name,
+                telephone: fields.phone,
+                email: fields.email,
+                profession: fields.profession,
+                ville: fields.city,
+                initials: fields.full_name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase(),
+              } : p))
+              setSelectedProspect(prev => prev && prev.id === id ? {
+                ...prev,
+                nom: fields.full_name,
+                telephone: fields.phone,
+                email: fields.email,
+                profession: fields.profession,
+                ville: fields.city,
+                initials: fields.full_name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase(),
+              } : prev)
+              toast.success('Fiche mise à jour')
+            }}
           />
         </>
       )}
