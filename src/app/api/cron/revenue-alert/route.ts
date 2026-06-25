@@ -3,6 +3,7 @@ import { verifyCronSecret } from '@/lib/cron/auth'
 import { logCronRun } from '@/lib/cron/logger'
 import { createSupabaseCronClient } from '@/lib/supabase/cron-client'
 import { sendBrevoEmail } from '@/lib/sequences/brevo'
+import { sendSectionNotification } from '@/lib/telegram/bot'
 import { apiSuccess, apiError } from '@/lib/api'
 
 export async function GET(req: NextRequest) {
@@ -150,6 +151,11 @@ export async function GET(req: NextRequest) {
       })
 
       if (result.success) {
+        // Telegram notification
+        await sendSectionNotification(
+          'kpi',
+          `Alerte CA : ${pct}% de l'objectif\nCA actuel: ${caMonth.toLocaleString('fr-FR')} EUR\nObjectif: ${target.toLocaleString('fr-FR')} EUR\nEcart: -${ecart.toLocaleString('fr-FR')} EUR`
+        )
         processed++
       } else {
         errors.push(`user ${user.id}: email non envoye -- ${result.error}`)

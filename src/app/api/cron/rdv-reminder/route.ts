@@ -5,6 +5,7 @@ import { verifyCronSecret } from '@/lib/cron/auth'
 import { logCronRun } from '@/lib/cron/logger'
 import { createSupabaseCronClient } from '@/lib/supabase/cron-client'
 import { sendBrevoEmail, sendBrevoSms } from '@/lib/sequences/brevo'
+import { sendSectionNotification } from '@/lib/telegram/bot'
 import { apiSuccess, apiError } from '@/lib/api'
 
 /** Helper WhatsApp Business Cloud API -- fallback SMS si non configure */
@@ -176,6 +177,15 @@ export async function GET(req: NextRequest) {
         status: userErrors.length === 0 ? 'success' : 'error',
         details: { rdvCount, sentCount, errors: userErrors },
       })
+
+      // Telegram notification
+      if (sentCount > 0) {
+        const tomorrowLabel = format(tomorrow, 'EEEE d MMMM', { locale: fr })
+        await sendSectionNotification(
+          'rdv',
+          `${rdvCount} RDV demain (${tomorrowLabel})\n${sentCount} rappel(s) envoyé(s)`
+        )
+      }
 
       processed++
     } catch (e) {

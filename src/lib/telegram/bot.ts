@@ -68,6 +68,18 @@ export async function sendPlaybookReport(params: {
   })
 }
 
+export async function sendSectionNotification(section: string, message: string) {
+  const emoji: Record<string, string> = {
+    rdv: '📅',
+    relance: '🔔',
+    kpi: '📊',
+    pipeline: '🎯',
+    sequence: '▶️',
+  }
+  const prefix = emoji[section] ?? '💡'
+  await sendTelegramMessage(`${prefix} *${section.toUpperCase()}*\n\n${message}`)
+}
+
 export async function sendStatusReport() {
   const sb = getSupabase()
   const { count: pendingCount } = await sb
