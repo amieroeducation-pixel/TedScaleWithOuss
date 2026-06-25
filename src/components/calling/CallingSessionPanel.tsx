@@ -5,6 +5,7 @@ import { C } from '@/lib/theme'
 import SessionContactList, { type SessionContact } from './SessionContactList'
 import SessionContactCard from './SessionContactCard'
 import BilanModal from './BilanModal'
+import { useCelebrations } from '@/hooks/useCelebrations'
 
 type Session = {
   id: string
@@ -19,7 +20,35 @@ type Session = {
 type Script = { contenu: string; is_default: boolean }
 type Objection = { id: string; question: string; reponse: string; ordre: number }
 
+/**
+ * Shuffle déterministe basé sur la date du jour.
+ * Utilise un simple hash de la date comme seed pour un PRNG minimaliste.
+ */
+function dailyShuffle<T>(arr: T[]): T[] {
+  if (arr.length <= 1) return arr
+  const today = new Date().toISOString().split('T')[0] // YYYY-MM-DD
+  // Simple seed from date string
+  let seed = 0
+  for (let i = 0; i < today.length; i++) {
+    seed = ((seed << 5) - seed + today.charCodeAt(i)) | 0
+  }
+  // Seeded pseudo-random (mulberry32)
+  const rand = () => {
+    seed |= 0; seed = (seed + 0x6D2B79F5) | 0
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed)
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+  const shuffled = [...arr]
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+  }
+  return shuffled
+}
+
 export default function CallingSessionPanel() {
+  const { celebrate } = useCelebrations()
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
   const [activeContact, setActiveContact] = useState<SessionContact | null>(null)
@@ -27,6 +56,7 @@ export default function CallingSessionPanel() {
   const [objections, setObjections] = useState<Objection[]>([])
   const [showBilan, setShowBilan] = useState(false)
   const [calledSinceLastBilan, setCalledSinceLastBilan] = useState<string[]>([])
+  const [streakCount, setStreakCount] = useState(0)
 
   useEffect(() => {
     fetch('/api/calling-sessions')
@@ -38,7 +68,11 @@ export default function CallingSessionPanel() {
         if (detail.success) {
           const s: Session = detail.data
           setSession(s)
-          const first = s.contacts.find(c => c.statut_appel === 'a_appeler') ?? s.contacts[0] ?? null
+          // Shuffle les contacts a_appeler avec un seed basé sur la date du jour
+          // pour varier les contacts présentés chaque jour
+          const aAppeler = s.contacts.filter(c => c.statut_appel === 'a_appeler')
+          const shuffled = dailyShuffle(aAppeler)
+          const first = shuffled[0] ?? s.contacts[0] ?? null
           setActiveContact(first)
           const [scriptRes, objRes] = await Promise.all([
             fetch(`/api/call-scripts?metier=${s.metier}`).then(r => r.json()),
@@ -75,8 +109,23 @@ export default function CallingSessionPanel() {
         if (next.length >= 10) setShowBilan(true)
         return next
       })
+      const isChaud = patch.statut_appel === 'chaud'
+      const isPositive = patch.statut_appel !== 'pas_repondu' && patch.statut_appel !== 'pas_interesse'
+      // Mini burst uniquement si pas chaud (chaud a sa propre célébration plus grande)
+      if (!isChaud) celebrate('appel_passe')
+      // Suivi de série
+      setStreakCount(prev => {
+        const next = isPositive ? prev + 1 : 0
+        if (isPositive && next > 0 && next % 5 === 0) {
+          setTimeout(() => celebrate('streak', undefined, { count: next }), 600)
+        }
+        return next
+      })
     }
-  }, [session])
+    if (patch.statut_appel === 'chaud') {
+      celebrate('rdv_pris', 'CONTACT CHAUD !')
+    }
+  }, [session, celebrate])
 
   async function handleTerminer() {
     if (!session) return
@@ -85,6 +134,7 @@ export default function CallingSessionPanel() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ statut: 'terminee' }),
     })
+    celebrate('session_terminee', 'SESSION TERMINÉE !')
     setSession(null)
   }
 
