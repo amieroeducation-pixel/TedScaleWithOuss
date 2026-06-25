@@ -1,38 +1,67 @@
 import { NextRequest } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { apiSuccess, apiError, apiUnauthorized } from '@/lib/api'
+import { normalizePhoneFR, isMobilePhone } from '@/lib/phone-utils'
 
 const METIERS_CONFIG: Record<string, { label: string; naf: string }> = {
+  // Médecine générale
   medecin_generaliste:  { label: 'Médecin généraliste',      naf: '86.21Z' },
+  // Spécialistes médicaux (NAF 86.22A — partagé)
   cardiologue:          { label: 'Cardiologue',               naf: '86.22A' },
   dermatologue:         { label: 'Dermatologue',              naf: '86.22A' },
   ophtalmologue:        { label: 'Ophtalmologue',             naf: '86.22A' },
   radiologue:           { label: 'Radiologue',                naf: '86.22A' },
   pediatre:             { label: 'Pédiatre',                  naf: '86.22A' },
+  orl:                  { label: 'ORL',                       naf: '86.22A' },
+  gynecologue:          { label: 'Gynécologue',               naf: '86.22A' },
+  urologue:             { label: 'Urologue',                  naf: '86.22A' },
+  pneumologue:          { label: 'Pneumologue',               naf: '86.22A' },
+  gastro_enterologue:   { label: 'Gastro-entérologue',        naf: '86.22A' },
+  neurologue:           { label: 'Neurologue',                naf: '86.22A' },
+  rhumatologue:         { label: 'Rhumatologue',              naf: '86.22A' },
+  endocrinologue:       { label: 'Endocrinologue',            naf: '86.22A' },
+  oncologue:            { label: 'Oncologue',                 naf: '86.22A' },
+  nephrologue:          { label: 'Néphrologue',               naf: '86.22A' },
+  hematologue:          { label: 'Hématologue',               naf: '86.22A' },
+  allergologue:         { label: 'Allergologue',              naf: '86.22A' },
+  // Chirurgie
+  chirurgien:           { label: 'Chirurgien',                naf: '86.22C' },
+  anesthesiste:         { label: 'Anesthésiste',              naf: '86.22C' },
+  // Dentaire
   dentiste:             { label: 'Chirurgien dentiste',        naf: '86.22B' },
+  orthodontiste:        { label: 'Orthodontiste',             naf: '86.23Z' },
+  // Paramédical
   infirmier:            { label: 'Infirmier libéral',          naf: '86.90A' },
+  sage_femme:           { label: 'Sage femme',                naf: '86.90A' },
   kinesitherapeute:     { label: 'Kinésithérapeute',          naf: '86.90B' },
+  orthophoniste:        { label: 'Orthophoniste',             naf: '86.90B' },
+  podologue:            { label: 'Podologue',                 naf: '86.90B' },
+  ergotherapeute:       { label: 'Ergothérapeute',            naf: '86.90B' },
+  orthoptiste:          { label: 'Orthoptiste',               naf: '86.90B' },
+  // Pratiques alternatives
   kinesiologue:         { label: 'Kinésiologue',              naf: '86.90D' },
   naturopathe:          { label: 'Naturopathe',               naf: '86.90D' },
   acupuncteur:          { label: 'Acupuncteur',               naf: '86.90D' },
   homeopathe:           { label: 'Homéopathe',                naf: '86.90D' },
-  pharmacien:           { label: 'Pharmacien',                naf: '47.73Z' },
-  avocat:               { label: 'Avocat',                    naf: '69.10Z' },
-  notaire:              { label: 'Notaire',                   naf: '69.10Z' },
-  expert_comptable:     { label: 'Expert comptable',          naf: '69.20Z' },
-  commissaire_comptes:  { label: 'Commissaire aux comptes',   naf: '69.20Z' },
-  architecte:           { label: 'Architecte',                naf: '71.11Z' },
-  veterinaire:          { label: 'Vétérinaire',               naf: '75.00Z' },
   osteopathe:           { label: 'Ostéopathe',                naf: '86.90D' },
-  psychologue:          { label: 'Psychologue',               naf: '86.90F' },
-  psychotherapeute:     { label: 'Psychothérapeute',          naf: '86.90F' },
-  sage_femme:           { label: 'Sage femme',                naf: '86.90A' },
-  orthophoniste:        { label: 'Orthophoniste',             naf: '86.90B' },
-  podologue:            { label: 'Podologue',                 naf: '86.90B' },
   chiropracteur:        { label: 'Chiropracteur',             naf: '86.90D' },
   dieteticien:          { label: 'Diététicien',               naf: '86.90D' },
-  ergotherapeute:       { label: 'Ergothérapeute',            naf: '86.90B' },
-  orthoptiste:          { label: 'Orthoptiste',               naf: '86.90B' },
+  // Psychologie
+  psychologue:          { label: 'Psychologue',               naf: '86.90F' },
+  psychotherapeute:     { label: 'Psychothérapeute',          naf: '86.90F' },
+  // Pharmacie
+  pharmacien:           { label: 'Pharmacien',                naf: '47.73Z' },
+  // Juridique
+  avocat:               { label: 'Avocat',                    naf: '69.10Z' },
+  notaire:              { label: 'Notaire',                   naf: '69.10Z' },
+  huissier:             { label: 'Huissier de justice',        naf: '69.10Z' },
+  // Comptabilité
+  expert_comptable:     { label: 'Expert comptable',          naf: '69.20Z' },
+  commissaire_comptes:  { label: 'Commissaire aux comptes',   naf: '69.20Z' },
+  // Autres professions libérales
+  architecte:           { label: 'Architecte',                naf: '71.11Z' },
+  geometre_expert:      { label: 'Géomètre-expert',           naf: '71.12B' },
+  veterinaire:          { label: 'Vétérinaire',               naf: '75.00Z' },
 }
 
 type GouvernResult = {
@@ -40,6 +69,67 @@ type GouvernResult = {
   siren?: string
   siege?: { adresse?: string; code_postal?: string; libelle_commune?: string; latitude?: string; longitude?: string }
   dirigeants?: Array<{ nom?: string; prenoms?: string }>
+  activite_principale?: string
+  libelle_activite_principale?: string
+}
+
+/**
+ * Infère le métier réel à partir du libellé d'activité principale de l'API.
+ * Utile quand plusieurs métiers partagent le même code NAF (ex: 86.22A).
+ */
+function inferMetierFromLibelle(libelle: string | undefined, requestedLabel: string): string {
+  if (!libelle) return requestedLabel
+  const l = libelle.toLowerCase().normalize('NFD').replace(/\p{Mn}/gu, '')
+
+  // Mapping mots-clés → métier réel
+  const KEYWORD_MAP: [string[], string][] = [
+    [['cardio', 'coeur'], 'Cardiologue'],
+    [['dermato', 'peau'], 'Dermatologue'],
+    [['ophtalmo', 'ophtalmol', 'oeil', 'yeux', 'vision'], 'Ophtalmologue'],
+    [['radio', 'imagerie'], 'Radiologue'],
+    [['pediatr', 'enfant'], 'Pédiatre'],
+    [['orl', 'oto-rhino', 'oto rhino', 'nez gorge'], 'ORL'],
+    [['gyneco', 'gynecol', 'obstetri'], 'Gynécologue'],
+    [['urolog'], 'Urologue'],
+    [['pneumo', 'poumon'], 'Pneumologue'],
+    [['gastro', 'digestif'], 'Gastro-entérologue'],
+    [['neuro', 'cerveau'], 'Neurologue'],
+    [['rhumato', 'articulat'], 'Rhumatologue'],
+    [['chirurg', 'chirurgie'], 'Chirurgien'],
+    [['anesthes'], 'Anesthésiste'],
+    [['endocrin', 'diabete', 'thyroid'], 'Endocrinologue'],
+    [['oncol', 'cancer', 'tumeur'], 'Oncologue'],
+    [['nephro', 'rein', 'renal'], 'Néphrologue'],
+    [['hematol', 'sang'], 'Hématologue'],
+    [['allergol', 'allergie'], 'Allergologue'],
+    [['medecin', 'general', 'omniprat'], 'Médecin généraliste'],
+    [['dentist', 'dentaire', 'stomatol'], 'Chirurgien dentiste'],
+    [['infirm'], 'Infirmier libéral'],
+    [['kinesither', 'masso-kin'], 'Kinésithérapeute'],
+    [['osteopath'], 'Ostéopathe'],
+    [['psycholog'], 'Psychologue'],
+    [['orthophon'], 'Orthophoniste'],
+    [['podolog', 'pedicur'], 'Podologue'],
+    [['sage-femme', 'sage femme', 'maieut'], 'Sage femme'],
+    [['pharmacie', 'pharmacien', 'officin'], 'Pharmacien'],
+    [['avocat', 'juridique', 'cabinet d\'avocat'], 'Avocat'],
+    [['notair', 'notariat'], 'Notaire'],
+    [['expert-compt', 'expert compt', 'expertise compt'], 'Expert comptable'],
+    [['architect'], 'Architecte'],
+    [['veterinair'], 'Vétérinaire'],
+    [['naturopath'], 'Naturopathe'],
+    [['acupunct'], 'Acupuncteur'],
+    [['chiropract'], 'Chiropracteur'],
+    [['dietetici', 'nutrition'], 'Diététicien'],
+    [['ergotherap'], 'Ergothérapeute'],
+    [['orthoptist'], 'Orthoptiste'],
+  ]
+
+  for (const [keywords, metier] of KEYWORD_MAP) {
+    if (keywords.some(k => l.includes(k))) return metier
+  }
+
+  return requestedLabel
 }
 type PappersEntreprise = {
   siege?: { telephone?: string }
@@ -174,8 +264,10 @@ async function canalDataGouv(
 
       if (!telephone) return null
 
+      // Inférer le vrai métier à partir du libellé d'activité (évite les faux positifs NAF partagés)
+      const realMetier = inferMetierFromLibelle(e.libelle_activite_principale, metierLabel)
       const initials = nomDisplay.split(' ').map((w: string) => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase() || '??'
-      const pjQuery = encodeURIComponent(metierLabel)
+      const pjQuery = encodeURIComponent(realMetier)
       const pjVille = encodeURIComponent(villeDisplay)
 
       return {
@@ -184,7 +276,7 @@ async function canalDataGouv(
         initials,
         nom: nomDisplay,
         entreprise,
-        metier: metierLabel,
+        metier: realMetier,
         ville: villeDisplay,
         codePostal: e.siege?.code_postal ?? '',
         adresse: e.siege?.adresse ?? '',
@@ -192,9 +284,9 @@ async function canalDataGouv(
         email: null,
         lat: e.siege?.latitude ? parseFloat(e.siege.latitude) : null,
         lng: e.siege?.longitude ? parseFloat(e.siege.longitude) : null,
-        googleUrl: `https://www.google.fr/search?q=${encodeURIComponent(metierLabel + ' ' + villeDisplay + ' téléphone')}`,
+        googleUrl: `https://www.google.fr/search?q=${encodeURIComponent(realMetier + ' ' + villeDisplay + ' téléphone')}`,
         pagesJaunesUrl: `https://www.pagesjaunes.fr/pagesblanches/recherche?quoiqui=${pjQuery}&ou=${pjVille}`,
-        mapsUrl: `https://www.google.fr/maps/search/${encodeURIComponent(metierLabel + ' ' + villeDisplay)}`,
+        mapsUrl: `https://www.google.fr/maps/search/${encodeURIComponent(realMetier + ' ' + villeDisplay)}`,
         status: 'Non contacté' as const,
         score: Math.round((60 + Math.random() * 35)) / 100,
         source,
@@ -292,10 +384,10 @@ export async function POST(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return apiUnauthorized()
 
-  let body: { metier?: string; ville?: string; departement?: string; limite?: number }
+  let body: { metier?: string; ville?: string; departement?: string; limite?: number; mobileOnly?: boolean }
   try { body = await request.json() } catch { return apiError('Corps invalide', 400) }
 
-  const { metier = '', ville = '', departement = '', limite = 10 } = body
+  const { metier = '', ville = '', departement = '', limite = 10, mobileOnly = false } = body
   const config = METIERS_CONFIG[metier]
   if (!config) return apiError(`Métier non reconnu: ${metier}`, 400)
 
@@ -308,12 +400,23 @@ export async function POST(request: NextRequest) {
     googleKey ? canalGooglePlaces(config.label, ville || departement, googleKey) : Promise.resolve([]),
   ])
 
+  // ── Normalisation des téléphones ──
+  const normalized = [...fromDataGouv, ...fromGoogle].map(p => {
+    const norm = normalizePhoneFR(p.telephone)
+    return norm ? { ...p, telephone: norm } : p
+  })
+
+  // ── Filtre mobile uniquement si demandé ──
+  const filtered = mobileOnly
+    ? normalized.filter(p => isMobilePhone(p.telephone))
+    : normalized
+
   // ── Fusion + dédoublonnage par numéro de téléphone ──
   const seenPhones = new Set<string>()
   const seenSirens = new Set<string>()
   const merged: Prospect[] = []
 
-  for (const p of [...fromDataGouv, ...fromGoogle]) {
+  for (const p of filtered) {
     const normPhone = p.telephone.replace(/[\s.\-]/g, '')
     if (seenPhones.has(normPhone)) continue
     if (p.siren && seenSirens.has(p.siren)) continue
