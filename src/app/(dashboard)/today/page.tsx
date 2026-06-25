@@ -4,6 +4,8 @@ export const dynamic = 'force-dynamic'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { C } from '@/lib/theme'
+import { AgendaEventType, AgendaEvent, AGENDA_COLORS, loadDayAgenda, saveDayAgenda, todayDateKey, fantasticalUrl } from '@/lib/agenda'
+import { saveLastSection } from '@/lib/navigation-state'
 import CallingSessionPanel from '@/components/calling/CallingSessionPanel'
 import { useCelebrations } from '@/hooks/useCelebrations'
 
@@ -84,39 +86,6 @@ function formatSeconds(s: number) { return `${pad(Math.floor(s / 60))}:${pad(s %
 // ─── Agenda helpers ────────────────────────────────────────────────────────
 function todayFrDate() {
   return new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-}
-
-function todayDateKey() {
-  return new Date().toISOString().split('T')[0]
-}
-
-type AgendaEventType = 'rdv' | 'bloc' | 'tache' | 'sport' | 'autre'
-
-interface AgendaEvent {
-  id: string
-  time: string
-  title: string
-  type: AgendaEventType
-}
-
-const AGENDA_COLORS: Record<AgendaEventType, { bg: string; border: string; text: string }> = {
-  rdv:   { bg: '#0d1a2e', border: C.indigo, text: C.indigo },
-  bloc:  { bg: '#0d1a0d', border: C.green,  text: C.green },
-  tache: { bg: '#1a1400', border: C.gold,   text: C.gold },
-  sport: { bg: '#1a0d0d', border: C.warn,   text: C.warn },
-  autre: { bg: C.surface1, border: C.line,  text: C.textMid },
-}
-
-function loadAgenda(): AgendaEvent[] {
-  try {
-    const s = localStorage.getItem(`today_agenda_${todayDateKey()}`)
-    if (s) return JSON.parse(s)
-  } catch { /* ignore */ }
-  return []
-}
-
-function saveAgenda(events: AgendaEvent[]) {
-  try { localStorage.setItem(`today_agenda_${todayDateKey()}`, JSON.stringify(events)) } catch { /* ignore */ }
 }
 
 // ─── Block timer indicator ─────────────────────────────────────────────────
@@ -432,7 +401,7 @@ export default function TodayPage() {
   const [tab, setTab] = useState<TodayTab>('prospection')
   const [clock, setClock] = useState('--:--')
   const [displayDate, setDisplayDate] = useState('')
-  useEffect(() => { setDisplayDate(todayFrDate()) }, [])
+  useEffect(() => { setDisplayDate(todayFrDate()); saveLastSection('/today') }, [])
 
   // ─── Ambiance musicale — une seule fois par heure ────────────────────────
   useEffect(() => {
@@ -524,7 +493,7 @@ export default function TodayPage() {
     setCalls(c.calls)
     setRdv1(c.rdv1)
     setRdv2(c.rdv2)
-    setAgendaEvents(loadAgenda())
+    setAgendaEvents(loadDayAgenda(todayDateKey()))
   }, [])
 
   const startTimer = () => {
@@ -982,11 +951,16 @@ export default function TodayPage() {
                         <div key={ev.id} style={{ display: 'flex', alignItems: 'center', gap: 8, background: colors.bg, border: `0.5px solid ${colors.border}`, borderRadius: 6, padding: '6px 10px' }}>
                           <span style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: colors.text, width: 36, flexShrink: 0 }}>{ev.time}</span>
                           <span style={{ fontSize: 10, color: C.textHi, flex: 1 }}>{ev.title}</span>
+                          <a
+                            href={fantasticalUrl(ev, todayDateKey())}
+                            style={{ fontSize: 10, textDecoration: 'none', color: C.textVlo, cursor: 'pointer', padding: '0 2px' }}
+                            title="Ouvrir dans Fantastical"
+                          >📲</a>
                           <button
                             onClick={() => {
                               const next = agendaEvents.filter(e => e.id !== ev.id)
                               setAgendaEvents(next)
-                              saveAgenda(next)
+                              saveDayAgenda(todayDateKey(), next)
                             }}
                             style={{ background: 'none', border: 'none', color: C.textVlo, cursor: 'pointer', fontSize: 10, padding: '0 2px' }}
                           >✕</button>
@@ -1210,6 +1184,8 @@ export default function TodayPage() {
                   <option value="bloc">🟢 Bloc production</option>
                   <option value="tache">⚪ Tâche</option>
                   <option value="sport">🔴 Sport</option>
+                  <option value="commerce">🟡 Commerce</option>
+                  <option value="interpro">🟡 Interpro</option>
                   <option value="autre">⚫ Autre</option>
                 </select>
               </div>
@@ -1226,7 +1202,7 @@ export default function TodayPage() {
                   if (!agendaForm.title.trim()) return
                   const next = [...agendaEvents, { id: Date.now().toString(), time: agendaForm.time, title: agendaForm.title.trim(), type: agendaForm.type }]
                   setAgendaEvents(next)
-                  saveAgenda(next)
+                  saveDayAgenda(todayDateKey(), next)
                   setAgendaForm(f => ({ ...f, title: '' }))
                   setShowAgendaModal(false)
                 }}

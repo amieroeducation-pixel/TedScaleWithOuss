@@ -21,6 +21,7 @@ import { CSS } from '@dnd-kit/utilities'
 import { C } from '@/lib/theme'
 import { openWhatsApp, openLinkedIn } from '@/lib/sequences/client-actions'
 import ProspectEditForm from '@/components/prospects/ProspectEditForm'
+import { saveLastSection } from '@/lib/navigation-state'
 
 // --- TYPES ---
 type Stage = 'À contacter' | 'RDV1' | 'RDV2' | 'RDV3' | 'Converti' | 'Perdu'
@@ -865,6 +866,8 @@ export default function CrmPage() {
   const [npForm, setNpForm] = useState({ full_name: '', profession: '', phone: '', email: '', city: '', source: 'autre', notes: '' })
   const [npCreating, setNpCreating] = useState(false)
   const [npError, setNpError] = useState<string | null>(null)
+
+  useEffect(() => { saveLastSection('/crm') }, [])
 
   // Fetch real prospects from DB
   const fetchProspects = useCallback(async () => {

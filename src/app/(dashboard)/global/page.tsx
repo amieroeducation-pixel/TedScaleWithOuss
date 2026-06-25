@@ -1,7 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { C } from '@/lib/theme'
+import { saveLastSection } from '@/lib/navigation-state'
+
+type GlobalKpi = {
+  tasks: { done_today: number; active: number; high_priority_remaining: number; this_week: number; total: number }
+  prospection: { contacts_today: number; prospects_this_week: number }
+}
 
 type GlobalTab = 'synthese' | 'planning' | 'rdvpris' | 'suivi'
 type SuiviPeriod = 'year' | 'month' | 'week'
@@ -215,6 +221,16 @@ function SuiviTabContent() {
 
 export default function GlobalPage() {
   const [tab, setTab] = useState<GlobalTab>('synthese')
+  const [kpi, setKpi] = useState<GlobalKpi | null>(null)
+
+  useEffect(() => { saveLastSection('/global') }, [])
+
+  useEffect(() => {
+    fetch('/api/global/stats')
+      .then(r => r.json())
+      .then(json => { if (json.success) setKpi(json.data) })
+      .catch(() => {})
+  }, [])
 
   const tabBtn = (key: GlobalTab, label: string) => {
     const active = tab === key
@@ -263,47 +279,71 @@ export default function GlobalPage() {
             <div style={{ fontSize: 9, color: C.textMid }}>Suivi quotidien et hebdomadaire des 4 piliers de performance</div>
           </div>
 
-          {/* KPI row */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8, marginBottom: 16 }}>
-            {([
-              { label: 'Performance Jour',     value: '68%', sub: '🟡 En cours',                 subColor: C.gold  },
-              { label: 'Performance Semaine',  value: '72%', sub: '+8% vs semaine dernière',      subColor: C.green },
-              { label: 'Objectifs atteints',   value: '2/4', sub: 'Prospection + Tâches',         subColor: C.gold  },
-              { label: 'Série active',         value: '5j',  sub: 'Record: 12j',                  subColor: C.green },
-            ] as Array<{ label: string; value: string; sub: string; subColor: string }>).map(({ label, value, sub, subColor }) => (
-              <div key={label} style={{ background: C.surface1, border: `0.5px solid ${C.line}`, borderRadius: 8, padding: 12 }}>
-                <div style={{ fontSize: 9, color: C.textMid, marginBottom: 4 }}>{label}</div>
-                <div style={{ fontSize: 22, fontWeight: 700, color: C.textHi, marginBottom: 4 }}>{value}</div>
-                <div style={{ fontSize: 9, color: subColor }}>{sub}</div>
+          {/* KPI row — données réelles */}
+          {(() => {
+            const TARGET_CONTACTS = 10
+            const TARGET_TASKS = 3
+            const contactsPct = kpi ? Math.min(Math.round(kpi.prospection.contacts_today / TARGET_CONTACTS * 100), 100) : null
+            const tasksPct    = kpi ? Math.min(Math.round(kpi.tasks.done_today / TARGET_TASKS * 100), 100) : null
+            const perfJour    = contactsPct !== null && tasksPct !== null ? Math.round((contactsPct + tasksPct) / 2) : null
+            const objAtteints = [
+              kpi ? kpi.prospection.contacts_today >= TARGET_CONTACTS : false,
+              kpi ? kpi.tasks.done_today >= TARGET_TASKS : false,
+            ].filter(Boolean).length
+            return (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8, marginBottom: 16 }}>
+                {([
+                  { label: 'Performance Jour',    value: perfJour !== null ? `${perfJour}%` : '–',  sub: perfJour === null ? 'Chargement…' : perfJour >= 80 ? '🟢 Excellente' : perfJour >= 50 ? '🟡 En cours' : '🔴 À rattraper', subColor: perfJour !== null && perfJour >= 80 ? C.green : C.gold },
+                  { label: 'Prospects sem.',      value: kpi ? String(kpi.prospection.prospects_this_week) : '–', sub: 'Ajoutés cette semaine', subColor: C.green },
+                  { label: 'Objectifs atteints',  value: kpi ? `${objAtteints}/2` : '–', sub: 'Prospection · Tâches', subColor: C.gold },
+                  { label: 'Tâches actives',      value: kpi ? String(kpi.tasks.active) : '–', sub: `${kpi?.tasks.this_week ?? '–'} cette semaine`, subColor: C.indigo },
+                ] as Array<{ label: string; value: string; sub: string; subColor: string }>).map(({ label, value, sub, subColor }) => (
+                  <div key={label} style={{ background: C.surface1, border: `0.5px solid ${C.line}`, borderRadius: 8, padding: 12 }}>
+                    <div style={{ fontSize: 9, color: C.textMid, marginBottom: 4 }}>{label}</div>
+                    <div style={{ fontSize: 22, fontWeight: 700, color: C.textHi, marginBottom: 4 }}>{value}</div>
+                    <div style={{ fontSize: 9, color: subColor }}>{sub}</div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            )
+          })()}
 
           {/* 4 Pillars */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 12, marginBottom: 20 }}>
 
             {/* Prospection */}
             <div style={{ background: C.bgMid, borderRadius: 8, padding: 16, border: `0.5px solid ${C.line}` }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: C.green }}>📞 Prospection</div>
-                <div style={{ background: '#0d1a0d', color: C.green, padding: '3px 10px', borderRadius: 8, fontSize: 10, fontWeight: 700 }}>80%</div>
-              </div>
-              <div style={{ background: C.surface3, height: 8, borderRadius: 4, marginBottom: 12, overflow: 'hidden' }}>
-                <div style={{ background: C.green, height: '100%', width: '80%', transition: 'width 0.3s' }} />
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ fontSize: 9, color: C.textMid }}>Contacts jour</div>
-                  <div style={{ fontSize: 10, color: C.textHi, fontWeight: 600 }}>8<span style={{ color: C.textLo }}>/10</span></div>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ fontSize: 9, color: C.textMid }}>Blocs production</div>
-                  <div style={{ fontSize: 10, color: C.textHi, fontWeight: 600 }}>3<span style={{ color: C.textLo }}>/4</span></div>
-                </div>
-              </div>
-              <button style={{ width: '100%', marginTop: 10, padding: 6, background: '#0d1a0d', border: `0.5px solid ${C.green}40`, color: C.green, borderRadius: 4, fontSize: 8, cursor: 'pointer', fontWeight: 600 }}>
-                → Voir détails
-              </button>
+              {(() => {
+                const TARGET_CONTACTS = 10
+                const contactsVal = kpi?.prospection.contacts_today ?? 0
+                const pct = Math.min(Math.round(contactsVal / TARGET_CONTACTS * 100), 100)
+                return (
+                  <>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: C.green }}>📞 Prospection</div>
+                      <div style={{ background: '#0d1a0d', color: C.green, padding: '3px 10px', borderRadius: 8, fontSize: 10, fontWeight: 700 }}>{kpi ? `${pct}%` : '–'}</div>
+                    </div>
+                    <div style={{ background: C.surface3, height: 8, borderRadius: 4, marginBottom: 12, overflow: 'hidden' }}>
+                      <div style={{ background: C.green, height: '100%', width: `${pct}%`, transition: 'width 0.3s' }} />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ fontSize: 9, color: C.textMid }}>Appels passés auj.</div>
+                        <div style={{ fontSize: 10, color: C.textHi, fontWeight: 600 }}>{contactsVal}<span style={{ color: C.textLo }}>/{TARGET_CONTACTS}</span></div>
+                      </div>
+                      {kpi && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div style={{ fontSize: 9, color: C.textMid }}>Prospects cette semaine</div>
+                          <div style={{ fontSize: 9, color: C.textLo }}>{kpi.prospection.prospects_this_week}</div>
+                        </div>
+                      )}
+                    </div>
+                    <button style={{ width: '100%', marginTop: 10, padding: 6, background: '#0d1a0d', border: `0.5px solid ${C.green}40`, color: C.green, borderRadius: 4, fontSize: 8, cursor: 'pointer', fontWeight: 600 }}>
+                      → Voir détails
+                    </button>
+                  </>
+                )
+              })()}
             </div>
 
             {/* Interpro */}
@@ -332,26 +372,42 @@ export default function GlobalPage() {
 
             {/* Tâches */}
             <div style={{ background: C.bgMid, borderRadius: 8, padding: 16, border: `0.5px solid ${C.line}` }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: C.indigo }}>✅ Tâches</div>
-                <div style={{ background: '#0d1a2e', color: C.indigo, padding: '3px 10px', borderRadius: 8, fontSize: 10, fontWeight: 700 }}>100%</div>
-              </div>
-              <div style={{ background: C.surface3, height: 8, borderRadius: 4, marginBottom: 12, overflow: 'hidden' }}>
-                <div style={{ background: C.indigo, height: '100%', width: '100%', transition: 'width 0.3s' }} />
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ fontSize: 9, color: C.textMid }}>Tâches complétées</div>
-                  <div style={{ fontSize: 10, color: C.textHi, fontWeight: 600 }}>3<span style={{ color: C.textLo }}>/3</span></div>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ fontSize: 9, color: C.textMid }}>Haute priorité restantes</div>
-                  <div style={{ fontSize: 9, color: C.textLo }}>0</div>
-                </div>
-              </div>
-              <button style={{ width: '100%', marginTop: 10, padding: 6, background: '#0d1a2e', border: `0.5px solid ${C.indigo}40`, color: C.indigo, borderRadius: 4, fontSize: 8, cursor: 'pointer', fontWeight: 600 }}>
-                → Voir tâches
-              </button>
+              {(() => {
+                const TARGET_TASKS = 3
+                const doneTodayVal = kpi?.tasks.done_today ?? 0
+                const pct = Math.min(Math.round(doneTodayVal / TARGET_TASKS * 100), 100)
+                const highPrio = kpi?.tasks.high_priority_remaining ?? '–'
+                return (
+                  <>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: C.indigo }}>✅ Tâches</div>
+                      <div style={{ background: '#0d1a2e', color: C.indigo, padding: '3px 10px', borderRadius: 8, fontSize: 10, fontWeight: 700 }}>{kpi ? `${pct}%` : '–'}</div>
+                    </div>
+                    <div style={{ background: C.surface3, height: 8, borderRadius: 4, marginBottom: 12, overflow: 'hidden' }}>
+                      <div style={{ background: C.indigo, height: '100%', width: `${pct}%`, transition: 'width 0.3s' }} />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ fontSize: 9, color: C.textMid }}>Tâches complétées auj.</div>
+                        <div style={{ fontSize: 10, color: C.textHi, fontWeight: 600 }}>{doneTodayVal}<span style={{ color: C.textLo }}>/{TARGET_TASKS}</span></div>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ fontSize: 9, color: C.textMid }}>Haute priorité restantes</div>
+                        <div style={{ fontSize: 9, color: highPrio === '–' || highPrio === 0 ? C.textLo : C.warn }}>{String(highPrio)}</div>
+                      </div>
+                      {kpi && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div style={{ fontSize: 9, color: C.textMid }}>Actives en cours</div>
+                          <div style={{ fontSize: 9, color: C.textLo }}>{kpi.tasks.active}</div>
+                        </div>
+                      )}
+                    </div>
+                    <button style={{ width: '100%', marginTop: 10, padding: 6, background: '#0d1a2e', border: `0.5px solid ${C.indigo}40`, color: C.indigo, borderRadius: 4, fontSize: 8, cursor: 'pointer', fontWeight: 600 }}>
+                      → Voir tâches
+                    </button>
+                  </>
+                )
+              })()}
             </div>
 
             {/* Commerce */}
