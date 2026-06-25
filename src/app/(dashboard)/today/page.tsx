@@ -254,12 +254,67 @@ function AudioPlayer() {
 function VideoPlayer() {
   const videoRef = useRef<HTMLVideoElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const [playlist, setPlaylist] = useState<Array<{ name: string; url: string }>>([])
+  const [playlist, setPlaylist] = useState<Array<{ name: string; url: string; persisted?: boolean; dbId?: string }>>([])
   const [currentIdx, setCurrentIdx] = useState(0)
   const [playing, setPlaying] = useState(false)
   const [progress, setProgress] = useState(0)
   const [timeDisplay, setTimeDisplay] = useState('0:00 / 0:00')
   const [repeat, setRepeat] = useState(false)
+  const [urlInput, setUrlInput] = useState('')
+  const [urlName, setUrlName] = useState('')
+  const [showUrlForm, setShowUrlForm] = useState(false)
+
+  // Load saved videos from API on mount
+  useEffect(() => {
+    async function loadSavedVideos() {
+      try {
+        const res = await fetch('/api/videos?section=today')
+        const json = await res.json()
+        if (json.success && json.data?.length > 0) {
+          const saved = json.data.map((v: { id: string; name: string; url: string }) => ({
+            name: v.name,
+            url: v.url,
+            persisted: true,
+            dbId: v.id,
+          }))
+          setPlaylist(prev => [...saved, ...prev])
+        }
+      } catch { /* ignore */ }
+    }
+    loadSavedVideos()
+  }, [])
+
+  const addUrlVideo = async () => {
+    const url = urlInput.trim()
+    if (!url || !url.startsWith('http')) return
+    const name = urlName.trim() || 'Video'
+    // Persist to API
+    try {
+      const res = await fetch('/api/videos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, url, section: 'today', position: playlist.length }),
+      })
+      const json = await res.json()
+      if (json.success && json.data) {
+        setPlaylist(prev => [...prev, { name, url, persisted: true, dbId: json.data.id }])
+      }
+    } catch { /* ignore */ }
+    setUrlInput('')
+    setUrlName('')
+    setShowUrlForm(false)
+  }
+
+  const removeVideo = async (idx: number) => {
+    const track = playlist[idx]
+    if (track?.persisted && track.dbId) {
+      try { await fetch(`/api/videos?id=${track.dbId}`, { method: 'DELETE' }) } catch { /* ignore */ }
+    } else if (!track?.persisted) {
+      URL.revokeObjectURL(track.url)
+    }
+    setPlaylist(prev => prev.filter((_, i) => i !== idx))
+    if (currentIdx >= idx && currentIdx > 0) setCurrentIdx(i => i - 1)
+  }
 
   const fmt = (s: number) => {
     const m = Math.floor(s / 60)
@@ -324,7 +379,7 @@ function VideoPlayer() {
   }
 
   const clear = () => {
-    playlist.forEach(t => URL.revokeObjectURL(t.url))
+    playlist.forEach(t => { if (!t.persisted) URL.revokeObjectURL(t.url) })
     stop(); setPlaylist([]); setCurrentIdx(0); setProgress(0); setTimeDisplay('0:00 / 0:00')
   }
 
@@ -373,18 +428,49 @@ function VideoPlayer() {
         {playlist.length > 0 && (
           <div style={{ maxHeight: 120, overflowY: 'auto', marginBottom: 8 }}>
             {playlist.map((t, i) => (
-              <div key={i} onClick={() => { setCurrentIdx(i); setPlaying(true) }}
-                style={{ padding: '3px 6px', fontSize: 8, cursor: 'pointer', borderRadius: 3, background: i === currentIdx ? C.surface2 : 'transparent', color: i === currentIdx ? C.gold : C.textMid }}>
-                {i + 1}. {t.name}
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <div onClick={() => { setCurrentIdx(i); setPlaying(true) }}
+                  style={{ flex: 1, padding: '3px 6px', fontSize: 8, cursor: 'pointer', borderRadius: 3, background: i === currentIdx ? C.surface2 : 'transparent', color: i === currentIdx ? C.gold : C.textMid }}>
+                  {i + 1}. {t.name} {t.persisted ? '💾' : ''}
+                </div>
+                <button onClick={(e) => { e.stopPropagation(); removeVideo(i) }} style={{ background: 'none', border: 'none', color: C.textLo, cursor: 'pointer', fontSize: 8, padding: 2 }}>✕</button>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* URL form */}
+        {showUrlForm && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 8, padding: 8, background: C.surface1, borderRadius: 4, border: `0.5px solid ${C.line}` }}>
+            <input
+              type="text"
+              placeholder="Nom (optionnel)"
+              value={urlName}
+              onChange={e => setUrlName(e.target.value)}
+              style={{ fontSize: 9, padding: '4px 6px', background: C.bgDeep, border: `0.5px solid ${C.line}`, borderRadius: 3, color: C.textHi }}
+            />
+            <input
+              type="text"
+              placeholder="URL de la video (YouTube, etc.)"
+              value={urlInput}
+              onChange={e => setUrlInput(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') addUrlVideo() }}
+              style={{ fontSize: 9, padding: '4px 6px', background: C.bgDeep, border: `0.5px solid ${C.line}`, borderRadius: 3, color: C.textHi }}
+            />
+            <div style={{ display: 'flex', gap: 4 }}>
+              <button onClick={addUrlVideo} style={{ flex: 1, fontSize: 8, padding: 4, borderRadius: 3, border: `0.5px solid ${C.green}40`, background: '#0d1a0d', color: C.green, cursor: 'pointer' }}>Ajouter</button>
+              <button onClick={() => setShowUrlForm(false)} style={{ fontSize: 8, padding: '4px 8px', borderRadius: 3, border: `0.5px solid ${C.line}`, background: C.surface1, color: C.textMid, cursor: 'pointer' }}>Annuler</button>
+            </div>
           </div>
         )}
 
         {/* Action buttons */}
         <div style={{ display: 'flex', gap: 6 }}>
           <button onClick={() => fileInputRef.current?.click()} style={{ flex: 1, fontSize: 8, padding: 6, borderRadius: 4, border: `0.5px solid ${C.indigo}40`, background: '#0d1a2e', color: C.indigo, cursor: 'pointer', fontWeight: 500 }}>
-            📁 Ajouter vidéos
+            📁 Fichiers
+          </button>
+          <button onClick={() => setShowUrlForm(s => !s)} style={{ flex: 1, fontSize: 8, padding: 6, borderRadius: 4, border: `0.5px solid ${C.green}40`, background: '#0d1a0d', color: C.green, cursor: 'pointer', fontWeight: 500 }}>
+            🔗 Ajouter URL
           </button>
           <button onClick={() => setRepeat(r => !r)} disabled={!hasTrack} style={{ fontSize: 8, padding: '6px 12px', borderRadius: 4, border: `0.5px solid ${repeat ? C.gold : C.line}`, background: repeat ? '#1a1400' : C.surface1, color: repeat ? C.gold : C.textMid, cursor: 'pointer' }}>🔁</button>
           <button onClick={stop} disabled={!hasTrack} style={{ fontSize: 8, padding: '6px 12px', borderRadius: 4, border: `0.5px solid ${C.line}`, background: C.surface1, color: C.textMid, cursor: 'pointer' }}>⏹</button>
