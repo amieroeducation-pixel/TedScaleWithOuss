@@ -1,8 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createSupabaseBrowserClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import type { SupabaseClient } from '@supabase/supabase-js'
+
+export const dynamic = 'force-dynamic'
 
 const C = {
   bgDeep: '#0a0e22',
@@ -25,11 +28,17 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [supabase, setSupabase] = useState<SupabaseClient | null>(null)
   const router = useRouter()
-  const supabase = createSupabaseBrowserClient()
+
+  useEffect(() => {
+    setSupabase(createSupabaseBrowserClient())
+  }, [])
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
+    if (!supabase) return
+
     setLoading(true)
     setError(null)
 
@@ -136,7 +145,7 @@ export default function LoginPage() {
 
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || !supabase}
                 style={{
                   padding: '12px', background: loading ? C.surface2 : C.indigo,
                   border: 'none', borderRadius: 8, color: C.textHi,
