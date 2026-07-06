@@ -30,22 +30,41 @@ export async function PATCH(
   if (!user) return apiUnauthorized()
 
   const { id } = await params
-  let body: unknown
+  let body: Record<string, unknown>
   try {
     body = await request.json()
   } catch {
     return apiError('Invalid JSON body', 400)
   }
 
+  // Récupère stage actuel avant update pour audit trail
+  const { data: oldProspect } = await supabase
+    .from('prospects')
+    .select('pipeline_stage, full_name')
+    .eq('id', id)
+    .single()
+
   const { data, error } = await supabase
     .from('prospects')
-    .update(body as Record<string, unknown>)
+    .update(body)
     .eq('id', id)
     .select()
     .single()
 
   if (error) return apiError(error.message)
   if (!data) return apiNotFound('Prospect')
+
+  // Audit trail: log interaction si stage change (fire-and-forget)
+  if (oldProspect && 'pipeline_stage' in body && body.pipeline_stage !== oldProspect.pipeline_stage) {
+    void supabase.from('interactions').insert({
+      user_id: user.id,
+      prospect_id: id,
+      type: body.pipeline_stage as string,
+      occurred_at: new Date().toISOString(),
+      notes: `Stage changé: ${oldProspect.pipeline_stage} → ${body.pipeline_stage}`,
+    })
+  }
+
   return apiSuccess(data)
 }
 

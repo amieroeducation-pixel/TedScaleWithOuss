@@ -10,7 +10,7 @@ type ProspectStatus = 'Non contacté' | 'En cours' | 'Converti' | 'Perdu'
 type MetierFilter = 'all' | 'medecin' | 'infirmier' | 'kine' | 'avocat'
 
 interface Prospect {
-  id: number
+  id: string | number
   initials: string
   nom: string
   metier: string
@@ -57,8 +57,12 @@ const METIERS = [
   { value: 'kinesitherapeute', label: 'Kinésithérapeute' },
   { value: 'orthophoniste', label: 'Orthophoniste' },
   { value: 'podologue', label: 'Podologue' },
+  { value: 'pedicure', label: 'Pédicure-podologue' },
   { value: 'ergotherapeute', label: 'Ergothérapeute' },
   { value: 'orthoptiste', label: 'Orthoptiste' },
+  { value: 'psychomotricien', label: 'Psychomotricien' },
+  { value: 'audioprothesiste', label: 'Audioprothésiste' },
+  { value: 'opticien', label: 'Opticien-lunetier' },
   // Pratiques alternatives
   { value: 'kinesiologue', label: 'Kinésiologue' },
   { value: 'naturopathe', label: 'Naturopathe' },
@@ -79,6 +83,10 @@ const METIERS = [
   // Comptabilité
   { value: 'expert_comptable', label: 'Expert-comptable' },
   { value: 'commissaire_comptes', label: 'Commissaire aux comptes' },
+  // Immobilier / Conseil
+  { value: 'agent_immobilier', label: 'Agent immobilier' },
+  { value: 'consultant', label: 'Consultant' },
+  { value: 'coach_sportif', label: 'Coach sportif' },
   // Autres
   { value: 'architecte', label: 'Architecte' },
   { value: 'geometre_expert', label: 'Géomètre-expert' },
@@ -188,7 +196,7 @@ export default function TnsPage() {
   const [ville, setVille] = useState('')
   const [includeTel, setIncludeTel] = useState(true)
   const [includeEmail, setIncludeEmail] = useState(false)
-  const [mobileOnly, setMobileOnly] = useState(false)
+  const [mobileOnly, setMobileOnly] = useState(true)
   const [limite, setLimite] = useState('10')
   const [showResults, setShowResults] = useState(false)
   const [searchResults, setSearchResults] = useState<SearchResult[]>([])
@@ -201,6 +209,7 @@ export default function TnsPage() {
   const [selectedProspect, setSelectedProspect] = useState<ProspectCardData | null>(null)
 
   const [contactedPhones, setContactedPhones] = useState<Set<string>>(new Set())
+  const [existingPhones, setExistingPhones] = useState<Set<string>>(new Set())
   const [showCreateSession, setShowCreateSession] = useState(false)
   // Panier multi-métiers : contacts accumulés entre plusieurs recherches
   const [panier, setPanier] = useState<SearchResult[]>([])
@@ -237,26 +246,35 @@ export default function TnsPage() {
   }, [])
 
   useEffect(() => {
-    fetch('/api/prospects?source=tns&limit=50')
+    fetch('/api/prospects?limit=200')
       .then(r => r.json())
       .then(j => {
         if (Array.isArray(j.data)) {
-          setProspects(j.data.map((p: {
+          const phones = new Set<string>()
+          const tnsProspects: Prospect[] = []
+          j.data.forEach((p: {
             id: string; full_name: string; profession?: string; city?: string;
             phone?: string; pipeline_stage?: string; lead_score?: number; source?: string;
-          }, i: number): Prospect => ({
-            id: i + 1,
-            initials: p.full_name.split(' ').map((w: string) => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase() || '??',
-            nom: p.full_name,
-            metier: p.profession ?? '',
-            ville: p.city ?? '',
-            telephone: p.phone ?? '—',
-            status: (p.pipeline_stage === 'converti' ? 'Converti' : p.pipeline_stage === 'perdu' ? 'Perdu' : p.pipeline_stage === 'rdv1' ? 'En cours' : 'Non contacté') as ProspectStatus,
-            score: p.lead_score ?? 0.5,
-            source: p.source ?? 'tns',
-            actions: ['WA', 'seq'] as ('WA' | 'email' | 'SMS' | 'LI' | 'seq')[],
-            metierFilter: 'all' as MetierFilter,
-          })))
+          }) => {
+            if (p.phone) phones.add(normPhone(p.phone))
+            if (p.source === 'tns') {
+              tnsProspects.push({
+                id: p.id,
+                initials: p.full_name.split(' ').map((w: string) => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase() || '??',
+                nom: p.full_name,
+                metier: p.profession ?? '',
+                ville: p.city ?? '',
+                telephone: p.phone ?? '—',
+                status: (p.pipeline_stage === 'converti' ? 'Converti' : p.pipeline_stage === 'perdu' ? 'Perdu' : p.pipeline_stage === 'rdv1' ? 'En cours' : 'Non contacté') as ProspectStatus,
+                score: p.lead_score ?? 0.5,
+                source: p.source ?? 'tns',
+                actions: ['WA', 'seq'] as ('WA' | 'email' | 'SMS' | 'LI' | 'seq')[],
+                metierFilter: 'all' as MetierFilter,
+              })
+            }
+          })
+          setExistingPhones(phones)
+          setProspects(tnsProspects)
         }
       })
       .catch(() => {})
@@ -272,6 +290,18 @@ export default function TnsPage() {
       try { localStorage.setItem('tns_contacted_phones', JSON.stringify([...next])) } catch { /* ignore */ }
       return next
     })
+
+    // Sync DB: trouve le prospect et PATCH last_contact_at
+    if (contacted) {
+      const prospect = prospects.find(p => p.telephone?.replace(/[\s.\-]/g, '') === norm)
+      if (prospect?.id) {
+        fetch(`/api/prospects/${prospect.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ last_contact_at: new Date().toISOString() })
+        }).catch(() => {}) // silent fail, localStorage reste source de vérité
+      }
+    }
   }
 
   function isPhoneContacted(phone: string | null | undefined): boolean {
@@ -341,10 +371,13 @@ export default function TnsPage() {
   async function addAllToProspection() {
     if (searchResults.length === 0) return
     setAddingAll(true)
+    const toAdd = searchResults.filter(r => !existingPhones.has(normPhone(r.telephone)))
     try {
-      await Promise.all(
-        searchResults.map(r =>
-          fetch('/api/prospects', {
+      const results = await Promise.all(
+        toAdd.map(r => {
+          const normPhone = r.telephone?.replace(/[\s.\-]/g, '') ?? ''
+          const alreadyContacted = contactedPhones.has(normPhone)
+          return fetch('/api/prospects', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -356,25 +389,36 @@ export default function TnsPage() {
               source: 'tns',
               tags: metiersSelected,
               notes: r.adresse ? `Adresse: ${r.adresse}` : '',
+              last_contact_at: alreadyContacted ? new Date().toISOString() : undefined,
             }),
-          })
-        )
+          }).then(res => res.json())
+        })
       )
-      // Update local list
-      const asProspects: Prospect[] = searchResults.map((r, i) => ({
-        id: Date.now() + i,
-        initials: r.initials,
-        nom: r.nom,
-        metier: r.metier,
-        ville: r.ville,
-        telephone: r.telephone ?? '—',
-        status: 'Non contacté' as ProspectStatus,
-        score: r.score,
-        source: r.source,
-        actions: ['email', 'seq'] as ('WA' | 'email' | 'SMS' | 'LI' | 'seq')[],
-        metierFilter: 'all' as MetierFilter,
-      }))
+      const added = results.filter(r => r.success)
+      const newPhones = new Set(existingPhones)
+      const asProspects: Prospect[] = toAdd
+        .filter((_, i) => results[i]?.success)
+        .map((r, i) => {
+          if (r.telephone) newPhones.add(normPhone(r.telephone))
+          return {
+            id: Date.now() + i,
+            initials: r.initials,
+            nom: r.nom,
+            metier: r.metier,
+            ville: r.ville,
+            telephone: r.telephone ?? '—',
+            status: 'Non contacté' as ProspectStatus,
+            score: r.score,
+            source: r.source,
+            actions: ['email', 'seq'] as ('WA' | 'email' | 'SMS' | 'LI' | 'seq')[],
+            metierFilter: 'all' as MetierFilter,
+          }
+        })
+      setExistingPhones(newPhones)
       setProspects(prev => [...asProspects, ...prev])
+      if (added.length < toAdd.length) {
+        setSearchError(`${added.length}/${searchResults.length} ajoutés (${searchResults.length - toAdd.length} déjà en base, ${toAdd.length - added.length} erreurs)`)
+      }
       setShowResults(false)
       setSearchResults([])
     } catch {
@@ -384,7 +428,11 @@ export default function TnsPage() {
     }
   }
 
-  const filtered = prospects.filter(p => activeFilter === 'all' || p.metierFilter === activeFilter)
+  const filtered = prospects.filter(p => {
+    if (activeFilter !== 'all' && p.metierFilter !== activeFilter) return false
+    const norm = p.telephone?.replace(/[\s.\-]/g, '') ?? ''
+    return !contactedPhones.has(norm) // Exclut les prospects déjà contactés
+  })
 
   return (
     <>
@@ -586,9 +634,11 @@ export default function TnsPage() {
                   {r.email && <span style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 7, color: C.textLo }}>{r.email}</span>}
                 </div>
                 <ScoreDot score={r.score} />
-                {isPhoneContacted(r.telephone)
-                  ? <span style={{ fontSize: 8, padding: '2px 7px', borderRadius: 5, background: '#0a1f0a', color: C.green, border: `1px solid ${C.green}40`, fontFamily: 'JetBrains Mono,monospace', fontWeight: 600, whiteSpace: 'nowrap' as const }}>✓ Contacté</span>
-                  : <StatusBadge status={r.status} />
+                {existingPhones.has(normPhone(r.telephone))
+                  ? <span style={{ fontSize: 8, padding: '2px 7px', borderRadius: 5, background: '#1a0a1a', color: '#c084fc', border: `1px solid #c084fc40`, fontFamily: 'JetBrains Mono,monospace', fontWeight: 600, whiteSpace: 'nowrap' as const }}>Déjà en base</span>
+                  : isPhoneContacted(r.telephone)
+                    ? <span style={{ fontSize: 8, padding: '2px 7px', borderRadius: 5, background: '#0a1f0a', color: C.green, border: `1px solid ${C.green}40`, fontFamily: 'JetBrains Mono,monospace', fontWeight: 600, whiteSpace: 'nowrap' as const }}>✓ Contacté</span>
+                    : <StatusBadge status={r.status} />
                 }
               </div>
             ))}
