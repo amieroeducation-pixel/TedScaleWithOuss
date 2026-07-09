@@ -285,6 +285,45 @@ Disponible entre deux tournées ?
 Ted`,
     is_default: false,
   },
+  // GENERIQUE — Tous métiers
+  {
+    metier: 'generique',
+    titre: 'Script générique — Professions libérales',
+    contenu: `Bonjour Monsieur [Nom],
+
+C'est Ted, conseiller en gestion de patrimoine indépendant.
+
+Je travaille avec des professionnels libéraux comme vous et ils ont souvent des problématiques sur la préparation à la retraite et l'optimisation fiscale.
+
+Est-ce que vous seriez disponible pour qu'on se rencontre ?
+
+Je vous propose un bilan patrimonial gratuit de 20 min en visio pour voir si vous laissez de l'argent sur la table.
+
+Intéressé ?
+
+Cordialement,
+Ted`,
+    is_default: true,
+  },
+  {
+    metier: 'generique',
+    titre: 'Script générique — Version féminine',
+    contenu: `Bonjour Madame [Nom],
+
+C'est Ted, conseiller en gestion de patrimoine indépendant.
+
+Je travaille avec des professionnels libéraux comme vous et ils ont souvent des problématiques sur la préparation à la retraite et l'optimisation fiscale.
+
+Est-ce que vous seriez disponible pour qu'on se rencontre ?
+
+Je vous propose un bilan patrimonial gratuit de 20 min en visio pour voir si vous laissez de l'argent sur la table.
+
+Intéressée ?
+
+Cordialement,
+Ted`,
+    is_default: false,
+  },
 ]
 
 export async function POST(_request: NextRequest) {
