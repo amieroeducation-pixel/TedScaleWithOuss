@@ -316,12 +316,13 @@ const PRESSURE_META: Record<PressureLevel, { label: string; sub: string }> = {
 }
 
 // --- DRAWER ---
-function ProspectDrawer({ prospect, onClose, onStageChange, onPressureChange, onProspectUpdated }: {
+function ProspectDrawer({ prospect, onClose, onStageChange, onPressureChange, onProspectUpdated, onOpenScriptPicker }: {
   prospect: Prospect
   onClose: () => void
   onStageChange: (id: string, stage: Stage) => void
   onPressureChange: (id: string, pressure: PressureLevel) => void
   onProspectUpdated: (id: string, fields: { full_name: string; phone: string; email: string; profession: string; city: string; company: string }) => void
+  onOpenScriptPicker: (prospect: Prospect, channel: 'whatsapp' | 'linkedin') => void
 }) {
   const [localNotes, setLocalNotes] = useState(prospect.notes)
   const [localPressure, setLocalPressure] = useState<PressureLevel>(prospect.pressure)
@@ -674,21 +675,7 @@ function ProspectDrawer({ prospect, onClose, onStageChange, onPressureChange, on
                     {/* Bouton action manuelle pour étapes client-side (WhatsApp, LinkedIn) */}
                     {(step.channel === 'whatsapp' || step.channel === 'linkedin') && step.status === 'pending' && (
                       <button
-                        onClick={() => {
-                          if (step.channel === 'whatsapp') {
-                            openWhatsApp(
-                              prospect.telephone ?? '',
-                              `Bonjour ${prospect.nom.split(' ')[0]}, suite à notre échange...`
-                            )
-                          } else {
-                            openLinkedIn({
-                              linkedinUrl: null,
-                              prospectName: prospect.nom,
-                              inmailTemplate: `Bonjour ${prospect.nom.split(' ')[0]}, je me permets de vous contacter...`,
-                              onCopied: () => toast.success('Template InMail copié dans le presse-papier'),
-                            })
-                          }
-                        }}
+                        onClick={() => onOpenScriptPicker(prospect, step.channel as 'whatsapp' | 'linkedin')}
                         style={{
                           fontSize: 9, padding: '2px 8px', borderRadius: 4, cursor: 'pointer',
                           border: `1px solid ${step.channel === 'whatsapp' ? '#25D366' : '#0A66C2'}`,
@@ -696,7 +683,7 @@ function ProspectDrawer({ prospect, onClose, onStageChange, onPressureChange, on
                           color: step.channel === 'whatsapp' ? '#25D366' : '#0A66C2',
                         }}
                       >
-                        {step.channel === 'whatsapp' ? 'Ouvrir WA' : 'Ouvrir LinkedIn'}
+                        {step.channel === 'whatsapp' ? '📋 Script WA' : '📋 Script LI'}
                       </button>
                     )}
                   </div>
@@ -861,6 +848,9 @@ export default function CrmPage() {
   const [selectedProspect, setSelectedProspect] = useState<Prospect | null>(null)
   const [filter, setFilter] = useState<'Tous' | 'TNS' | 'Chefs' | '★★★★★'>('Tous')
   const [isLoading, setIsLoading] = useState(true)
+  const [showScriptPicker, setShowScriptPicker] = useState<{ prospect: Prospect; channel: 'whatsapp' | 'linkedin' } | null>(null)
+  const [callScripts, setCallScripts] = useState<Array<{ id: string; metier: string; titre: string; contenu: string }>>([])
+  const [scriptsLoading, setScriptsLoading] = useState(false)
   const [fetchError, setFetchError] = useState<string | null>(null)
   const [showNewProspect, setShowNewProspect] = useState(false)
   const [npForm, setNpForm] = useState({ full_name: '', profession: '', phone: '', email: '', city: '', source: 'autre', notes: '' })
@@ -868,6 +858,25 @@ export default function CrmPage() {
   const [npError, setNpError] = useState<string | null>(null)
 
   useEffect(() => { saveLastSection('/crm') }, [])
+
+  // Fetch call scripts
+  useEffect(() => {
+    async function loadScripts() {
+      setScriptsLoading(true)
+      try {
+        const res = await fetch('/api/call-scripts')
+        const json = await res.json()
+        if (json.success && Array.isArray(json.data)) {
+          setCallScripts(json.data)
+        }
+      } catch {
+        // Silent fail, scripts non-bloquants
+      } finally {
+        setScriptsLoading(false)
+      }
+    }
+    loadScripts()
+  }, [])
 
   // Fetch real prospects from DB
   const fetchProspects = useCallback(async () => {
@@ -882,7 +891,7 @@ export default function CrmPage() {
           initials: p.full_name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase(),
           profession: p.profession || '',
           ville: p.city || '',
-          telephone: p.phone_normalized || '',
+          telephone: p.phone || p.phone_normalized || '',
           email: p.email || '',
           stage: DB_TO_UI[p.pipeline_stage] || 'À contacter',
           leadScore: p.lead_score || 50,
@@ -1130,6 +1139,7 @@ export default function CrmPage() {
             onClose={() => setSelectedProspect(null)}
             onStageChange={handleStageChange}
             onPressureChange={handlePressureChange}
+            onOpenScriptPicker={(prospect, channel) => setShowScriptPicker({ prospect, channel })}
             onProspectUpdated={(id, fields) => {
               setProspects(prev => prev.map(p => p.id === id ? {
                 ...p,
@@ -1269,6 +1279,123 @@ export default function CrmPage() {
                 {npCreating ? 'CRÉATION...' : '➕ AJOUTER AU CRM'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal sélection script call */}
+      {showScriptPicker && (
+        <div onClick={() => setShowScriptPicker(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: C.bgMid, border: `1px solid ${C.line}`, borderRadius: 14, padding: 24, width: '100%', maxWidth: 900, maxHeight: '90vh', overflow: 'auto', position: 'relative' }}>
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: C.ribbon, borderRadius: '14px 14px 0 0' }} />
+            <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 16, fontWeight: 600, color: C.textHi, marginBottom: 4, marginTop: 6 }}>
+              SCRIPTS D'APPEL — {showScriptPicker.prospect.nom}
+            </div>
+            <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.textLo, marginBottom: 18 }}>
+              {showScriptPicker.channel === 'whatsapp' ? 'Sélectionne un script pour WhatsApp' : 'Sélectionne un script pour LinkedIn'}
+            </div>
+
+            {scriptsLoading && (
+              <div style={{ textAlign: 'center', padding: 40, color: C.textLo, fontSize: 11 }}>Chargement scripts...</div>
+            )}
+
+            {!scriptsLoading && callScripts.length === 0 && (
+              <div style={{ textAlign: 'center', padding: 40 }}>
+                <div style={{ fontSize: 11, color: C.textLo, marginBottom: 12 }}>Aucun script disponible</div>
+                <div style={{ fontSize: 9, color: C.textLo }}>
+                  Tu peux créer des scripts via <span style={{ color: C.gold }}>Settings → Scripts d'appel</span>
+                </div>
+              </div>
+            )}
+
+            {!scriptsLoading && callScripts.length > 0 && (
+              <div style={{ display: 'grid', gap: 10 }}>
+                {callScripts.map(script => (
+                  <div
+                    key={script.id}
+                    onClick={() => {
+                      const prenom = showScriptPicker.prospect.nom.split(' ')[0]
+                      const message = script.contenu.replace(/\[Prénom\]/g, prenom).replace(/\[Nom\]/g, showScriptPicker.prospect.nom)
+
+                      if (showScriptPicker.channel === 'whatsapp') {
+                        openWhatsApp(showScriptPicker.prospect.telephone, message)
+                      } else {
+                        openLinkedIn({
+                          linkedinUrl: null,
+                          prospectName: showScriptPicker.prospect.nom,
+                          inmailTemplate: message,
+                          onCopied: () => toast.success('Script copié dans le presse-papier'),
+                        })
+                      }
+                      setShowScriptPicker(null)
+                    }}
+                    style={{
+                      background: C.surface1,
+                      border: `1px solid ${C.line}`,
+                      borderRadius: 8,
+                      padding: 16,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.borderColor = C.gold
+                      e.currentTarget.style.background = C.surface2
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.borderColor = C.line
+                      e.currentTarget.style.background = C.surface1
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                      <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 12, fontWeight: 600, color: C.textHi }}>
+                        {script.titre}
+                      </div>
+                      <div style={{
+                        fontSize: 8,
+                        padding: '2px 8px',
+                        borderRadius: 4,
+                        background: C.gold + '22',
+                        color: C.gold,
+                        fontFamily: 'JetBrains Mono,monospace',
+                        textTransform: 'uppercase',
+                      }}>
+                        {script.metier}
+                      </div>
+                    </div>
+                    <div style={{
+                      fontFamily: 'JetBrains Mono,monospace',
+                      fontSize: 9,
+                      color: C.textMid,
+                      maxHeight: 100,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'pre-wrap',
+                      lineHeight: 1.4,
+                    }}>
+                      {script.contenu.slice(0, 300)}{script.contenu.length > 300 ? '...' : ''}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <button
+              onClick={() => setShowScriptPicker(null)}
+              style={{
+                marginTop: 20,
+                width: '100%',
+                padding: 10,
+                borderRadius: 8,
+                background: C.surface1,
+                border: `1px solid ${C.line}`,
+                color: C.textLo,
+                fontFamily: 'Oswald,sans-serif',
+                fontSize: 11,
+                cursor: 'pointer',
+              }}
+            >
+              ANNULER
+            </button>
           </div>
         </div>
       )}
