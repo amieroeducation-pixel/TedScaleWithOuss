@@ -5,6 +5,13 @@ import { useEffect, useState } from 'react'
 import { PLAYBOOKS } from '@/lib/playbooks/config'
 import PlaybookCard from '@/components/playbooks/PlaybookCard'
 import Link from 'next/link'
+import { C } from '@/lib/theme'
+
+const FAMILIES = [
+  { key: 'A', label: 'Famille A — Prospection Data Officielle', accent: C.gold },
+  { key: 'B', label: 'Famille B — Intelligence Client', accent: C.indigo },
+  { key: 'C', label: 'Famille C — LinkedIn Gojiberry', accent: C.cyan },
+]
 
 export default function PlaybooksPage() {
   const [lastRuns, setLastRuns] = useState<Record<string, any>>({})
@@ -29,7 +36,6 @@ export default function PlaybooksPage() {
     try {
       const res = await fetch(`/api/playbooks/${playbookId}/run`, { method: 'POST', body: '{}', headers: { 'Content-Type': 'application/json' } })
       if (!res.ok) throw new Error('Run failed')
-      // Recharger le dernier run après 4 secondes pour refléter l'état réel
       setTimeout(async () => {
         const runsRes = await fetch(`/api/playbooks/${playbookId}/runs`)
         const data = await runsRes.json()
@@ -41,70 +47,42 @@ export default function PlaybooksPage() {
     }
   }
 
-  const familyA = PLAYBOOKS.filter(p => p.family === 'A')
-  const familyB = PLAYBOOKS.filter(p => p.family === 'B')
-  const familyC = PLAYBOOKS.filter(p => p.family === 'C')
-
   return (
-    <div className="space-y-8 p-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Playbooks</h1>
-        <p className="mt-1 text-gray-500">Workflows automatisés de prospection patrimoniale</p>
+    <div style={{ padding: 24, background: C.bgDeep, minHeight: '100vh' }}>
+      <div style={{ marginBottom: 24 }}>
+        <h1 style={{ fontSize: 20, fontWeight: 700, color: C.textHi, margin: 0, fontFamily: 'Oswald, sans-serif', letterSpacing: 1 }}>
+          PLAYBOOKS
+        </h1>
+        <p style={{ fontSize: 12, color: C.textMid, margin: '4px 0 0' }}>
+          Workflows automatisés de prospection patrimoniale
+        </p>
       </div>
 
-      <section>
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-blue-600">
-          Famille A — Prospection Data Officielle
-        </h2>
-        <div className="space-y-3">
-          {familyA.map(p => (
-            <Link key={p.id} href={`/playbooks/${p.id}`} className="block">
-              <PlaybookCard
-                playbook={p}
-                lastRun={lastRuns[p.id]}
-                onRun={(id) => { handleRun(id) }}
-                isRunning={runningIds.has(p.id)}
-              />
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      <section>
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-purple-600">
-          Famille B — Intelligence Client
-        </h2>
-        <div className="space-y-3">
-          {familyB.map(p => (
-            <Link key={p.id} href={`/playbooks/${p.id}`} className="block">
-              <PlaybookCard
-                playbook={p}
-                lastRun={lastRuns[p.id]}
-                onRun={(id) => { handleRun(id) }}
-                isRunning={runningIds.has(p.id)}
-              />
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      <section>
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-green-600">
-          Famille C — LinkedIn Gojiberry
-        </h2>
-        <div className="space-y-3">
-          {familyC.map(p => (
-            <Link key={p.id} href={`/playbooks/${p.id}`} className="block">
-              <PlaybookCard
-                playbook={p}
-                lastRun={lastRuns[p.id]}
-                onRun={(id) => { handleRun(id) }}
-                isRunning={runningIds.has(p.id)}
-              />
-            </Link>
-          ))}
-        </div>
-      </section>
+      {FAMILIES.map(({ key, label, accent }) => {
+        const playbooks = PLAYBOOKS.filter(p => p.family === key)
+        return (
+          <div key={key} style={{ marginBottom: 28 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+              <div style={{ width: 3, height: 14, background: accent, borderRadius: 2 }} />
+              <span style={{ fontSize: 10, fontWeight: 700, color: accent, textTransform: 'uppercase', letterSpacing: 1.5 }}>
+                {label}
+              </span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {playbooks.map(p => (
+                <Link key={p.id} href={`/playbooks/${p.id}`} style={{ textDecoration: 'none' }}>
+                  <PlaybookCard
+                    playbook={p}
+                    lastRun={lastRuns[p.id]}
+                    onRun={(id) => { handleRun(id) }}
+                    isRunning={runningIds.has(p.id)}
+                  />
+                </Link>
+              ))}
+            </div>
+          </div>
+        )
+      })}
     </div>
   )
 }

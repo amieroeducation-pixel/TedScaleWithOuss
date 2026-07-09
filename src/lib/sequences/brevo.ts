@@ -1,4 +1,4 @@
-type BrevoResult = { success: boolean; error?: string }
+export type BrevoResult = { success: boolean; error?: string }
 
 export async function sendBrevoEmail(args: {
   to: string
@@ -66,5 +66,43 @@ export async function sendBrevoSms(args: {
     return { success: true }
   } catch (e) {
     return { success: false, error: e instanceof Error ? e.message : 'Erreur réseau Brevo SMS' }
+  }
+}
+
+export async function sendWhatsAppMessage(args: {
+  to: string
+  message: string
+}): Promise<BrevoResult> {
+  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID
+  const accessToken = process.env.WHATSAPP_ACCESS_TOKEN
+
+  if (!phoneNumberId || !accessToken) {
+    return { success: false, error: 'WhatsApp non configuré (WHATSAPP_PHONE_NUMBER_ID ou WHATSAPP_ACCESS_TOKEN manquant)' }
+  }
+
+  try {
+    const res = await fetch(
+      `https://graph.facebook.com/v21.0/${phoneNumberId}/messages`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messaging_product: 'whatsapp',
+          to: args.to.replace(/\D/g, ''),
+          type: 'text',
+          text: { body: args.message },
+        }),
+      }
+    )
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: `HTTP ${res.status}` }))
+      return { success: false, error: err.message || `WhatsApp HTTP ${res.status}` }
+    }
+    return { success: true }
+  } catch (e) {
+    return { success: false, error: e instanceof Error ? e.message : 'Erreur réseau WhatsApp' }
   }
 }

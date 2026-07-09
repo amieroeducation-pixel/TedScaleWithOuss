@@ -47,6 +47,7 @@ if (-not $supabaseUrl -or -not $supabaseAnon) {
 # 2. Build Docker avec les variables publiques
 Write-Host ">>> Build image Docker..." -ForegroundColor Yellow
 docker build `
+  --platform linux/amd64 `
   --build-arg NEXT_PUBLIC_SUPABASE_URL=$supabaseUrl `
   --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY=$supabaseAnon `
   -t $ImageName .
@@ -76,7 +77,9 @@ $secretsArg = (
   "TELEGRAM_CHAT_ID",
   "ANTHROPIC_API_KEY",
   "LINKEDIN_WEBHOOK_SECRET",
-  "MAKECOM_LINKEDIN_SEND_WEBHOOK"
+  "MAKECOM_LINKEDIN_SEND_WEBHOOK",
+  "GOJIBERRY_API_KEY",
+  "NEXT_PUBLIC_APP_URL"
 ) | Where-Object { $envVars.ContainsKey($_) } | ForEach-Object {
   "$_=$($envVars[$_])"
 }

@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { runCessionsBodacc, runCreationsRecentes, runHoldings, runDividendes, runDirigeants55 } from '@/lib/playbooks/engine-a'
+import { runCessionsBodacc, runCreationsRecentes, runHoldings, runDividendes, runDirigeants55, runHeritiersBodacc, runVendeursImmo, runRadiationsBodacc } from '@/lib/playbooks/engine-a'
 import { runSurveillanceBook, runDetectionLiquidite, runPreparationRdv, runCartographieHolding } from '@/lib/playbooks/engine-b'
 import { sendPlaybookReport } from '@/lib/telegram/bot'
 
@@ -20,6 +20,9 @@ const ENGINES: Record<string, (runId: string, body?: any) => Promise<number>> = 
   'a3-holdings': runHoldings,
   'a4-dividendes': runDividendes,
   'a5-dirigeants': runDirigeants55,
+  'a6-heritiers': runHeritiersBodacc,
+  'a7-vendeurs-immo': runVendeursImmo,
+  'a8-radiations': runRadiationsBodacc,
   'b1-surveillance': runSurveillanceBook,
   'b3-liquidite': runDetectionLiquidite,
 }

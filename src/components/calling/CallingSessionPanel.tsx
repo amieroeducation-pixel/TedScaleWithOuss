@@ -20,33 +20,6 @@ type Session = {
 type Script = { contenu: string; is_default: boolean }
 type Objection = { id: string; question: string; reponse: string; ordre: number }
 
-/**
- * Shuffle déterministe basé sur la date du jour.
- * Utilise un simple hash de la date comme seed pour un PRNG minimaliste.
- */
-function dailyShuffle<T>(arr: T[]): T[] {
-  if (arr.length <= 1) return arr
-  const today = new Date().toISOString().split('T')[0] // YYYY-MM-DD
-  // Simple seed from date string
-  let seed = 0
-  for (let i = 0; i < today.length; i++) {
-    seed = ((seed << 5) - seed + today.charCodeAt(i)) | 0
-  }
-  // Seeded pseudo-random (mulberry32)
-  const rand = () => {
-    seed |= 0; seed = (seed + 0x6D2B79F5) | 0
-    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed)
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
-  }
-  const shuffled = [...arr]
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(rand() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
-  }
-  return shuffled
-}
-
 export default function CallingSessionPanel() {
   const { celebrate } = useCelebrations()
   const [session, setSession] = useState<Session | null>(null)
@@ -68,15 +41,7 @@ export default function CallingSessionPanel() {
         if (detail.success) {
           const s: Session = detail.data
           setSession(s)
-          // Filtrer les contacts jamais appelés et les shuffle par jour
-          // pour ne pas toujours afficher les mêmes en premier
-          const aAppeler = s.contacts.filter(c => c.statut_appel === 'a_appeler')
-          const shuffled = dailyShuffle(aAppeler)
-          // Offset quotidien pour que chaque jour commence à un index différent
-          const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000)
-          const offset = shuffled.length > 0 ? dayOfYear % shuffled.length : 0
-          const rotated = [...shuffled.slice(offset), ...shuffled.slice(0, offset)]
-          const first = rotated[0] ?? s.contacts[0] ?? null
+          const first = s.contacts.find(c => c.statut_appel === 'a_appeler') ?? s.contacts[0] ?? null
           setActiveContact(first)
           const [scriptRes, objRes] = await Promise.all([
             fetch(`/api/call-scripts?metier=${s.metier}`).then(r => r.json()),
@@ -115,15 +80,21 @@ export default function CallingSessionPanel() {
       })
       const isChaud = patch.statut_appel === 'chaud'
       const isPositive = patch.statut_appel !== 'pas_repondu' && patch.statut_appel !== 'pas_interesse'
-      // Mini burst uniquement si pas chaud (chaud a sa propre célébration plus grande)
       if (!isChaud) celebrate('appel_passe')
-      // Suivi de série
       setStreakCount(prev => {
         const next = isPositive ? prev + 1 : 0
         if (isPositive && next > 0 && next % 5 === 0) {
           setTimeout(() => celebrate('streak', undefined, { count: next }), 600)
         }
         return next
+      })
+      // Avancer au prochain contact non-appelé
+      setSession(prev => {
+        if (!prev) return prev
+        const updatedContacts = prev.contacts.map(c => c.id === contactId ? { ...c, ...data.data } : c)
+        const nextContact = updatedContacts.find(c => c.id !== contactId && c.statut_appel === 'a_appeler')
+        if (nextContact) setTimeout(() => setActiveContact(nextContact), 300)
+        return { ...prev, contacts: updatedContacts }
       })
     }
     if (patch.statut_appel === 'chaud') {
@@ -140,6 +111,49 @@ export default function CallingSessionPanel() {
     })
     celebrate('session_terminee', 'SESSION TERMINÉE !')
     setSession(null)
+  }
+
+  const [renewing, setRenewing] = useState(false)
+
+  async function handleRenouveler() {
+    if (!session) return
+    setRenewing(true)
+    try {
+      const res = await fetch('/api/prospection/tns', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ metier: session.metier, ville: session.ville, limite: 20, mobileOnly: true }),
+      })
+      const data = await res.json()
+      const prospects = data.data?.prospects ?? []
+      if (prospects.length === 0) { setRenewing(false); return }
+
+      const sessionRes = await fetch('/api/calling-sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          titre: `${session.metier} ${session.ville} — ${new Date().toLocaleDateString('fr-FR')}`,
+          metier: session.metier,
+          ville: session.ville,
+          source: session.source,
+          contacts: prospects.map((p: { siren?: string; nom: string; entreprise?: string; metier?: string; ville?: string; telephone: string; email?: string; adresse?: string; source?: string }) => ({
+            siren: p.siren, nom: p.nom, entreprise: p.entreprise,
+            metier: p.metier, ville: p.ville, telephone: p.telephone,
+            email: p.email, adresse: p.adresse, source: p.source,
+          })),
+        }),
+      })
+      const sessionData = await sessionRes.json()
+      if (sessionData.success) {
+        const detail = await fetch(`/api/calling-sessions/${sessionData.data.id}`).then(r => r.json())
+        if (detail.success) {
+          setSession(detail.data)
+          const first = detail.data.contacts.find((c: SessionContact) => c.statut_appel === 'a_appeler') ?? detail.data.contacts[0]
+          setActiveContact(first)
+        }
+      }
+    } catch { /* silently */ }
+    setRenewing(false)
   }
 
   const contacts = session?.contacts ?? []
@@ -185,6 +199,13 @@ export default function CallingSessionPanel() {
             <div style={{ width: 80, height: 6, background: C.surface3, borderRadius: 10, overflow: 'hidden', alignSelf: 'center' }}>
               <div style={{ width: `${(appeles / Math.max(contacts.length, 1)) * 100}%`, height: '100%', background: C.green, borderRadius: 10 }} />
             </div>
+            <button
+              onClick={handleRenouveler}
+              disabled={renewing}
+              style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, padding: '4px 10px', borderRadius: 5, background: '#0a1a1a', border: `1px solid ${C.indigo}40`, color: C.indigo, cursor: renewing ? 'not-allowed' : 'pointer', opacity: renewing ? 0.6 : 1 }}
+            >
+              {renewing ? '⏳' : '🔄'} Renouveler
+            </button>
             <button
               onClick={handleTerminer}
               style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, padding: '4px 10px', borderRadius: 5, background: '#1a0d0d', border: `1px solid #ff647040`, color: '#ff6470', cursor: 'pointer' }}

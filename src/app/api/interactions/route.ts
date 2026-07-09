@@ -3,7 +3,7 @@ import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { apiSuccess, apiError, apiUnauthorized } from '@/lib/api'
 import { z } from 'zod'
 
-const INTERACTION_TYPES = ['appel', 'rdv1', 'rdv2', 'rdv3', 'email', 'whatsapp', 'linkedin', 'autre'] as const
+const INTERACTION_TYPES = ['appel', 'rdv1', 'rdv2', 'rdv3', 'email', 'sms', 'whatsapp', 'linkedin', 'interpro', 'autre'] as const
 
 const PostSchema = z.object({
   prospect_id: z.string().uuid(),

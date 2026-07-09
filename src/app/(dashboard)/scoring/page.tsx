@@ -93,8 +93,20 @@ export default function ScoringPage() {
   const prof = useStarRows(PROFESSIONS)
   const zone = useStarRows(ZONES)
   const [topProspects, setTopProspects] = useState<ProspectRow[]>([])
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
 
   useEffect(() => {
+    fetch('/api/settings')
+      .then(r => r.json())
+      .then(json => {
+        if (json.success && json.data?.scoring_grids) {
+          const g = json.data.scoring_grids
+          if (g.professions) g.professions.forEach((row: ScoreRow, i: number) => prof.setVal(i, row.val))
+          if (g.zones) g.zones.forEach((row: ScoreRow, i: number) => zone.setVal(i, row.val))
+        }
+      })
+      .catch(() => {})
     fetch('/api/prospects?limit=50')
       .then(r => r.json())
       .then(json => {
@@ -107,6 +119,18 @@ export default function ScoringPage() {
       })
       .catch(() => {})
   }, [])
+
+  async function saveGrids() {
+    setSaving(true)
+    await fetch('/api/settings', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scoring_grids: { professions: prof.rows, zones: zone.rows } }),
+    }).catch(() => {})
+    setSaving(false)
+    setSaved(true)
+    setTimeout(() => setSaved(false), 3000)
+  }
 
   return (
     <>
@@ -197,6 +221,22 @@ export default function ScoringPage() {
             ))}
           </div>
         </Panel>
+      </div>
+
+      {/* Save button */}
+      <div style={{ marginTop: 16 }}>
+        <button
+          onClick={saveGrids}
+          disabled={saving}
+          style={{
+            width: '100%', padding: 12, borderRadius: 8, border: 'none',
+            background: saved ? '#0d1a0d' : saving ? C.surface2 : `linear-gradient(90deg,${C.gold},${C.indigo})`,
+            color: '#fff', fontFamily: 'Oswald,sans-serif', fontSize: 12, fontWeight: 600,
+            letterSpacing: '0.1em', cursor: saving ? 'wait' : 'pointer',
+          }}
+        >
+          {saving ? '⏳ Sauvegarde...' : saved ? '✅ Grilles sauvegardées !' : '💾 SAUVEGARDER LES GRILLES'}
+        </button>
       </div>
     </>
   )

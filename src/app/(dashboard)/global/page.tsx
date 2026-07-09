@@ -1,42 +1,56 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { C } from '@/lib/theme'
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import { saveLastSection } from '@/lib/navigation-state'
 
 type GlobalKpi = {
   tasks: { done_today: number; active: number; high_priority_remaining: number; this_week: number; total: number }
-  prospection: { contacts_today: number; prospects_this_week: number }
+  prospection: { contacts_today: number; prospects_this_week: number; calls_today: number; rdv1_today: number; rdv2_today: number; blocks_today: number }
+}
+
+type KpiData = {
+  period: string
+  realise: { appels: number; contacts: number; rdv_pris: number; rdv_faits: number; blocks: number }
+  objectifs: { appels: number; contacts: number; rdv_pris: number; rdv_faits: number; propositions: number; collecte: number }
+  ecarts: { appels: number; contacts: number; rdv_pris: number; rdv_faits: number }
+  prev_period: { appels: number; contacts: number; rdv_pris: number; rdv_faits: number }
+  tendances: { appels: string; contacts: string; rdv_pris: string; rdv_faits: string }
+  ratios: { appels_to_rdv: number; rdv_pris_to_faits: number }
+  has_objectives: boolean
 }
 
 type GlobalTab = 'synthese' | 'planning' | 'rdvpris' | 'suivi'
-type SuiviPeriod = 'year' | 'month' | 'week'
-
-const WEEKLY_PERF_DATA = [
-  { semaine: 'S22', score: 62, rdv: 4, appels: 38 },
-  { semaine: 'S23', score: 71, rdv: 6, appels: 45 },
-  { semaine: 'S24', score: 58, rdv: 3, appels: 32 },
-  { semaine: 'S25', score: 79, rdv: 7, appels: 52 },
-  { semaine: 'S26', score: 85, rdv: 8, appels: 48 },
-  { semaine: 'S27', score: 73, rdv: 5, appels: 41 },
-]
-
-const OBJ_VS_REAL_DATA = [
-  { categorie: 'Appels', objectif: 50, realise: 41 },
-  { categorie: 'RDV R1', objectif: 5, realise: 4 },
-  { categorie: 'RDV R2', objectif: 3, realise: 3 },
-  { categorie: 'Propositions', objectif: 2, realise: 1 },
-  { categorie: 'Collecte (k)', objectif: 50, realise: 35 },
-]
+type SuiviPeriod = 'day' | 'week' | 'month'
 
 const MONTHS = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC']
 const MONTH_WEEKS = ['4s','4s','4s','4s','4s','4s','4s','4s','5s','4s','4s','5s']
 
-function MonthIntensityGrid() {
+function MonthIntensityGrid({ onIntensityChange, initialValues }: { onIntensityChange?: (intensity: number[]) => void; initialValues?: number[] }) {
   const [values, setValues] = useState<Record<string,string>>(
-    Object.fromEntries(MONTHS.map(m => [m, '1.0']))
+    Object.fromEntries(MONTHS.map((m, i) => [m, String(initialValues?.[i] ?? 1.0)]))
   )
+  const initRef = React.useRef(false)
+
+  useEffect(() => {
+    if (initialValues && !initRef.current) {
+      const newValues = Object.fromEntries(MONTHS.map((m, i) => [m, String(initialValues[i] ?? 1.0)]))
+      setValues(newValues)
+      initRef.current = true
+    }
+  }, [initialValues])
+
+  const handleChange = useCallback((month: string, val: string) => {
+    setValues(prev => {
+      const next = { ...prev, [month]: val }
+      if (onIntensityChange) {
+        onIntensityChange(MONTHS.map(m => parseFloat(next[m]) || 1))
+      }
+      return next
+    })
+  }, [onIntensityChange])
   const selectStyle = {
     width: '100%', padding: 4, background: C.surface1,
     border: `1px solid ${C.line}`, borderRadius: 4, color: C.text, fontSize: 11, textAlign: 'center' as const,
@@ -46,7 +60,7 @@ function MonthIntensityGrid() {
       {slice.map((m, i) => (
         <div key={m} style={{ textAlign: 'center' }}>
           <div style={{ fontSize: 8, color: C.textLo, marginBottom: 4 }}>{m} ({MONTH_WEEKS[i + offset]})</div>
-          <select value={values[m]} onChange={e => setValues(v => ({ ...v, [m]: e.target.value }))} style={selectStyle}>
+          <select value={values[m]} onChange={e => handleChange(m, e.target.value)} style={selectStyle}>
             <option value="">--</option>
             <option value="0.7">↘↘</option>
             <option value="0.9">↘</option>
@@ -105,11 +119,80 @@ function IntensityConfig({ onLegendChange }: { onLegendChange: (s: string) => vo
   )
 }
 
-function PlanningTabContent({ title, r1Label, r2Label, moneyLabel, r1Default, r2Default, moneyDefault }: {
-  title: string; r1Label: string; r2Label: string; moneyLabel: string;
+function PlanningTabContent({ title, r1Key, r2Key, moneyKey, r1Label, r2Label, moneyLabel, r1Default, r2Default, moneyDefault }: {
+  title: string; r1Key: string; r2Key: string; moneyKey: string;
+  r1Label: string; r2Label: string; moneyLabel: string;
   r1Default: number; r2Default: number; moneyDefault: number
 }) {
   const [legend, setLegend] = useState('-- Ignorer · ↘↘ -30% · ↘ -10% · - Normal · ↗ +10% · ↗↗ +30%')
+  const [r1, setR1] = useState(r1Default)
+  const [r2, setR2] = useState(r2Default)
+  const [money, setMoney] = useState(moneyDefault)
+  const [intensity, setIntensity] = useState<number[]>([1,1,1,1,1,1,1,1,1,1,1,1])
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [loaded, setLoaded] = useState(false)
+  const [calculated, setCalculated] = useState<{ month: string; r1: number; r2: number; money: number }[] | null>(null)
+
+  useEffect(() => {
+    fetch('/api/global/kpi/objectives')
+      .then(r => r.json())
+      .then(json => {
+        if (json.success && json.data) {
+          const d = json.data
+          if (d[r1Key] != null) setR1(d[r1Key])
+          if (d[r2Key] != null) setR2(d[r2Key])
+          if (d[moneyKey] != null) setMoney(d[moneyKey])
+          if (d.month_intensity) setIntensity(d.month_intensity)
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoaded(true))
+  }, [r1Key, r2Key, moneyKey])
+
+  const handleSave = async () => {
+    setSaving(true)
+    setSaved(false)
+    setError(null)
+    try {
+      const body: Record<string, any> = {
+        [r1Key]: r1,
+        [r2Key]: r2,
+        [moneyKey]: money,
+        month_intensity: intensity,
+      }
+      const res = await fetch('/api/global/kpi/objectives', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      const json = await res.json()
+      if (!res.ok || !json.success) {
+        setError(json.error || `Erreur ${res.status}`)
+        setSaving(false)
+        return
+      }
+      setSaving(false)
+      setSaved(true)
+      setTimeout(() => setSaved(false), 3000)
+
+      const totalIntensity = intensity.reduce((a, b) => a + b, 0)
+      const months = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc']
+      setCalculated(months.map((m, i) => {
+        const coeff = intensity[i] / totalIntensity
+        return {
+          month: m,
+          r1: Math.round(r1 * coeff),
+          r2: Math.round(r2 * coeff),
+          money: Math.round(money * coeff),
+        }
+      }))
+    } catch {
+      setError('Erreur réseau — vérifie ta connexion')
+      setSaving(false)
+    }
+  }
 
   const numInp = (color: string) => ({
     width: '100%', padding: 8, background: C.surface1, border: `1px solid ${C.line}`,
@@ -128,15 +211,15 @@ function PlanningTabContent({ title, r1Label, r2Label, moneyLabel, r1Default, r2
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12 }}>
           <div>
             <label style={{ fontSize: 8, color: C.textLo, display: 'block', marginBottom: 4 }}>{r1Label}</label>
-            <input type="number" defaultValue={r1Default} min={0} max={2000} style={numInp(C.indigo)} />
+            <input type="number" value={r1} min={0} max={2000} onChange={e => setR1(+e.target.value)} style={numInp(C.indigo)} />
           </div>
           <div>
             <label style={{ fontSize: 8, color: C.textLo, display: 'block', marginBottom: 4 }}>{r2Label}</label>
-            <input type="number" defaultValue={r2Default} min={0} max={2000} style={numInp(C.green)} />
+            <input type="number" value={r2} min={0} max={2000} onChange={e => setR2(+e.target.value)} style={numInp(C.green)} />
           </div>
           <div>
             <label style={{ fontSize: 8, color: C.textLo, display: 'block', marginBottom: 4 }}>{moneyLabel}</label>
-            <input type="number" defaultValue={moneyDefault} min={0} max={10000000} step={1000} style={numInp(C.gold)} />
+            <input type="number" value={money} min={0} max={10000000} step={1000} onChange={e => setMoney(+e.target.value)} style={numInp(C.gold)} />
           </div>
         </div>
       </div>
@@ -145,23 +228,94 @@ function PlanningTabContent({ title, r1Label, r2Label, moneyLabel, r1Default, r2
         <div style={{ fontSize: 10, fontWeight: 600, color: C.gold, marginBottom: 8 }}>⚙️ Configuration des intensités</div>
         <div style={{ fontSize: 8, color: C.textLo, marginBottom: 12 }}>Définis le pourcentage de variation pour chaque symbole</div>
         <IntensityConfig onLegendChange={setLegend} />
-        <div style={{ fontSize: 10, fontWeight: 600, color: C.gold, marginBottom: 8 }}>📅 Intensité par mois (sélectionne les symboles)</div>
+        <div style={{ fontSize: 10, fontWeight: 600, color: C.gold, marginBottom: 8 }}>📅 Intensité par mois</div>
         <div style={{ fontSize: 8, color: C.textLo, marginBottom: 12 }}>{legend}</div>
-        <MonthIntensityGrid />
-        <button style={{ width: '100%', padding: 10, background: C.indigo, border: 'none', borderRadius: 6, color: '#fff', fontSize: 10, fontWeight: 600, cursor: 'pointer' }}>
-          🔄 Actualiser et calculer
+        <MonthIntensityGrid key={loaded ? 'loaded' : 'init'} onIntensityChange={setIntensity} initialValues={intensity} />
+        {error && (
+          <div style={{ background: '#1a0d0d', border: '1px solid #ff6b6b40', borderRadius: 6, padding: 8, marginTop: 8 }}>
+            <div style={{ fontSize: 9, color: '#ff6b6b' }}>❌ {error}</div>
+          </div>
+        )}
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          style={{ width: '100%', padding: 10, background: saving ? C.surface2 : saved ? '#0d1a0d' : C.indigo, border: 'none', borderRadius: 6, color: '#fff', fontSize: 10, fontWeight: 600, cursor: saving ? 'wait' : 'pointer', marginTop: 8 }}
+        >
+          {saving ? '⏳ Sauvegarde...' : saved ? '✅ Sauvegardé !' : '💾 Sauvegarder et calculer'}
         </button>
       </div>
 
-      <div style={{ background: C.bgMid, border: `1px solid ${C.line}`, borderRadius: 8, padding: 16, color: C.textMid, fontSize: 9 }}>
-        Le planning calculé s'affichera ici après avoir cliqué sur Actualiser.
-      </div>
+      {calculated && (
+        <div style={{ background: C.bgMid, border: `1px solid ${C.line}`, borderRadius: 8, padding: 16 }}>
+          <div style={{ fontSize: 10, fontWeight: 600, color: C.gold, marginBottom: 12 }}>📅 Objectifs mensuels calculés</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 6 }}>
+            <div style={{ fontSize: 8, color: C.textLo, fontWeight: 600 }}>Mois</div>
+            <div style={{ fontSize: 8, color: C.indigo, fontWeight: 600 }}>{r1Label}</div>
+            <div style={{ fontSize: 8, color: C.green, fontWeight: 600 }}>{r2Label}</div>
+            <div style={{ fontSize: 8, color: C.gold, fontWeight: 600 }}>€</div>
+            {calculated.map(row => (
+              <React.Fragment key={row.month}>
+                <div style={{ fontSize: 9, color: C.textMid }}>{row.month}</div>
+                <div style={{ fontSize: 9, color: C.textHi }}>{row.r1}</div>
+                <div style={{ fontSize: 9, color: C.textHi }}>{row.r2}</div>
+                <div style={{ fontSize: 9, color: C.textHi }}>{(row.money / 100).toLocaleString('fr-FR')}€</div>
+              </React.Fragment>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
 
+type HistoryPoint = {
+  label: string
+  appels: number; contacts: number; rdv_pris: number; rdv_faits: number
+  obj_appels?: number; obj_contacts?: number; obj_rdv_pris?: number; obj_rdv_faits?: number
+}
+
+type ComparisonData = { week: number; year: number; appels: number; contacts: number; rdv_pris: number; rdv_faits: number }
+
 function SuiviTabContent() {
-  const [period, setPeriod] = useState<SuiviPeriod>('year')
+  const [period, setPeriod] = useState<SuiviPeriod>('week')
+  const [kpiData, setKpiData] = useState<KpiData | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  const [granularity, setGranularity] = useState<'week' | 'month'>('week')
+  const [history, setHistory] = useState<HistoryPoint[]>([])
+  const [historyLoading, setHistoryLoading] = useState(true)
+
+  const [compareWeek, setCompareWeek] = useState('')
+  const [comparison, setComparison] = useState<ComparisonData | null>(null)
+
+  const [selectedKpi, setSelectedKpi] = useState<'appels' | 'contacts' | 'rdv_pris' | 'rdv_faits'>('appels')
+
+  useEffect(() => {
+    setLoading(true)
+    fetch(`/api/global/kpi?period=${period}`)
+      .then(r => r.json())
+      .then(json => { if (json.success) setKpiData(json.data) })
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [period])
+
+  useEffect(() => {
+    setHistoryLoading(true)
+    fetch(`/api/global/kpi/history?granularity=${granularity}&weeks_back=12`)
+      .then(r => r.json())
+      .then(json => { if (json.success) setHistory(json.data.points) })
+      .catch(() => {})
+      .finally(() => setHistoryLoading(false))
+  }, [granularity])
+
+  const handleCompare = () => {
+    if (!compareWeek) return
+    const [y, w] = compareWeek.split('-W')
+    fetch(`/api/global/kpi/history?granularity=week&weeks_back=1&compare_week=${w}&compare_year=${y}`)
+      .then(r => r.json())
+      .then(json => { if (json.success) setComparison(json.data.comparison) })
+      .catch(() => {})
+  }
 
   const pBtn = (p: SuiviPeriod, label: string) => (
     <button
@@ -177,92 +331,253 @@ function SuiviTabContent() {
     >{label}</button>
   )
 
-  const numInp = (color: string) => ({
-    width: '100%', padding: 8, background: C.surface1, border: `1px solid ${C.line}`,
-    borderRadius: 6, color, fontSize: 14, fontWeight: 600, textAlign: 'center' as const,
-  })
+  const gBtn = (g: 'week' | 'month', label: string) => (
+    <button
+      key={g}
+      onClick={() => setGranularity(g)}
+      style={{
+        flex: 1, padding: 6,
+        background: granularity === g ? '#0d1a2e' : C.surface1,
+        border: `1px solid ${granularity === g ? C.indigo : C.line}`,
+        color: granularity === g ? C.indigo : C.textLo,
+        borderRadius: 4, fontSize: 8, fontWeight: granularity === g ? 600 : 500, cursor: 'pointer',
+      }}
+    >{label}</button>
+  )
+
+  const kpiBtn = (k: typeof selectedKpi, label: string, color: string) => (
+    <button
+      key={k}
+      onClick={() => setSelectedKpi(k)}
+      style={{
+        padding: '4px 8px',
+        background: selectedKpi === k ? `${color}20` : C.surface1,
+        border: `1px solid ${selectedKpi === k ? color : C.line}`,
+        color: selectedKpi === k ? color : C.textLo,
+        borderRadius: 4, fontSize: 8, fontWeight: selectedKpi === k ? 600 : 500, cursor: 'pointer',
+      }}
+    >{label}</button>
+  )
+
+  const tendanceIcon = (t: string) => t === 'up' ? '↗️' : t === 'down' ? '↘️' : '→'
+  const ecartColor = (e: number) => e >= 0 ? C.green : '#ff6b6b'
+
+  const barData = kpiData ? [
+    { categorie: 'Appels', objectif: kpiData.objectifs.appels, realise: kpiData.realise.appels },
+    { categorie: 'Contacts', objectif: kpiData.objectifs.contacts, realise: kpiData.realise.contacts },
+    { categorie: 'RDV Pris', objectif: kpiData.objectifs.rdv_pris, realise: kpiData.realise.rdv_pris },
+    { categorie: 'RDV Faits', objectif: kpiData.objectifs.rdv_faits, realise: kpiData.realise.rdv_faits },
+  ] : []
+
+  const kpiColors: Record<string, string> = { appels: C.green, contacts: C.indigo, rdv_pris: C.gold, rdv_faits: '#b07aee' }
+  const objKey = `obj_${selectedKpi}` as string
 
   return (
     <div>
       <div style={{ marginBottom: 16 }}>
         <div style={{ fontSize: 14, fontWeight: 600, color: C.textHi, marginBottom: 8 }}>📊 Suivi Objectifs vs Réalisations</div>
-        <div style={{ fontSize: 9, color: C.textLo }}>Compare tes objectifs planifiés avec tes résultats réels - Données modifiables</div>
+        <div style={{ fontSize: 9, color: C.textLo }}>Comparaison en temps réel, évolution historique, et comparateur de périodes</div>
       </div>
 
+      {/* Période actuelle */}
       <div style={{ background: C.bgMid, border: `1px solid ${C.line}`, borderRadius: 8, padding: 16, marginBottom: 16 }}>
-        <div style={{ fontSize: 10, fontWeight: 600, color: C.gold, marginBottom: 12 }}>🎯 Période d'analyse</div>
+        <div style={{ fontSize: 10, fontWeight: 600, color: C.gold, marginBottom: 12 }}>🎯 Période en cours</div>
         <div style={{ display: 'flex', gap: 8 }}>
-          {pBtn('year', 'Année 2026')}
-          {pBtn('month', 'Par mois')}
-          {pBtn('week', 'Par semaine')}
+          {pBtn('day', "Aujourd'hui")}
+          {pBtn('week', 'Semaine')}
+          {pBtn('month', 'Mois')}
         </div>
       </div>
 
+      {loading && <div style={{ textAlign: 'center', color: C.textLo, padding: 20, fontSize: 10 }}>Chargement...</div>}
+
+      {!loading && kpiData && !kpiData.has_objectives && (
+        <div style={{ background: '#1a1400', border: `1px solid ${C.gold}40`, borderRadius: 8, padding: 16, marginBottom: 16 }}>
+          <div style={{ fontSize: 10, color: C.gold, fontWeight: 600, marginBottom: 6 }}>⚠️ Objectifs non configurés</div>
+          <div style={{ fontSize: 9, color: C.textMid }}>Configure tes objectifs annuels dans l'onglet "Rétro Planning" pour voir la comparaison.</div>
+        </div>
+      )}
+
+      {!loading && kpiData && (
+        <>
+          {/* KPI Cards */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 10, marginBottom: 16 }}>
+            {([
+              { label: 'Appels', realise: kpiData.realise.appels, obj: kpiData.objectifs.appels, ecart: kpiData.ecarts.appels, tendance: kpiData.tendances.appels, prev: kpiData.prev_period.appels, color: C.green },
+              { label: 'Contacts', realise: kpiData.realise.contacts, obj: kpiData.objectifs.contacts, ecart: kpiData.ecarts.contacts, tendance: kpiData.tendances.contacts, prev: kpiData.prev_period.contacts, color: C.indigo },
+              { label: 'RDV Pris', realise: kpiData.realise.rdv_pris, obj: kpiData.objectifs.rdv_pris, ecart: kpiData.ecarts.rdv_pris, tendance: kpiData.tendances.rdv_pris, prev: kpiData.prev_period.rdv_pris, color: C.gold },
+              { label: 'RDV Faits', realise: kpiData.realise.rdv_faits, obj: kpiData.objectifs.rdv_faits, ecart: kpiData.ecarts.rdv_faits, tendance: kpiData.tendances.rdv_faits, prev: kpiData.prev_period.rdv_faits, color: '#b07aee' },
+            ] as Array<{ label: string; realise: number; obj: number; ecart: number; tendance: string; prev: number; color: string }>).map(({ label, realise, obj, ecart, tendance, prev, color }) => (
+              <div key={label} style={{ background: C.bgMid, border: `1px solid ${C.line}`, borderRadius: 8, padding: 14 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <div style={{ fontSize: 9, color: C.textMid }}>{label}</div>
+                  <div style={{ fontSize: 9 }}>{tendanceIcon(tendance)}</div>
+                </div>
+                <div style={{ fontSize: 22, fontWeight: 700, color: C.textHi, marginBottom: 4 }}>{realise}</div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ fontSize: 9, color: C.textLo }}>Obj: {obj}</div>
+                  <div style={{ fontSize: 9, fontWeight: 600, color: ecartColor(ecart) }}>{ecart >= 0 ? '+' : ''}{ecart}%</div>
+                </div>
+                <div style={{ background: C.surface3, height: 6, borderRadius: 3, marginTop: 8, overflow: 'hidden' }}>
+                  <div style={{ background: color, height: '100%', width: `${Math.min(obj > 0 ? (realise / obj) * 100 : 0, 100)}%`, transition: 'width 0.3s' }} />
+                </div>
+                <div style={{ fontSize: 8, color: C.textLo, marginTop: 6 }}>Période préc. : {prev}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* BarChart - Objectifs vs Réalisé */}
+          <div style={{ background: C.bgMid, border: `1px solid ${C.line}`, borderRadius: 8, padding: 16, marginBottom: 16 }}>
+            <div style={{ fontSize: 10, fontWeight: 600, color: C.gold, marginBottom: 12 }}>🎯 Objectifs vs Réalisé ({period === 'day' ? "aujourd'hui" : period === 'week' ? 'semaine' : 'mois'})</div>
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={barData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke={C.line} />
+                <XAxis dataKey="categorie" tick={{ fill: C.textLo, fontSize: 9 }} stroke={C.line} />
+                <YAxis tick={{ fill: C.textLo, fontSize: 10 }} stroke={C.line} />
+                <Tooltip contentStyle={{ background: C.surface2, border: `1px solid ${C.line}`, borderRadius: 6, fontSize: 11, color: C.text }} />
+                <Bar dataKey="objectif" fill={C.gold} name="Objectif" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="realise" fill={C.indigo} name="Réalisé" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Ratios */}
+          <div style={{ background: C.bgMid, border: `1px solid ${C.line}`, borderRadius: 8, padding: 16, marginBottom: 16 }}>
+            <div style={{ fontSize: 10, fontWeight: 600, color: C.gold, marginBottom: 12 }}>🔗 Taux de conversion</div>
+            <div style={{ display: 'flex', gap: 16 }}>
+              <div style={{ flex: 1, textAlign: 'center' }}>
+                <div style={{ fontSize: 20, fontWeight: 700, color: C.textHi }}>{kpiData.ratios.appels_to_rdv}%</div>
+                <div style={{ fontSize: 8, color: C.textLo, marginTop: 4 }}>Appels → RDV</div>
+              </div>
+              <div style={{ width: 1, background: C.line }} />
+              <div style={{ flex: 1, textAlign: 'center' }}>
+                <div style={{ fontSize: 20, fontWeight: 700, color: C.textHi }}>{kpiData.ratios.rdv_pris_to_faits}%</div>
+                <div style={{ fontSize: 8, color: C.textLo, marginTop: 4 }}>RDV Pris → Faits</div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ═══════ ÉVOLUTION HISTORIQUE ═══════ */}
       <div style={{ background: C.bgMid, border: `1px solid ${C.line}`, borderRadius: 8, padding: 16, marginBottom: 16 }}>
-        <div style={{ fontSize: 10, fontWeight: 600, color: C.gold, marginBottom: 8 }}>✍️ Données réelles (modifiables)</div>
-        <div style={{ fontSize: 8, color: C.textMid, marginBottom: 12 }}>Les valeurs sont auto-remplies mais tu peux les modifier manuellement</div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12 }}>
-          <div>
-            <label style={{ fontSize: 8, color: C.textLo, display: 'block', marginBottom: 4 }}>RDV R1 réalisés</label>
-            <input type="number" defaultValue={150} min={0} max={2000} style={numInp(C.indigo)} />
-          </div>
-          <div>
-            <label style={{ fontSize: 8, color: C.textLo, display: 'block', marginBottom: 4 }}>RDV R2 réalisés</label>
-            <input type="number" defaultValue={90} min={0} max={2000} style={numInp(C.green)} />
-          </div>
-          <div>
-            <label style={{ fontSize: 8, color: C.textLo, display: 'block', marginBottom: 4 }}>Collecte réelle (€)</label>
-            <input type="number" defaultValue={400000} min={0} max={10000000} step={1000} style={numInp(C.gold)} />
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <div style={{ fontSize: 10, fontWeight: 600, color: C.gold }}>📈 Évolution historique</div>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {gBtn('week', 'Par semaine')}
+            {gBtn('month', 'Par mois')}
           </div>
         </div>
-        <div style={{ marginTop: 12, display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 12 }}>
-          <div>
-            <label style={{ fontSize: 8, color: C.textLo, display: 'block', marginBottom: 4 }}>RDV Pris (réel)</label>
-            <input type="number" defaultValue={180} min={0} max={2000} style={numInp('#b07aee')} />
-          </div>
-          <div>
-            <label style={{ fontSize: 8, color: C.textLo, display: 'block', marginBottom: 4 }}>Proposition réelle (€)</label>
-            <input type="number" defaultValue={500000} min={0} max={10000000} step={1000} style={numInp(C.cyan)} />
-          </div>
+
+        <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
+          {kpiBtn('appels', 'Appels', C.green)}
+          {kpiBtn('contacts', 'Contacts', C.indigo)}
+          {kpiBtn('rdv_pris', 'RDV Pris', C.gold)}
+          {kpiBtn('rdv_faits', 'RDV Faits', '#b07aee')}
         </div>
+
+        {historyLoading ? (
+          <div style={{ textAlign: 'center', color: C.textLo, padding: 20, fontSize: 10 }}>Chargement...</div>
+        ) : history.length === 0 ? (
+          <div style={{ textAlign: 'center', color: C.textLo, padding: 20, fontSize: 10 }}>Aucune donnée sur cette période</div>
+        ) : (
+          <ResponsiveContainer width="100%" height={220}>
+            <LineChart data={history} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke={C.line} />
+              <XAxis dataKey="label" tick={{ fill: C.textLo, fontSize: 8 }} stroke={C.line} />
+              <YAxis tick={{ fill: C.textLo, fontSize: 9 }} stroke={C.line} />
+              <Tooltip contentStyle={{ background: C.surface2, border: `1px solid ${C.line}`, borderRadius: 6, fontSize: 10, color: C.text }} />
+              <Legend wrapperStyle={{ fontSize: 9 }} />
+              <Line type="monotone" dataKey={selectedKpi} stroke={kpiColors[selectedKpi]} strokeWidth={2} name="Réalisé" dot={{ r: 3 }} />
+              {history[0] && objKey in history[0] && (
+                <Line type="monotone" dataKey={objKey} stroke={`${kpiColors[selectedKpi]}80`} strokeWidth={1.5} strokeDasharray="5 5" name="Objectif" dot={false} />
+              )}
+            </LineChart>
+          </ResponsiveContainer>
+        )}
       </div>
 
-      {/* LineChart - Weekly Performance Trend */}
+      {/* ═══════ COMPARATEUR DE SEMAINES ═══════ */}
       <div style={{ background: C.bgMid, border: `1px solid ${C.line}`, borderRadius: 8, padding: 16, marginBottom: 16 }}>
-        <div style={{ fontSize: 10, fontWeight: 600, color: C.gold, marginBottom: 12 }}>📈 Tendance performance hebdomadaire</div>
-        <ResponsiveContainer width="100%" height={220}>
-          <LineChart data={WEEKLY_PERF_DATA} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke={C.line} />
-            <XAxis dataKey="semaine" tick={{ fill: C.textLo, fontSize: 10 }} stroke={C.line} />
-            <YAxis tick={{ fill: C.textLo, fontSize: 10 }} stroke={C.line} />
-            <Tooltip contentStyle={{ background: C.surface2, border: `1px solid ${C.line}`, borderRadius: 6, fontSize: 11, color: C.text }} />
-            <Line type="monotone" dataKey="score" stroke={C.gold} strokeWidth={2} dot={{ fill: C.gold, r: 4 }} name="Score %" />
-            <Line type="monotone" dataKey="rdv" stroke={C.indigo} strokeWidth={2} dot={{ fill: C.indigo, r: 3 }} name="RDV" />
-          </LineChart>
-        </ResponsiveContainer>
+        <div style={{ fontSize: 10, fontWeight: 600, color: C.gold, marginBottom: 12 }}>⚖️ Comparer avec une semaine</div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 12 }}>
+          <input
+            type="week"
+            value={compareWeek}
+            onChange={e => setCompareWeek(e.target.value)}
+            style={{ flex: 1, padding: 8, background: C.surface1, border: `1px solid ${C.line}`, borderRadius: 6, color: C.text, fontSize: 10 }}
+          />
+          <button
+            onClick={handleCompare}
+            disabled={!compareWeek}
+            style={{ padding: '8px 14px', background: compareWeek ? C.indigo : C.surface2, border: 'none', borderRadius: 6, color: '#fff', fontSize: 9, fontWeight: 600, cursor: compareWeek ? 'pointer' : 'not-allowed' }}
+          >
+            Comparer
+          </button>
+        </div>
+
+        {comparison && kpiData && (
+          <div>
+            <div style={{ fontSize: 9, color: C.textMid, marginBottom: 10 }}>Semaine {comparison.week} ({comparison.year}) vs semaine en cours</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8 }}>
+              {([
+                { label: 'Appels', current: kpiData.realise.appels, compare: comparison.appels, color: C.green },
+                { label: 'Contacts', current: kpiData.realise.contacts, compare: comparison.contacts, color: C.indigo },
+                { label: 'RDV Pris', current: kpiData.realise.rdv_pris, compare: comparison.rdv_pris, color: C.gold },
+                { label: 'RDV Faits', current: kpiData.realise.rdv_faits, compare: comparison.rdv_faits, color: '#b07aee' },
+              ]).map(({ label, current, compare, color }) => {
+                const diff = compare > 0 ? Math.round(((current - compare) / compare) * 100) : 0
+                return (
+                  <div key={label} style={{ background: C.bgDeep, borderRadius: 6, padding: 10, textAlign: 'center' }}>
+                    <div style={{ fontSize: 8, color: C.textLo, marginBottom: 4 }}>{label}</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color }}>{current}</div>
+                    <div style={{ fontSize: 9, color: C.textLo, margin: '4px 0' }}>vs {compare}</div>
+                    <div style={{ fontSize: 9, fontWeight: 600, color: diff >= 0 ? C.green : '#ff6b6b' }}>
+                      {diff >= 0 ? '+' : ''}{diff}%
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* BarChart - Objectifs vs Realise */}
+      {/* ═══════ VUE MULTI-KPI (toutes les courbes) ═══════ */}
       <div style={{ background: C.bgMid, border: `1px solid ${C.line}`, borderRadius: 8, padding: 16 }}>
-        <div style={{ fontSize: 10, fontWeight: 600, color: C.gold, marginBottom: 12 }}>🎯 Objectifs vs Réalisé (semaine en cours)</div>
-        <ResponsiveContainer width="100%" height={220}>
-          <BarChart data={OBJ_VS_REAL_DATA} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke={C.line} />
-            <XAxis dataKey="categorie" tick={{ fill: C.textLo, fontSize: 9 }} stroke={C.line} />
-            <YAxis tick={{ fill: C.textLo, fontSize: 10 }} stroke={C.line} />
-            <Tooltip contentStyle={{ background: C.surface2, border: `1px solid ${C.line}`, borderRadius: 6, fontSize: 11, color: C.text }} />
-            <Bar dataKey="objectif" fill={C.gold} name="Objectif" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="realise" fill={C.indigo} name="Réalisé" radius={[4, 4, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
+        <div style={{ fontSize: 10, fontWeight: 600, color: C.gold, marginBottom: 12 }}>📊 Vue d'ensemble — tous les KPI</div>
+        {historyLoading ? (
+          <div style={{ textAlign: 'center', color: C.textLo, padding: 20, fontSize: 10 }}>Chargement...</div>
+        ) : history.length === 0 ? (
+          <div style={{ textAlign: 'center', color: C.textLo, padding: 20, fontSize: 10 }}>Aucune donnée</div>
+        ) : (
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={history} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke={C.line} />
+              <XAxis dataKey="label" tick={{ fill: C.textLo, fontSize: 8 }} stroke={C.line} />
+              <YAxis tick={{ fill: C.textLo, fontSize: 9 }} stroke={C.line} />
+              <Tooltip contentStyle={{ background: C.surface2, border: `1px solid ${C.line}`, borderRadius: 6, fontSize: 10, color: C.text }} />
+              <Legend wrapperStyle={{ fontSize: 9 }} />
+              <Bar dataKey="appels" fill={C.green} name="Appels" radius={[2, 2, 0, 0]} />
+              <Bar dataKey="contacts" fill={C.indigo} name="Contacts" radius={[2, 2, 0, 0]} />
+              <Bar dataKey="rdv_pris" fill={C.gold} name="RDV Pris" radius={[2, 2, 0, 0]} />
+              <Bar dataKey="rdv_faits" fill="#b07aee" name="RDV Faits" radius={[2, 2, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        )}
       </div>
     </div>
   )
 }
 
 export default function GlobalPage() {
+  const router = useRouter()
   const [tab, setTab] = useState<GlobalTab>('synthese')
   const [kpi, setKpi] = useState<GlobalKpi | null>(null)
+  const [interpro, setInterpro] = useState<{ count: number; lastContact: string | null } | null>(null)
+  const [commerce, setCommerce] = useState<{ contracts: number; revenue: number; target: number } | null>(null)
+  const [weekScores, setWeekScores] = useState<{ label: string; pct: number; today: boolean }[] | null>(null)
+  const [dailyObj, setDailyObj] = useState<{ calls: number; contacts: number; rdv1: number; rdv2: number } | null>(null)
 
   useEffect(() => { saveLastSection('/global') }, [])
 
@@ -270,6 +585,23 @@ export default function GlobalPage() {
     fetch('/api/global/stats')
       .then(r => r.json())
       .then(json => { if (json.success) setKpi(json.data) })
+      .catch(() => {})
+    fetch('/api/global/interpro')
+      .then(r => r.json())
+      .then(json => { if (json.success) setInterpro(json.data) })
+      .catch(() => {})
+    fetch('/api/global/commerce')
+      .then(r => r.json())
+      .then(json => { if (json.success) setCommerce(json.data) })
+      .catch(() => {})
+    fetch('/api/global/kpi/week-scores')
+      .then(r => r.json())
+      .then(json => {
+        if (json.success) {
+          setWeekScores(json.data.scores)
+          setDailyObj(json.data.dailyObjectives)
+        }
+      })
       .catch(() => {})
   }, [])
 
@@ -290,13 +622,14 @@ export default function GlobalPage() {
     )
   }
 
-  const barDays = [
-    { label: 'Lun', pct: 85, height: 153, bg: '#4a3f1a', txtColor: '#999', today: false },
-    { label: 'Mar', pct: 75, height: 135, bg: '#5a4f2a', txtColor: '#aaa', today: false },
-    { label: 'Mer', pct: 55, height: 99,  bg: '#6a5f3a', txtColor: '#bbb', today: false },
-    { label: 'Jeu', pct: 70, height: 126, bg: '#8a7f5a', txtColor: '#ccc', today: false },
-    { label: 'Ven', pct: 68, height: 122, bg: '#aa9a6a', txtColor: '#fff', today: true },
-  ]
+  const barDays = (weekScores ?? []).map(s => ({
+    label: s.label,
+    pct: s.pct,
+    height: Math.max(Math.round((s.pct / 100) * 180), 10),
+    bg: s.pct >= 80 ? '#2a5a2a' : s.pct >= 50 ? '#5a4f2a' : s.pct > 0 ? '#4a3f1a' : C.surface1,
+    txtColor: s.today ? '#fff' : s.pct > 0 ? '#ccc' : C.textLo,
+    today: s.today,
+  }))
 
   return (
     <div style={{ background: C.bgDeep, minHeight: '100vh', padding: 16, color: C.text, fontFamily: 'JetBrains Mono, monospace' }}>
@@ -334,21 +667,23 @@ export default function GlobalPage() {
 
           {/* KPI row — données réelles */}
           {(() => {
-            const TARGET_CONTACTS = 10
+            const TARGET_CONTACTS = dailyObj ? (dailyObj.calls + dailyObj.contacts) : 10
             const TARGET_TASKS = 3
-            const contactsPct = kpi ? Math.min(Math.round(kpi.prospection.contacts_today / TARGET_CONTACTS * 100), 100) : null
+            const contactsPct = kpi ? Math.min(Math.round((kpi.prospection.calls_today + kpi.prospection.contacts_today) / TARGET_CONTACTS * 100), 100) : null
             const tasksPct    = kpi ? Math.min(Math.round(kpi.tasks.done_today / TARGET_TASKS * 100), 100) : null
             const perfJour    = contactsPct !== null && tasksPct !== null ? Math.round((contactsPct + tasksPct) / 2) : null
             const objAtteints = [
-              kpi ? kpi.prospection.contacts_today >= TARGET_CONTACTS : false,
+              kpi ? (kpi.prospection.calls_today + kpi.prospection.contacts_today) >= TARGET_CONTACTS : false,
               kpi ? kpi.tasks.done_today >= TARGET_TASKS : false,
+              dailyObj && kpi ? kpi.prospection.rdv1_today >= dailyObj.rdv1 : false,
             ].filter(Boolean).length
+            const totalObj = dailyObj ? 3 : 2
             return (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8, marginBottom: 16 }}>
                 {([
                   { label: 'Performance Jour',    value: perfJour !== null ? `${perfJour}%` : '–',  sub: perfJour === null ? 'Chargement…' : perfJour >= 80 ? '🟢 Excellente' : perfJour >= 50 ? '🟡 En cours' : '🔴 À rattraper', subColor: perfJour !== null && perfJour >= 80 ? C.green : C.gold },
                   { label: 'Prospects sem.',      value: kpi ? String(kpi.prospection.prospects_this_week) : '–', sub: 'Ajoutés cette semaine', subColor: C.green },
-                  { label: 'Objectifs atteints',  value: kpi ? `${objAtteints}/2` : '–', sub: 'Prospection · Tâches', subColor: C.gold },
+                  { label: 'Objectifs atteints',  value: kpi ? `${objAtteints}/${totalObj}` : '–', sub: 'Prospection · Tâches · RDV', subColor: C.gold },
                   { label: 'Tâches actives',      value: kpi ? String(kpi.tasks.active) : '–', sub: `${kpi?.tasks.this_week ?? '–'} cette semaine`, subColor: C.indigo },
                 ] as Array<{ label: string; value: string; sub: string; subColor: string }>).map(({ label, value, sub, subColor }) => (
                   <div key={label} style={{ background: C.surface1, border: `0.5px solid ${C.line}`, borderRadius: 8, padding: 12 }}>
@@ -367,8 +702,8 @@ export default function GlobalPage() {
             {/* Prospection */}
             <div style={{ background: C.bgMid, borderRadius: 8, padding: 16, border: `0.5px solid ${C.line}` }}>
               {(() => {
-                const TARGET_CONTACTS = 10
-                const contactsVal = kpi?.prospection.contacts_today ?? 0
+                const TARGET_CONTACTS = dailyObj ? (dailyObj.calls + dailyObj.contacts) : 10
+                const contactsVal = (kpi?.prospection.calls_today ?? 0) + (kpi?.prospection.contacts_today ?? 0)
                 const pct = Math.min(Math.round(contactsVal / TARGET_CONTACTS * 100), 100)
                 return (
                   <>
@@ -381,9 +716,15 @@ export default function GlobalPage() {
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div style={{ fontSize: 9, color: C.textMid }}>Appels passés auj.</div>
+                        <div style={{ fontSize: 9, color: C.textMid }}>Appels + Contacts auj.</div>
                         <div style={{ fontSize: 10, color: C.textHi, fontWeight: 600 }}>{contactsVal}<span style={{ color: C.textLo }}>/{TARGET_CONTACTS}</span></div>
                       </div>
+                      {kpi && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div style={{ fontSize: 9, color: C.textMid }}>RDV pris auj.</div>
+                          <div style={{ fontSize: 9, color: C.textLo }}>{kpi.prospection.rdv1_today}{dailyObj ? ` / ${dailyObj.rdv1}` : ''}</div>
+                        </div>
+                      )}
                       {kpi && (
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <div style={{ fontSize: 9, color: C.textMid }}>Prospects cette semaine</div>
@@ -391,7 +732,7 @@ export default function GlobalPage() {
                         </div>
                       )}
                     </div>
-                    <button style={{ width: '100%', marginTop: 10, padding: 6, background: '#0d1a0d', border: `0.5px solid ${C.green}40`, color: C.green, borderRadius: 4, fontSize: 8, cursor: 'pointer', fontWeight: 600 }}>
+                    <button onClick={() => router.push('/analytics')} style={{ width: '100%', marginTop: 10, padding: 6, background: '#0d1a0d', border: `0.5px solid ${C.green}40`, color: C.green, borderRadius: 4, fontSize: 8, cursor: 'pointer', fontWeight: 600 }}>
                       → Voir détails
                     </button>
                   </>
@@ -401,26 +742,35 @@ export default function GlobalPage() {
 
             {/* Interpro */}
             <div style={{ background: C.bgMid, borderRadius: 8, padding: 16, border: `0.5px solid ${C.line}` }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: C.gold }}>🤝 Interpro</div>
-                <div style={{ background: '#1a1400', color: C.gold, padding: '3px 10px', borderRadius: 8, fontSize: 10, fontWeight: 700 }}>67%</div>
-              </div>
-              <div style={{ background: C.surface3, height: 8, borderRadius: 4, marginBottom: 12, overflow: 'hidden' }}>
-                <div style={{ background: C.gold, height: '100%', width: '67%', transition: 'width 0.3s' }} />
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ fontSize: 9, color: C.textMid }}>Contacts ID</div>
-                  <div style={{ fontSize: 10, color: C.textHi, fontWeight: 600 }}>2<span style={{ color: C.textLo }}>/3</span></div>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ fontSize: 9, color: C.textMid }}>Dernière prise contact</div>
-                  <div style={{ fontSize: 9, color: C.textLo }}>Hier 14h</div>
-                </div>
-              </div>
-              <button style={{ width: '100%', marginTop: 10, padding: 6, background: '#1a1400', border: `0.5px solid ${C.gold}40`, color: C.gold, borderRadius: 4, fontSize: 8, cursor: 'pointer', fontWeight: 600 }}>
-                → Voir cercle
-              </button>
+              {(() => {
+                const TARGET_INTERPRO = 3
+                const interproCount = interpro?.count ?? 0
+                const pct = Math.min(Math.round(interproCount / TARGET_INTERPRO * 100), 100)
+                return (
+                  <>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: C.gold }}>🤝 Interpro</div>
+                      <div style={{ background: '#1a1400', color: C.gold, padding: '3px 10px', borderRadius: 8, fontSize: 10, fontWeight: 700 }}>{interpro ? `${pct}%` : '–'}</div>
+                    </div>
+                    <div style={{ background: C.surface3, height: 8, borderRadius: 4, marginBottom: 12, overflow: 'hidden' }}>
+                      <div style={{ background: C.gold, height: '100%', width: `${pct}%`, transition: 'width 0.3s' }} />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ fontSize: 9, color: C.textMid }}>Partenaires actifs</div>
+                        <div style={{ fontSize: 10, color: C.textHi, fontWeight: 600 }}>{interproCount}<span style={{ color: C.textLo }}>/{TARGET_INTERPRO}</span></div>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ fontSize: 9, color: C.textMid }}>Dernier contact</div>
+                        <div style={{ fontSize: 9, color: C.textLo }}>{interpro?.lastContact ?? '–'}</div>
+                      </div>
+                    </div>
+                    <button onClick={() => router.push('/cercle')} style={{ width: '100%', marginTop: 10, padding: 6, background: '#1a1400', border: `0.5px solid ${C.gold}40`, color: C.gold, borderRadius: 4, fontSize: 8, cursor: 'pointer', fontWeight: 600 }}>
+                      → Voir cercle
+                    </button>
+                  </>
+                )
+              })()}
             </div>
 
             {/* Tâches */}
@@ -455,7 +805,7 @@ export default function GlobalPage() {
                         </div>
                       )}
                     </div>
-                    <button style={{ width: '100%', marginTop: 10, padding: 6, background: '#0d1a2e', border: `0.5px solid ${C.indigo}40`, color: C.indigo, borderRadius: 4, fontSize: 8, cursor: 'pointer', fontWeight: 600 }}>
+                    <button onClick={() => router.push('/tasks')} style={{ width: '100%', marginTop: 10, padding: 6, background: '#0d1a2e', border: `0.5px solid ${C.indigo}40`, color: C.indigo, borderRadius: 4, fontSize: 8, cursor: 'pointer', fontWeight: 600 }}>
                       → Voir tâches
                     </button>
                   </>
@@ -465,26 +815,34 @@ export default function GlobalPage() {
 
             {/* Commerce */}
             <div style={{ background: C.bgMid, borderRadius: 8, padding: 16, border: `0.5px solid ${C.line}` }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: '#b07aee' }}>📚 Commerce</div>
-                <div style={{ background: '#140d1e', color: '#b07aee', padding: '3px 10px', borderRadius: 8, fontSize: 10, fontWeight: 700 }}>0%</div>
-              </div>
-              <div style={{ background: C.surface3, height: 8, borderRadius: 4, marginBottom: 12, overflow: 'hidden' }}>
-                <div style={{ background: '#b07aee', height: '100%', width: '0%', transition: 'width 0.3s' }} />
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ fontSize: 9, color: C.textMid }}>Vidéo du jour</div>
-                  <div style={{ fontSize: 10, color: C.textHi, fontWeight: 600 }}>0<span style={{ color: C.textLo }}>/1</span></div>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ fontSize: 9, color: C.textMid }}>Thème actuel</div>
-                  <div style={{ fontSize: 9, color: C.textLo }}>Découverte</div>
-                </div>
-              </div>
-              <button style={{ width: '100%', marginTop: 10, padding: 6, background: '#140d1e', border: '0.5px solid #b07aee40', color: '#b07aee', borderRadius: 4, fontSize: 8, cursor: 'pointer', fontWeight: 600 }}>
-                → Voir formation
-              </button>
+              {(() => {
+                const target = commerce?.target || 1
+                const pct = commerce ? Math.min(Math.round((commerce.revenue / target) * 100), 100) : 0
+                return (
+                  <>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: '#b07aee' }}>📚 Commerce</div>
+                      <div style={{ background: '#140d1e', color: '#b07aee', padding: '3px 10px', borderRadius: 8, fontSize: 10, fontWeight: 700 }}>{commerce ? `${pct}%` : '–'}</div>
+                    </div>
+                    <div style={{ background: C.surface3, height: 8, borderRadius: 4, marginBottom: 12, overflow: 'hidden' }}>
+                      <div style={{ background: '#b07aee', height: '100%', width: `${pct}%`, transition: 'width 0.3s' }} />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ fontSize: 9, color: C.textMid }}>Contrats ce mois</div>
+                        <div style={{ fontSize: 10, color: C.textHi, fontWeight: 600 }}>{commerce?.contracts ?? 0}</div>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ fontSize: 9, color: C.textMid }}>CA vs Objectif</div>
+                        <div style={{ fontSize: 9, color: C.textLo }}>{commerce ? `${(commerce.revenue / 1000).toFixed(0)}k / ${(commerce.target / 1000).toFixed(0)}k€` : '–'}</div>
+                      </div>
+                    </div>
+                    <button onClick={() => router.push('/commerce')} style={{ width: '100%', marginTop: 10, padding: 6, background: '#140d1e', border: '0.5px solid #b07aee40', color: '#b07aee', borderRadius: 4, fontSize: 8, cursor: 'pointer', fontWeight: 600 }}>
+                      → Voir formation
+                    </button>
+                  </>
+                )
+              })()}
             </div>
 
           </div>
@@ -519,16 +877,16 @@ export default function GlobalPage() {
 
           {/* Score explanation */}
           <div style={{ background: '#0a1929', border: '1px solid #0a66c240', borderRadius: 8, padding: 12 }}>
-            <div style={{ fontSize: 10, color: C.indigo, fontWeight: 600, marginBottom: 6 }}>🧮 Calcul du score global</div>
+            <div style={{ fontSize: 10, color: C.indigo, fontWeight: 600, marginBottom: 6 }}>🧮 Calcul du score</div>
             <div style={{ fontSize: 9, color: C.textMid, lineHeight: 1.5 }}>
-              <strong>Score Jour</strong> = Moyenne des 4 piliers (Prospection + Interpro + Tâches + Commerce) / 4<br />
-              <strong>Score Semaine</strong> = Moyenne des scores quotidiens de lundi à vendredi<br />
+              <strong>Score Jour</strong> = (Appels + Contacts + RDV pris + RDV faits) / objectifs journaliers calculés<br />
+              <strong>Score Semaine</strong> = Moyenne des scores quotidiens (Lun→Ven)<br />
               <br />
-              Chaque pilier a son propre objectif 100% :<br />
-              • Prospection : 10 contacts + 4 blocs = 100%<br />
-              • Interpro : 3 contacts ID = 100%<br />
-              • Tâches : 3 tâches faites = 100%<br />
-              • Commerce : 1 vidéo vue = 100%
+              Les objectifs journaliers sont calculés depuis tes objectifs annuels :<br />
+              • Objectif annuel × intensité du mois / total intensités<br />
+              • ÷ semaines du mois ÷ 5 jours ouvrés<br />
+              <br />
+              Configure tes objectifs dans l'onglet "Rétro Planning" pour personnaliser.
             </div>
           </div>
         </div>
@@ -538,12 +896,15 @@ export default function GlobalPage() {
       {tab === 'planning' && (
         <PlanningTabContent
           title="📅 Rétro Planning RDV Fait 2026"
+          r1Key="obj_rdv_faits_annuel"
+          r2Key="obj_rdv_pris_annuel"
+          moneyKey="obj_collecte_annuel"
           r1Label="RDV R1 annuel"
           r2Label="RDV R2 annuel"
           moneyLabel="Collecte annuelle (€)"
-          r1Default={240}
-          r2Default={144}
-          moneyDefault={600000}
+          r1Default={200}
+          r2Default={300}
+          moneyDefault={100000000}
         />
       )}
 
@@ -551,12 +912,15 @@ export default function GlobalPage() {
       {tab === 'rdvpris' && (
         <PlanningTabContent
           title="📅 Rétro RDV Pris 2026"
-          r1Label="RDV Pris R1 annuel"
-          r2Label="RDV Pris R2 annuel"
-          moneyLabel="Proposition annuelle (€)"
-          r1Default={240}
-          r2Default={144}
-          moneyDefault={600000}
+          r1Key="obj_rdv_pris_annuel"
+          r2Key="obj_appels_annuel"
+          moneyKey="obj_propositions_annuel"
+          r1Label="RDV Pris annuel"
+          r2Label="Appels annuel"
+          moneyLabel="Propositions annuelles"
+          r1Default={300}
+          r2Default={2400}
+          moneyDefault={100}
         />
       )}
 

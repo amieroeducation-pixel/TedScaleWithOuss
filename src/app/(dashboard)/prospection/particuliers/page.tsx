@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { C } from '@/lib/theme'
 
 type Status = 'Non contacté' | 'En cours' | 'Converti' | 'Perdu'
@@ -35,12 +35,38 @@ const MOCK_PARTICULIERS: Particulier[] = [
 const CSV_COLUMNS = ['nom', 'prenom', 'email', 'telephone', 'ville', 'age', 'patrimoine']
 
 export default function ParticuliersPage() {
-  const [particuliers, setParticuliers] = useState<Particulier[]>(MOCK_PARTICULIERS)
+  const [particuliers, setParticuliers] = useState<Particulier[]>([])
   const [preview, setPreview] = useState<string[][] | null>(null)
   const [mapping, setMapping] = useState<Record<string, string>>({})
   const [fileName, setFileName] = useState('')
   const [isDragActive, setIsDragActive] = useState(false)
   const [search, setSearch] = useState('')
+  const [importing, setImporting] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/prospects?source=particuliers&limit=200')
+      .then(r => r.json())
+      .then(json => {
+        if (json.success && Array.isArray(json.data)) {
+          setParticuliers(json.data.map((p: { id: string; full_name: string; email?: string; phone?: string; city?: string; pipeline_stage?: string }, i: number) => {
+            const parts = (p.full_name || '').split(' ')
+            const stageMap: Record<string, Status> = { a_contacter: 'Non contacté', contacte: 'En cours', rdv_planifie: 'En cours', proposition: 'En cours', converti: 'Converti', perdu: 'Perdu' }
+            return {
+              id: i + 1,
+              nom: parts.slice(1).join(' ') || parts[0] || '',
+              prenom: parts[0] || '',
+              email: p.email || '',
+              telephone: p.phone || '',
+              ville: p.city || '',
+              age: '',
+              patrimoine: '',
+              status: (stageMap[p.pipeline_stage || ''] || 'Non contacté') as Status,
+            }
+          }))
+        }
+      })
+      .catch(() => {})
+  }, [])
 
   const handleFile = useCallback((file: File) => {
     setFileName(file.name)
@@ -80,9 +106,8 @@ export default function ParticuliersPage() {
     if (file) handleFile(file)
   }
 
-  function confirmImport() {
-    const newParticuliers: Particulier[] = (preview?.slice(1) || []).map((row, i) => ({
-      id: Date.now() + i,
+  async function confirmImport() {
+    const rows = (preview?.slice(1) || []).map(row => ({
       nom: row[Number(mapping.nom)] || '',
       prenom: row[Number(mapping.prenom)] || '',
       email: row[Number(mapping.email)] || '',
@@ -90,12 +115,40 @@ export default function ParticuliersPage() {
       ville: row[Number(mapping.ville)] || '',
       age: row[Number(mapping.age)] || '',
       patrimoine: row[Number(mapping.patrimoine)] || '',
-      status: 'Non contacté' as Status,
-    })).filter(p => p.nom || p.email)
-    if (newParticuliers.length) setParticuliers(prev => [...newParticuliers, ...prev])
+    })).filter(r => r.nom || r.email)
+
+    if (!rows.length) return
+    setImporting(true)
+
+    const results: Particulier[] = []
+    for (const row of rows) {
+      const res = await fetch('/api/prospects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          full_name: `${row.prenom} ${row.nom}`.trim(),
+          email: row.email || undefined,
+          phone: row.telephone || undefined,
+          city: row.ville || undefined,
+          source: 'particuliers',
+          notes: row.patrimoine ? `Patrimoine: ${row.patrimoine}` : undefined,
+        }),
+      }).catch(() => null)
+      if (res && res.ok) {
+        results.push({
+          id: Date.now() + results.length,
+          nom: row.nom, prenom: row.prenom, email: row.email,
+          telephone: row.telephone, ville: row.ville, age: row.age,
+          patrimoine: row.patrimoine, status: 'Non contacté',
+        })
+      }
+    }
+
+    if (results.length) setParticuliers(prev => [...results, ...prev])
     setPreview(null)
     setFileName('')
     setMapping({})
+    setImporting(false)
   }
 
   function changeStatus(id: number, status: Status) {

@@ -58,6 +58,10 @@ const METIERS_CONFIG: Record<string, { label: string; naf: string }> = {
   // Comptabilité
   expert_comptable:     { label: 'Expert comptable',          naf: '69.20Z' },
   commissaire_comptes:  { label: 'Commissaire aux comptes',   naf: '69.20Z' },
+  // Immobilier / Conseil
+  agent_immobilier:     { label: 'Agent immobilier',           naf: '68.31Z' },
+  consultant:           { label: 'Consultant',                 naf: '70.22Z' },
+  coach_sportif:        { label: 'Coach sportif',              naf: '93.13Z' },
   // Autres professions libérales
   architecte:           { label: 'Architecte',                naf: '71.11Z' },
   geometre_expert:      { label: 'Géomètre-expert',           naf: '71.12B' },
@@ -163,6 +167,49 @@ type Prospect = {
   status: 'Non contacté'
   score: number
   source: string
+  already_in_crm?: boolean
+}
+
+// ── Scoring par profession ──
+const PROFESSION_SCORES: Record<string, number> = {
+  'Chirurgien': 95, 'Radiologue': 93, 'Cardiologue': 92,
+  'Dermatologue': 90, 'Ophtalmologue': 90, 'Chirurgien dentiste': 88,
+  'Pharmacien': 85, 'Gynécologue': 85, 'Neurologue': 85,
+  'Anesthésiste': 88, 'Oncologue': 90, 'Néphrologue': 85,
+  'Hématologue': 85, 'Endocrinologue': 85, 'Gastro-entérologue': 85,
+  'Pneumologue': 83, 'Urologue': 83, 'Rhumatologue': 82,
+  'ORL': 82, 'Pédiatre': 80, 'Allergologue': 80,
+  'Médecin généraliste': 80, 'Kinésithérapeute': 70,
+  'Orthophoniste': 68, 'Podologue': 65, 'Ergothérapeute': 65,
+  'Orthoptiste': 65, 'Infirmier libéral': 60, 'Sage femme': 65,
+  'Avocat': 75, 'Notaire': 80, 'Expert comptable': 82,
+  'Huissier de justice': 75, 'Commissaire aux comptes': 80,
+  'Architecte': 72, 'Vétérinaire': 68,
+  'Agent immobilier': 70, 'Consultant': 68, 'Coach sportif': 55,
+  'Ostéopathe': 62, 'Naturopathe': 55, 'Psychologue': 65,
+  'Psychothérapeute': 65, 'Acupuncteur': 58, 'Chiropracteur': 60,
+  'Diététicien': 55, 'Kinésiologue': 55, 'Homéopathe': 60,
+  'Géomètre-expert': 70, 'Orthodontiste': 88,
+}
+
+const ZONE_BONUS: [string[], number][] = [
+  [['paris 1', 'paris 2', 'paris 3', 'paris 4', 'paris 5', 'paris 6', 'paris 7', 'paris 8'], 10],
+  [['paris 9', 'paris 10', 'paris 16', 'neuilly', 'boulogne'], 7],
+  [['paris', 'vincennes', 'levallois', 'versailles'], 5],
+  [['92', 'hauts-de-seine'], 3],
+]
+
+function computeLeadScore(metier: string, ville: string): number {
+  const base = PROFESSION_SCORES[metier] ?? 65
+  const villeNorm = ville.toLowerCase().normalize('NFD').replace(/\p{Mn}/gu, '').trim()
+  let bonus = 0
+  for (const [zones, points] of ZONE_BONUS) {
+    if (zones.some(z => villeNorm.includes(z))) {
+      bonus = points
+      break
+    }
+  }
+  return Math.min(base + bonus, 100)
 }
 
 // ── Canal 1 + 2 : Data.gouv → enrichissement Pappers ──
@@ -288,7 +335,7 @@ async function canalDataGouv(
         pagesJaunesUrl: `https://www.pagesjaunes.fr/pagesblanches/recherche?quoiqui=${pjQuery}&ou=${pjVille}`,
         mapsUrl: `https://www.google.fr/maps/search/${encodeURIComponent(realMetier + ' ' + villeDisplay)}`,
         status: 'Non contacté' as const,
-        score: Math.round((60 + Math.random() * 35)) / 100,
+        score: computeLeadScore(realMetier, villeDisplay),
         source,
       }
     })
@@ -364,7 +411,7 @@ async function canalGooglePlaces(
               pagesJaunesUrl: `https://www.pagesjaunes.fr/pagesblanches/recherche?quoiqui=${pjQuery}&ou=${pjVille}`,
               mapsUrl: `https://www.google.fr/maps/place/?q=place_id:${place.place_id}`,
               status: 'Non contacté' as const,
-              score: Math.round((65 + Math.random() * 30)) / 100,
+              score: computeLeadScore(metierLabel, villeExtracted),
               source: 'Google Maps',
             } as Prospect
           } catch { return null }
@@ -425,8 +472,74 @@ export async function POST(request: NextRequest) {
     merged.push(p)
   }
 
-  // Ré-indexer les IDs et limiter au nombre demandé
-  const prospects = merged.slice(0, Math.max(parseInt(String(limite)), 1)).map((p, i) => ({ ...p, id: i + 1 }))
+  // ── Déduplication CRM : exclure les numéros déjà dans le CRM de l'utilisateur ──
+  // Charger les numéros existants dans prospects
+  const [crmRes, lostRes, callingRes] = await Promise.all([
+    supabase
+      .from('prospects')
+      .select('phone_normalized')
+      .eq('user_id', user.id)
+      .not('phone_normalized', 'is', null),
+    supabase
+      .from('prospects')
+      .select('phone_normalized')
+      .eq('user_id', user.id)
+      .eq('pipeline_stage', 'perdu')
+      .not('phone_normalized', 'is', null),
+    supabase
+      .from('calling_session_contacts')
+      .select('telephone')
+      .eq('user_id', user.id),
+  ])
 
-  return apiSuccess({ prospects, total: merged.length })
+  // Construire les sets de numéros normalisés
+  const crmPhones = new Set<string>()
+  const lostPhones = new Set<string>()
+
+  if (crmRes.data) {
+    for (const row of crmRes.data) {
+      if (row.phone_normalized) {
+        crmPhones.add(row.phone_normalized.replace(/[\s.\-]/g, ''))
+      }
+    }
+  }
+  if (lostRes.data) {
+    for (const row of lostRes.data) {
+      if (row.phone_normalized) {
+        lostPhones.add(row.phone_normalized.replace(/[\s.\-]/g, ''))
+      }
+    }
+  }
+  if (callingRes.data) {
+    for (const row of callingRes.data) {
+      if (row.telephone) {
+        const norm = normalizePhoneFR(row.telephone)
+        if (norm) crmPhones.add(norm.replace(/[\s.\-]/g, ''))
+      }
+    }
+  }
+
+  // Filtrer les résultats
+  let excluded_already_in_crm = 0
+  let excluded_lost = 0
+  const deduped: Prospect[] = []
+
+  for (const p of merged) {
+    const normPhone = p.telephone.replace(/[\s.\-]/g, '')
+    if (lostPhones.has(normPhone)) {
+      excluded_lost++
+      continue
+    }
+    if (crmPhones.has(normPhone)) {
+      excluded_already_in_crm++
+      // On pourrait les inclure en grisé, mais on les exclut pour ne pas polluer
+      continue
+    }
+    deduped.push(p)
+  }
+
+  // Ré-indexer les IDs et limiter au nombre demandé
+  const prospects = deduped.slice(0, Math.max(parseInt(String(limite)), 1)).map((p, i) => ({ ...p, id: i + 1 }))
+
+  return apiSuccess({ prospects, total: deduped.length, excluded_already_in_crm, excluded_lost })
 }

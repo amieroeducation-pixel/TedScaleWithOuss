@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { apiSuccess, apiError, apiUnauthorized } from '@/lib/api'
 
-export async function PUT(
+export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -11,7 +11,7 @@ export async function PUT(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return apiUnauthorized()
 
-  let body: { titre?: string; contenu?: string; is_default?: boolean }
+  let body: { metier?: string; titre?: string; contenu?: string; is_default?: boolean }
   try { body = await request.json() } catch { return apiError('Corps invalide', 400) }
 
   if (body.is_default) {

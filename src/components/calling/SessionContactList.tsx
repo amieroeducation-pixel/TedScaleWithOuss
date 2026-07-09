@@ -65,7 +65,7 @@ export default function SessionContactList({ contacts, activeId, onSelect }: Pro
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 10, color: C.textHi, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.nom}</div>
-          <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 7.5, color: C.textLo }}>{c.ville}</div>
+          <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 7.5, color: C.textLo }}>{c.telephone} · {c.ville}</div>
         </div>
         <span style={{ fontSize: 12, flexShrink: 0 }}>{cfg.emoji}</span>
       </div>

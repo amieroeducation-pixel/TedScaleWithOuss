@@ -61,7 +61,7 @@ type TodayTab = 'prospection' | 'relances'
 // ─── Relances column types ─────────────────────────────────────────────────
 type RelanceStatus = 'arappeler' | 'appelee' | 'replanifier' | 'terminee'
 interface Relance {
-  id: number; name: string; priority: 1 | 2 | 3; status: RelanceStatus; note?: string
+  id: string; name: string; priority: 1 | 2 | 3; status: RelanceStatus; note?: string
 }
 
 const BLOCK_DURATION = 52 * 60 // 52 minutes in seconds
@@ -609,6 +609,8 @@ export default function TodayPage() {
       const elapsed = Math.floor((Date.now() - stored.startedAt) / 1000)
       const resumeSec = Math.min(stored.timerSec + elapsed, BLOCK_DURATION - 1)
       setTimerSec(resumeSec)
+      // Auto-resume: start the interval since it was running before page reload
+      setTimerRunning(true)
     } else {
       setTimerSec(stored.timerSec)
     }
@@ -620,7 +622,7 @@ export default function TodayPage() {
     setTargetForm(t)
   }, [])
 
-  // ─── Agenda éditable ────────────────────────────────────────────────────────
+  // ─── Agenda éditable — persisted in Supabase via /api/today/agenda ─────────
   const [agendaEvents, setAgendaEvents] = useState<AgendaEvent[]>([])
   const [showAgendaModal, setShowAgendaModal] = useState(false)
   const [agendaForm, setAgendaForm] = useState({ time: '09:00', title: '', type: 'rdv' as AgendaEventType })
@@ -632,16 +634,29 @@ export default function TodayPage() {
     setCalls(c.calls)
     setRdv1(c.rdv1)
     setRdv2(c.rdv2)
-    setAgendaEvents(loadDayAgenda(todayDateKey()))
   }, [])
 
-  const startTimer = () => {
-    if (timerRunning) return
-    setTimerRunning(true)
+  // Load agenda from DB
+  useEffect(() => {
+    const dk = todayDateKey()
+    fetch(`/api/today/agenda?date=${dk}`)
+      .then(r => r.json())
+      .then(j => { if (j.data) setAgendaEvents(j.data) })
+      .catch(() => {
+        // Fallback to localStorage if API fails
+        setAgendaEvents(loadDayAgenda(dk))
+      })
+  }, [])
+
+  // Effect-based timer: starts/stops interval based on timerRunning state
+  useEffect(() => {
+    if (!timerRunning) {
+      if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null }
+      return
+    }
     timerRef.current = setInterval(() => {
       setTimerSec(s => {
         if (s + 1 >= BLOCK_DURATION) {
-          clearInterval(timerRef.current!)
           setTimerRunning(false)
           setBlocksCompleted(b => {
             const next = Math.min(b + 1, 6)
@@ -660,16 +675,22 @@ export default function TodayPage() {
         return s + 1
       })
     }, 1000)
+    return () => { if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null } }
+  }, [timerRunning, celebrate])
+
+  const startTimer = () => {
+    if (timerRunning) return
+    setTimerRunning(true)
+    saveTimer(timerSec, true, Date.now() - timerSec * 1000)
   }
 
   const pauseTimer = () => {
-    if (timerRef.current) clearInterval(timerRef.current)
     setTimerRunning(false)
     setTimerSec(s => { saveTimer(s, false, 0); return s })
   }
 
   const completeBlock = () => {
-    pauseTimer()
+    setTimerRunning(false)
     setTimerSec(0)
     saveTimer(0, false, 0)
     setBlocksCompleted(b => {
@@ -680,11 +701,17 @@ export default function TodayPage() {
         else if (next === 5) celebrate('objectif_blocs', 'ENCORE UN !')
         else celebrate('appel_passe')
       }, 0)
+      // POST session duration to daily_kpis
+      fetch('/api/today/kpis', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ blocks: next }),
+      }).catch(() => {})
       return next
     })
   }
 
-  // Counters — persistés en localStorage par jour
+  // Counters — source de vérité = DB, localStorage = cache
   const COUNTERS_KEY = `today_counters_${new Date().toDateString()}`
   function loadCounters() {
     try { const s = localStorage.getItem(COUNTERS_KEY); if (s) return JSON.parse(s) } catch { /* ignore */ }
@@ -694,16 +721,52 @@ export default function TodayPage() {
   const [calls, setCalls] = useState(0)
   const [rdv1, setRdv1] = useState(0)
   const [rdv2, setRdv2] = useState(0)
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const initialLoadDone = useRef(false)
+
+  // Charger depuis DB au mount
+  useEffect(() => {
+    fetch('/api/today/kpis')
+      .then(r => r.json())
+      .then(j => {
+        if (j.data?.kpi) {
+          setContacts(j.data.kpi.contacts)
+          setCalls(j.data.kpi.calls)
+          setRdv1(j.data.kpi.rdv1)
+          setRdv2(j.data.kpi.rdv2)
+          setBlocksCompleted(j.data.kpi.blocks)
+        }
+        if (j.data?.targets) {
+          setTargets(j.data.targets)
+          setTargetForm(j.data.targets)
+        }
+        initialLoadDone.current = true
+      })
+      .catch(() => {
+        const c = loadCounters()
+        setContacts(c.contacts); setCalls(c.calls); setRdv1(c.rdv1); setRdv2(c.rdv2)
+        initialLoadDone.current = true
+      })
+  }, [])
 
   const contactPct = Math.round((contacts / targets.contacts) * 100)
   const callPct    = Math.round((calls    / targets.calls)    * 100)
   const rdv1Pct    = Math.round((rdv1     / targets.rdv1)     * 100)
   const rdv2Pct    = Math.round((rdv2     / targets.rdv2)     * 100)
 
-  // Sauvegarde des compteurs à chaque changement
+  // Debounce 2s — sauvegarde DB + localStorage à chaque changement
   useEffect(() => {
+    if (!initialLoadDone.current) return
     try { localStorage.setItem(COUNTERS_KEY, JSON.stringify({ contacts, calls, rdv1, rdv2 })) } catch { /* ignore */ }
-  }, [contacts, calls, rdv1, rdv2])
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
+    saveTimeoutRef.current = setTimeout(() => {
+      fetch('/api/today/kpis', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contacts, calls, rdv1, rdv2, blocks: blocksCompleted }),
+      }).catch(() => {})
+    }, 2000)
+  }, [contacts, calls, rdv1, rdv2, blocksCompleted])
 
   // ─── Wrapped setters — déclenchent une célébration quand l'objectif est atteint ──
   const setContactsW = useCallback((fn: (v: number) => number) => {
@@ -768,20 +831,44 @@ export default function TodayPage() {
     setShowTargetModal(false)
   }
 
-  // Relances
+  // Relances — persisted in Supabase via /api/today/relances
   const [relances, setRelances] = useState<Relance[]>([])
+  const [relancesLoading, setRelancesLoading] = useState(true)
   const [showRelanceModal, setShowRelanceModal] = useState(false)
   const [newRelance, setNewRelance] = useState({ name: '', priority: 1 as 1 | 2 | 3, note: '' })
 
-  const addRelance = () => {
+  // Load relances from DB on mount
+  useEffect(() => {
+    fetch('/api/today/relances')
+      .then(r => r.json())
+      .then(j => { if (j.data) setRelances(j.data) })
+      .catch(() => {})
+      .finally(() => setRelancesLoading(false))
+  }, [])
+
+  const addRelance = async () => {
     if (!newRelance.name.trim()) return
-    setRelances(r => [...r, { id: Date.now(), name: newRelance.name, priority: newRelance.priority, status: 'arappeler', note: newRelance.note }])
+    try {
+      const res = await fetch('/api/today/relances', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newRelance.name, priority: newRelance.priority, note: newRelance.note }),
+      })
+      const j = await res.json()
+      if (j.data) setRelances(r => [...r, j.data])
+    } catch { /* ignore */ }
     setNewRelance({ name: '', priority: 1, note: '' })
     setShowRelanceModal(false)
   }
 
-  const moveRelance = (id: number, status: RelanceStatus) => {
+  const moveRelance = (id: string, status: RelanceStatus) => {
     setRelances(r => r.map(rel => rel.id === id ? { ...rel, status } : rel))
+    // Persist status change
+    fetch('/api/today/relances', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, status }),
+    }).catch(() => {})
   }
 
   const relancesByCol = (col: RelanceStatus) => relances.filter(r => r.status === col)
@@ -1097,9 +1184,8 @@ export default function TodayPage() {
                           >📲</a>
                           <button
                             onClick={() => {
-                              const next = agendaEvents.filter(e => e.id !== ev.id)
-                              setAgendaEvents(next)
-                              saveDayAgenda(todayDateKey(), next)
+                              setAgendaEvents(prev => prev.filter(e => e.id !== ev.id))
+                              fetch(`/api/today/agenda?id=${ev.id}`, { method: 'DELETE' }).catch(() => {})
                             }}
                             style={{ background: 'none', border: 'none', color: C.textVlo, cursor: 'pointer', fontSize: 10, padding: '0 2px' }}
                           >✕</button>
@@ -1123,6 +1209,7 @@ export default function TodayPage() {
       {/* ─── RELANCES ─── */}
       {tab === 'relances' && (
         <div>
+          {relancesLoading && <div style={{ fontSize: 11, color: C.textLo, marginBottom: 12 }}>Chargement des relances...</div>}
           {/* KPI + add button */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8, flex: 1 }}>
@@ -1337,11 +1424,24 @@ export default function TodayPage() {
             <div style={{ display: 'flex', gap: 8 }}>
               <button onClick={() => setShowAgendaModal(false)} style={{ flex: 1, padding: 10, borderRadius: 8, background: C.surface1, border: `1px solid ${C.line}`, color: C.textLo, fontFamily: 'Oswald,sans-serif', fontSize: 11, cursor: 'pointer' }}>ANNULER</button>
               <button
-                onClick={() => {
+                onClick={async () => {
                   if (!agendaForm.title.trim()) return
-                  const next = [...agendaEvents, { id: Date.now().toString(), time: agendaForm.time, title: agendaForm.title.trim(), type: agendaForm.type }]
-                  setAgendaEvents(next)
-                  saveDayAgenda(todayDateKey(), next)
+                  try {
+                    const res = await fetch('/api/today/agenda', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ title: agendaForm.title.trim(), time: agendaForm.time, type: agendaForm.type, date: todayDateKey() }),
+                    })
+                    const j = await res.json()
+                    if (j.data) {
+                      setAgendaEvents(prev => [...prev, j.data])
+                    }
+                  } catch {
+                    // Fallback: add locally
+                    const next = [...agendaEvents, { id: Date.now().toString(), time: agendaForm.time, title: agendaForm.title.trim(), type: agendaForm.type }]
+                    setAgendaEvents(next)
+                    saveDayAgenda(todayDateKey(), next)
+                  }
                   setAgendaForm(f => ({ ...f, title: '' }))
                   setShowAgendaModal(false)
                 }}

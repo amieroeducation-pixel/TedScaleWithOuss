@@ -3,6 +3,7 @@ import { addDays, startOfDay, endOfDay, format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import { verifyCronSecret } from '@/lib/cron/auth'
 import { logCronRun } from '@/lib/cron/logger'
+import { isCronEnabled } from '@/lib/cron/toggles'
 import { createSupabaseCronClient } from '@/lib/supabase/cron-client'
 import { sendBrevoEmail, sendBrevoSms } from '@/lib/sequences/brevo'
 import { sendSectionNotification } from '@/lib/telegram/bot'
@@ -50,6 +51,10 @@ async function sendWhatsAppMessage(
 export async function GET(req: NextRequest) {
   const authError = verifyCronSecret(req)
   if (authError) return authError
+
+  if (!(await isCronEnabled('rdv-reminder'))) {
+    return apiSuccess({ status: 'disabled', message: 'Cron désactivé par l\'utilisateur' })
+  }
 
   const supabase = createSupabaseCronClient()
   const { data: users, error } = await supabase

@@ -29,7 +29,7 @@ export default function SessionContactCard({ contact, script, objections, onUpda
   const [note, setNote] = useState(contact.note ?? '')
   const [rappelDate, setRappelDate] = useState(contact.rappel_date?.split('T')[0] ?? '')
   const [scriptOpen, setScriptOpen] = useState(true)
-  const [objectionsOpen, setObjectionsOpen] = useState(false)
+  const [objectionsOpen, setObjectionsOpen] = useState(true)
   const [saving, setSaving] = useState(false)
 
   async function setStatut(statut_appel: SessionContact['statut_appel']) {
@@ -157,27 +157,30 @@ export default function SessionContactCard({ contact, script, objections, onUpda
       </div>
 
       {/* Objections accordéon */}
-      {objections.length > 0 && (
-        <div style={{ background: C.surface1, borderRadius: 8, border: `1px solid ${C.lineSoft}`, overflow: 'hidden' }}>
-          <button
-            onClick={() => setObjectionsOpen(o => !o)}
-            style={{ width: '100%', padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'transparent', border: 'none', cursor: 'pointer', color: C.textHi }}
-          >
-            <span style={{ fontFamily: 'Oswald,sans-serif', fontSize: 10, fontWeight: 600 }}>❓ OBJECTIONS</span>
-            <span style={{ fontSize: 10, color: C.textLo }}>{objectionsOpen ? '▼' : '▶'}</span>
-          </button>
-          {objectionsOpen && (
-            <div style={{ borderTop: `1px solid ${C.lineSoft}`, padding: '8px 12px 12px' }}>
-              {objections.map(o => (
-                <div key={o.id} style={{ marginBottom: 8, background: C.bgMid, borderRadius: 6, padding: '7px 10px' }}>
-                  <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.cyan, fontWeight: 600, marginBottom: 3 }}>❓ {o.question}</div>
-                  <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.textMid, lineHeight: 1.5 }}>💬 {o.reponse}</div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+      <div style={{ background: C.surface1, borderRadius: 8, border: `1px solid ${C.lineSoft}`, overflow: 'hidden' }}>
+        <button
+          onClick={() => setObjectionsOpen(o => !o)}
+          style={{ width: '100%', padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'transparent', border: 'none', cursor: 'pointer', color: C.textHi }}
+        >
+          <span style={{ fontFamily: 'Oswald,sans-serif', fontSize: 10, fontWeight: 600 }}>❓ OBJECTIONS ({objections.length})</span>
+          <span style={{ fontSize: 10, color: C.textLo }}>{objectionsOpen ? '▼' : '▶'}</span>
+        </button>
+        {objectionsOpen && (
+          <div style={{ borderTop: `1px solid ${C.lineSoft}`, padding: '8px 12px 12px' }}>
+            {objections.length === 0 ? (
+              <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.textLo, fontStyle: 'italic', textAlign: 'center', padding: '8px 0' }}>
+                Aucune objection configurée — rendez-vous dans{' '}
+                <a href="/settings" style={{ color: C.cyan, textDecoration: 'none' }}>Paramètres › Scripts</a>.
+              </div>
+            ) : objections.map(o => (
+              <div key={o.id} style={{ marginBottom: 8, background: C.bgMid, borderRadius: 6, padding: '7px 10px' }}>
+                <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.cyan, fontWeight: 600, marginBottom: 3 }}>❓ {o.question}</div>
+                <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.textMid, lineHeight: 1.5 }}>💬 {o.reponse}</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 import { C } from '@/lib/theme'
 import { useUserSettings, UserSettings } from '@/hooks/useUserSettings'
 
-type Tab = 'general' | 'kpi' | 'notifications' | 'integrations' | 'sections' | 'mobile' | 'sequences' | 'triggers' | 'scripts'
+type Tab = 'general' | 'kpi' | 'notifications' | 'integrations' | 'sections' | 'mobile' | 'sequences' | 'variantes' | 'triggers' | 'scripts'
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'general', label: 'Général' },
@@ -15,6 +15,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'sections', label: '👁️ Sections' },
   { id: 'mobile', label: '📱 Mobile' },
   { id: 'sequences', label: '🔗 Séquences' },
+  { id: 'variantes', label: '🎯 Variantes' },
   { id: 'triggers', label: '⚡ Triggers' },
   { id: 'scripts', label: '📞 Scripts' },
 ]
@@ -1125,25 +1126,34 @@ function TabSequences() {
                 <div style={{ fontSize: 9, color: C.textLo, marginBottom: 8, fontFamily: 'JetBrains Mono,monospace' }}>Aucune étape. Ajoute la première.</div>
               )}
               {t.steps.map(step => (
-                <div key={step.id} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6 }}>
-                  <span style={{ fontSize: 9, color: C.gold, width: 32, textAlign: 'center', fontFamily: 'JetBrains Mono,monospace', flexShrink: 0 }}>J+{step.delay_days}</span>
-                  <select
-                    value={step.channel}
-                    onChange={e => patchStep(t.id, step.id, { channel: e.target.value })}
-                    style={{ background: C.surface2, color: C.text, border: `1px solid ${C.line}`, borderRadius: 4, fontSize: 10, padding: '3px 6px', fontFamily: 'JetBrains Mono,monospace' }}
-                  >
-                    {CHANNEL_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                  <input
-                    type="number"
-                    value={step.delay_days}
-                    min={0}
-                    max={365}
-                    onChange={e => patchStep(t.id, step.id, { delay_days: Number(e.target.value) })}
-                    style={{ width: 50, background: C.surface2, color: C.gold, border: `1px solid ${C.line}`, borderRadius: 4, fontSize: 10, textAlign: 'center', fontFamily: 'JetBrains Mono,monospace', padding: '3px 4px' }}
+                <div key={step.id} style={{ marginBottom: 10, padding: 8, background: C.surface1, borderRadius: 6, border: `1px solid ${C.lineSoft}` }}>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6 }}>
+                    <span style={{ fontSize: 9, color: C.gold, width: 32, textAlign: 'center', fontFamily: 'JetBrains Mono,monospace', flexShrink: 0 }}>J+{step.delay_days}</span>
+                    <select
+                      value={step.channel}
+                      onChange={e => patchStep(t.id, step.id, { channel: e.target.value })}
+                      style={{ background: C.surface2, color: C.text, border: `1px solid ${C.line}`, borderRadius: 4, fontSize: 10, padding: '3px 6px', fontFamily: 'JetBrains Mono,monospace' }}
+                    >
+                      {CHANNEL_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                    <input
+                      type="number"
+                      value={step.delay_days}
+                      min={0}
+                      max={365}
+                      onChange={e => patchStep(t.id, step.id, { delay_days: Number(e.target.value) })}
+                      style={{ width: 50, background: C.surface2, color: C.gold, border: `1px solid ${C.line}`, borderRadius: 4, fontSize: 10, textAlign: 'center', fontFamily: 'JetBrains Mono,monospace', padding: '3px 4px' }}
+                    />
+                    <span style={{ fontSize: 9, color: C.textLo, fontFamily: 'JetBrains Mono,monospace' }}>jours</span>
+                    <SetBtn color={C.cyan} bg="#1f0d0d" onClick={() => deleteStep(t.id, step.id)}>x</SetBtn>
+                  </div>
+                  <textarea
+                    value={step.message_template ?? ''}
+                    onChange={e => patchStep(t.id, step.id, { message_template: e.target.value })}
+                    placeholder="Contenu du message... Variables : {{prenom}}, {{nom}}, {{profession}}, {{ville}}, {{heure}}, {{date}}"
+                    rows={3}
+                    style={{ width: '100%', background: C.bgMid, color: C.textMid, border: `1px solid ${C.line}`, borderRadius: 4, fontSize: 10, fontFamily: 'JetBrains Mono,monospace', padding: '6px 8px', resize: 'vertical', boxSizing: 'border-box' as const }}
                   />
-                  <span style={{ fontSize: 9, color: C.textLo, fontFamily: 'JetBrains Mono,monospace' }}>jours</span>
-                  <SetBtn color={C.cyan} bg="#1f0d0d" onClick={() => deleteStep(t.id, step.id)}>x</SetBtn>
                 </div>
               ))}
               <div style={{ marginTop: 8 }}>
@@ -1600,8 +1610,219 @@ export default function SettingsPage() {
       {activeTab === 'sections' && <TabSections />}
       {activeTab === 'mobile' && <TabMobile />}
       {activeTab === 'sequences' && <TabSequences />}
+      {activeTab === 'variantes' && <TabVariantes />}
       {activeTab === 'triggers' && <TabTriggers />}
       {activeTab === 'scripts' && <TabScripts />}
     </>
+  )
+}
+
+// ========== TAB VARIANTES ==========
+type Variant = string
+type VariantStep = {
+  step_order: number
+  channel: string
+  delay_days: number
+  variants: Variant[]
+}
+type VariantSequence = {
+  name: string
+  steps: VariantStep[]
+}
+
+function TabVariantes() {
+  const [sequences, setSequences] = useState<VariantSequence[]>([])
+  const [loading, setLoading] = useState(true)
+  const [selectedSeq, setSelectedSeq] = useState<string | null>(null)
+  const [selectedStep, setSelectedStep] = useState<number | null>(null)
+  const [selectedVar, setSelectedVar] = useState(0)
+
+  useEffect(() => {
+    fetch('/api/crm/sequences/seed-library')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.data) {
+          setSequences(data.data)
+          if (data.data.length > 0) setSelectedSeq(data.data[0].name)
+        }
+        setLoading(false)
+      })
+      .catch(() => setLoading(false))
+  }, [])
+
+  const currentSeq = sequences.find(s => s.name === selectedSeq)
+  const currentStep = currentSeq?.steps.find(st => st.step_order === selectedStep)
+
+  if (loading) {
+    return <div style={{ padding: 20, color: C.text }}>Chargement des variantes...</div>
+  }
+
+  return (
+    <div>
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: C.textHi, marginBottom: 6 }}>
+          Variantes de Messages — Style Laetitia Fall
+        </div>
+        <div style={{ fontSize: 10, color: C.textLo }}>
+          Comparez 5-6 variantes par step • Cliquez "Activer" pour utiliser
+        </div>
+      </div>
+
+      {/* Liste séquences */}
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ fontSize: 10, fontWeight: 600, color: C.textLo, textTransform: 'uppercase', marginBottom: 10 }}>
+          Séquences ({sequences.length})
+        </div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {sequences.map(seq => (
+            <button
+              key={seq.name}
+              onClick={() => {
+                setSelectedSeq(seq.name)
+                setSelectedStep(null)
+              }}
+              style={{
+                padding: '8px 14px',
+                background: selectedSeq === seq.name ? C.indigo : C.surface1,
+                border: `1px solid ${selectedSeq === seq.name ? C.indigo : C.line}`,
+                borderRadius: 6,
+                color: selectedSeq === seq.name ? C.textHi : C.text,
+                fontSize: 10,
+                fontWeight: 500,
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+              }}
+            >
+              {seq.name}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Steps de la séquence sélectionnée */}
+      {currentSeq && (
+        <>
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ fontSize: 10, fontWeight: 600, color: C.textLo, textTransform: 'uppercase', marginBottom: 10 }}>
+              Steps — {currentSeq.name}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 10 }}>
+              {currentSeq.steps.map(step => (
+                <div
+                  key={step.step_order}
+                  onClick={() => {
+                    setSelectedStep(step.step_order)
+                    setSelectedVar(0)
+                  }}
+                  style={{
+                    padding: '10px 12px',
+                    background: selectedStep === step.step_order ? C.surface2 : C.surface1,
+                    border: `1px solid ${selectedStep === step.step_order ? C.gold : C.line}`,
+                    borderRadius: 6,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  <div style={{ fontSize: 9, fontWeight: 600, color: C.textHi, marginBottom: 3 }}>
+                    J+{step.delay_days} • {step.channel.toUpperCase()}
+                  </div>
+                  <div style={{ fontSize: 8, color: C.textLo }}>
+                    {step.variants.length} variantes
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Variantes du step sélectionné */}
+          {currentStep && (
+            <div style={{
+              background: C.surface1,
+              border: `1px solid ${C.line}`,
+              borderRadius: 8,
+              padding: 16,
+            }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: C.textHi, marginBottom: 12 }}>
+                Variantes — Step {currentStep.step_order} ({currentStep.channel.toUpperCase()}, J+{currentStep.delay_days})
+              </div>
+
+              {/* Sélecteur variantes */}
+              <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
+                {currentStep.variants.map((_, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setSelectedVar(idx)}
+                    style={{
+                      padding: '6px 12px',
+                      background: selectedVar === idx ? C.gold : C.surface2,
+                      border: `1px solid ${selectedVar === idx ? C.gold : C.line}`,
+                      borderRadius: 4,
+                      color: selectedVar === idx ? C.bgDeep : C.text,
+                      fontSize: 9,
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      fontFamily: 'Oswald,sans-serif',
+                      letterSpacing: '0.05em',
+                      transition: 'all 0.2s',
+                    }}
+                  >
+                    VAR {String.fromCharCode(65 + idx)}
+                  </button>
+                ))}
+              </div>
+
+              {/* Preview */}
+              <div style={{
+                background: C.bgDeep,
+                border: `1px solid ${C.lineSoft}`,
+                borderRadius: 6,
+                padding: 14,
+                marginBottom: 14,
+                maxHeight: 400,
+                overflow: 'auto',
+              }}>
+                <div style={{
+                  fontSize: 10,
+                  color: C.text,
+                  lineHeight: 1.6,
+                  whiteSpace: 'pre-wrap',
+                  fontFamily: 'Inter,sans-serif',
+                }}>
+                  {currentStep.variants[selectedVar]}
+                </div>
+              </div>
+
+              {/* Bouton Activer */}
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                <button
+                  onClick={() => {
+                    toast.success(`Variante ${String.fromCharCode(65 + selectedVar)} activée!`)
+                    // TODO: Implémenter la sauvegarde en DB
+                  }}
+                  style={{
+                    padding: '10px 20px',
+                    background: C.green,
+                    border: 'none',
+                    borderRadius: 6,
+                    color: C.textHi,
+                    fontSize: 10,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    fontFamily: 'Oswald,sans-serif',
+                    letterSpacing: '0.06em',
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  ✓ Activer cette variante
+                </button>
+                <div style={{ fontSize: 8, color: C.textLo }}>
+                  Utilisera ce message par défaut pour ce step
+                </div>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+    </div>
   )
 }

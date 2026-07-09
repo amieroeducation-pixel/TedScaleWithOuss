@@ -646,3 +646,13 @@ $$ language plpgsql security definer;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function create_user_settings_on_signup();
+
+-- ============================================================
+-- Migration 016: Missing columns (daily_kpis + user_settings)
+-- ============================================================
+
+ALTER TABLE daily_kpis ADD COLUMN IF NOT EXISTS blocks integer NOT NULL DEFAULT 0;
+
+ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS google_calendar_access_token text;
+ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS google_calendar_refresh_token text;
+ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS google_calendar_token_expiry bigint;

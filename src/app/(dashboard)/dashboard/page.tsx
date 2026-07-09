@@ -7,6 +7,13 @@ import { C } from '@/lib/theme'
 import { AgendaEventType, AgendaEvent, AGENDA_COLORS, loadDayAgenda, saveDayAgenda, fantasticalUrl } from '@/lib/agenda'
 import { saveLastSection } from '@/lib/navigation-state'
 
+// ---------- TYPES ----------
+type WeeklyData = {
+  kpis: { calls: number; rdv: number; newProspects: number; contracts: number; targetAmount: number }
+  barometer: { globalPct: number; callPct: number; callVal: string; blockPct: number; blockVal: string; relancePct: number; relanceVal: string }
+  actions: Array<{ text: string; tag: string; urgent: boolean }>
+}
+
 // ---------- HELPERS ----------
 function getWeekMonday(offset: number): Date {
   const now = new Date()
@@ -47,8 +54,19 @@ export default function WeeklyPage() {
   const [weekAgenda, setWeekAgenda] = useState<Record<string, AgendaEvent[]>>({})
   const [showModal, setShowModal] = useState(false)
   const [form, setForm] = useState({ dateKey: '', time: '09:00', title: '', client: '', type: 'rdv' as AgendaEventType })
+  const [weeklyData, setWeeklyData] = useState<WeeklyData | null>(null)
+  const [loadingData, setLoadingData] = useState(true)
 
   useEffect(() => { saveLastSection('/dashboard') }, [])
+
+  useEffect(() => {
+    setLoadingData(true)
+    fetch('/api/dashboard/weekly')
+      .then(r => r.json())
+      .then(res => { if (res.data) setWeeklyData(res.data) })
+      .catch(() => {})
+      .finally(() => setLoadingData(false))
+  }, [])
 
   const reloadWeekAgenda = useCallback(() => {
     const dates = getWeekDates(weekOffset)
@@ -105,12 +123,17 @@ export default function WeeklyPage() {
 
       {/* ── Metrics row ── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 16 }}>
-        {[
-          { label: 'CA avril',     value: '18 400 €', sub: '↑ +12% vs mars',     subColor: C.green },
-          { label: 'Taux closing', value: '34%',       sub: 'Objectif 40%',        subColor: C.gold },
-          { label: 'RDV semaine',  value: '7',          sub: '5 conf. · 2 en att.', subColor: C.green },
-          { label: 'À relancer',   value: '12',         sub: 'Prospects actifs',    subColor: C.gold },
-        ].map(m => (
+        {(loadingData || !weeklyData ? [
+          { label: 'Appels semaine', value: '—', sub: 'Chargement...', subColor: C.textLo },
+          { label: 'RDV semaine', value: '—', sub: 'Chargement...', subColor: C.textLo },
+          { label: 'Nouveaux prospects', value: '—', sub: 'Chargement...', subColor: C.textLo },
+          { label: 'Contrats mois', value: '—', sub: 'Chargement...', subColor: C.textLo },
+        ] : [
+          { label: 'Appels semaine', value: String(weeklyData.kpis.calls), sub: `Objectif 40`, subColor: weeklyData.kpis.calls >= 40 ? C.green : C.gold },
+          { label: 'RDV semaine', value: String(weeklyData.kpis.rdv), sub: `Cette semaine`, subColor: C.green },
+          { label: 'Nouveaux prospects', value: String(weeklyData.kpis.newProspects), sub: 'Cette semaine', subColor: C.green },
+          { label: 'Contrats mois', value: String(weeklyData.kpis.contracts), sub: `Obj. ${weeklyData.kpis.targetAmount ? (weeklyData.kpis.targetAmount / 1000).toFixed(0) + 'k€' : '—'}`, subColor: C.gold },
+        ]).map(m => (
           <div key={m.label} style={{ background: C.surface1, border: `1px solid ${C.line}`, borderRadius: 10, padding: '14px 16px' }}>
             <div style={{ fontSize: 10, color: C.textLo, marginBottom: 6, textTransform: 'uppercase' as const, letterSpacing: 1 }}>{m.label}</div>
             <div style={{ fontSize: 22, fontWeight: 700, color: C.textHi, fontFamily: 'Oswald, sans-serif' }}>{m.value}</div>
@@ -127,14 +150,9 @@ export default function WeeklyPage() {
           <div style={{ fontSize: 11, fontWeight: 700, color: C.textHi, marginBottom: 12, textTransform: 'uppercase' as const, letterSpacing: 1 }}>
             Actions prioritaires
           </div>
-          {[
-            { text: 'Sophie Renaud — 34j sans contact — appel urgent', tag: 'Premium', urgent: true },
-            { text: 'Dr. Rousseau — closing RDV 3 cette semaine',      tag: 'Premium', urgent: true },
-            { text: 'Antoine Perrin — proposition upsell SCPI',        tag: 'Premium', urgent: true },
-            { text: 'Relancer Dr. Martin — RDV 2 en attente 5j',      tag: 'Relance', urgent: false },
-            { text: 'Confirmer RDV mer. 16h — Mme Chen',              tag: 'À confirmer', urgent: false },
-            { text: 'Séquence email post-RDV 1 × 4 prospects',        tag: 'Auto',     urgent: false },
-          ].map((item, i) => (
+          {(weeklyData?.actions ?? [
+            { text: 'Chargement des tâches...', tag: '—', urgent: false },
+          ]).map((item, i) => (
             <div key={i} style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               padding: '7px 10px', marginBottom: 6,
@@ -176,17 +194,21 @@ export default function WeeklyPage() {
               <path d="M 20 80 A 70 70 0 0 1 160 80" fill="none" stroke="url(#gaugeGrad)" strokeWidth="14" strokeLinecap="round" strokeDasharray="220" strokeDashoffset="0" />
               <line x1="90" y1="80" x2="125" y2="45" stroke={C.gold} strokeWidth="3" strokeLinecap="round" />
               <circle cx="90" cy="80" r="5" fill={C.gold} />
-              <text x="90" y="73" textAnchor="middle" fontSize="20" fontWeight="500" fill={C.textHi}>68%</text>
+              <text x="90" y="73" textAnchor="middle" fontSize="20" fontWeight="500" fill={C.textHi}>{weeklyData?.barometer.globalPct ?? '—'}%</text>
               <text x="20" y="95" textAnchor="start" fontSize="9" fill={C.textLo}>0</text>
               <text x="160" y="95" textAnchor="end" fontSize="9" fill={C.textLo}>100</text>
             </svg>
           </div>
           <div style={{ fontSize: 9, color: C.textLo, textAlign: 'center', marginBottom: 14 }}>Objectif global semaine</div>
-          {[
-            { label: 'Appels',        pct: 75, val: '30/40', color: C.green },
-            { label: 'Blocs travail', pct: 60, val: '9/15',  color: C.green },
-            { label: 'Relances',      pct: 50, val: '6/12',  color: C.indigo },
-          ].map(bar => (
+          {(weeklyData ? [
+            { label: 'Appels', pct: weeklyData.barometer.callPct, val: weeklyData.barometer.callVal, color: C.green },
+            { label: 'Blocs travail', pct: weeklyData.barometer.blockPct, val: weeklyData.barometer.blockVal, color: C.green },
+            { label: 'Relances', pct: weeklyData.barometer.relancePct, val: weeklyData.barometer.relanceVal, color: C.indigo },
+          ] : [
+            { label: 'Appels', pct: 0, val: '—', color: C.green },
+            { label: 'Blocs travail', pct: 0, val: '—', color: C.green },
+            { label: 'Relances', pct: 0, val: '—', color: C.indigo },
+          ]).map(bar => (
             <div key={bar.label} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
               <div style={{ fontSize: 9, color: C.textLo, width: 80, flexShrink: 0 }}>{bar.label}</div>
               <div style={{ flex: 1, background: C.surface3, height: 8, borderRadius: 10, overflow: 'hidden' }}>

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { C } from '@/lib/theme'
 
 // ─── TYPES ────────────────────────────────────────────────────────────────────
@@ -80,8 +81,13 @@ function PanelTitle({ title, accent = C.cyan }: { title: string; accent?: string
 
 // ─── PAGE ─────────────────────────────────────────────────────────────────────
 export default function ClientsPage() {
+  const router = useRouter()
   const [clientsResp, setClientsResp] = useState<ClientsResp | null>(null)
   const [healthResp, setHealthResp] = useState<HealthResp | null>(null)
+  const [contactModal, setContactModal] = useState<{ clientId: string; name: string } | null>(null)
+  const [contactChannel, setContactChannel] = useState<'appel' | 'sms' | 'email'>('appel')
+  const [contactNotes, setContactNotes] = useState('')
+  const [contactSaving, setContactSaving] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
@@ -208,7 +214,7 @@ export default function ClientsPage() {
                   </div>
                 </div>
                 <button
-                  onClick={() => {/* placeholder Phase 1 */}}
+                  onClick={() => setContactModal({ clientId: a.client_id, name: a.full_name })}
                   style={{
                     fontSize: 10, padding: '6px 12px', borderRadius: 6, cursor: 'pointer',
                     border: `1px solid ${a.severity === 'critical' ? C.warn + '44' : C.gold + '44'}`,
@@ -343,6 +349,63 @@ export default function ClientsPage() {
             </div>
           )}
         </Panel>
+      )}
+      {/* Modal Contacter */}
+      {contactModal && (
+        <div onClick={() => setContactModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: C.bgMid, border: `1px solid ${C.indigo}30`, borderRadius: 14, padding: 24, width: '100%', maxWidth: 400, position: 'relative' }}>
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: C.ribbon, borderRadius: '14px 14px 0 0' }} />
+            <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 14, fontWeight: 600, color: C.indigo, marginBottom: 4, marginTop: 4 }}>📞 Contacter {contactModal.name}</div>
+            <div style={{ fontSize: 9, color: C.textLo, marginBottom: 16 }}>Logger une interaction avec ce client</div>
+
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ fontSize: 8, color: C.textLo, display: 'block', marginBottom: 6 }}>Canal</label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {(['appel', 'sms', 'email'] as const).map(ch => (
+                  <button key={ch} onClick={() => setContactChannel(ch)} style={{
+                    flex: 1, padding: '8px 0', borderRadius: 6, fontSize: 10, fontWeight: 600, cursor: 'pointer',
+                    background: contactChannel === ch ? `${C.indigo}22` : C.surface1,
+                    border: `1px solid ${contactChannel === ch ? C.indigo : C.line}`,
+                    color: contactChannel === ch ? C.indigo : C.textLo,
+                  }}>{ch === 'appel' ? '📞 Appel' : ch === 'sms' ? '💬 SMS' : '✉️ Email'}</button>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ marginBottom: 18 }}>
+              <label style={{ fontSize: 8, color: C.textLo, display: 'block', marginBottom: 5 }}>Notes (optionnel)</label>
+              <textarea
+                value={contactNotes}
+                onChange={e => setContactNotes(e.target.value)}
+                placeholder="Résumé de l'échange..."
+                rows={3}
+                style={{ width: '100%', padding: '8px 10px', background: C.surface1, border: `1px solid ${C.line}`, borderRadius: 6, color: C.textHi, fontSize: 11, resize: 'vertical', boxSizing: 'border-box' }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => { setContactModal(null); setContactNotes('') }} style={{ flex: 1, padding: 10, borderRadius: 8, background: C.surface1, border: `1px solid ${C.line}`, color: C.textLo, fontFamily: 'Oswald,sans-serif', fontSize: 11, cursor: 'pointer' }}>ANNULER</button>
+              <button
+                disabled={contactSaving}
+                onClick={async () => {
+                  setContactSaving(true)
+                  try {
+                    await fetch('/api/interactions', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ prospect_id: contactModal.clientId, type: contactChannel, notes: contactNotes || null }),
+                    })
+                    setContactModal(null)
+                    setContactNotes('')
+                    router.refresh()
+                  } catch {}
+                  setContactSaving(false)
+                }}
+                style={{ flex: 2, padding: 10, borderRadius: 8, background: '#0d1a2e', border: `1px solid ${C.indigo}66`, color: C.indigo, fontFamily: 'Oswald,sans-serif', fontSize: 11, fontWeight: 600, cursor: contactSaving ? 'not-allowed' : 'pointer', opacity: contactSaving ? 0.6 : 1 }}
+              >{contactSaving ? 'ENREGISTREMENT...' : 'LOGGER L\'INTERACTION'}</button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   )

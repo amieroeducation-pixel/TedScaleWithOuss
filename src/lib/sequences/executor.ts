@@ -1,18 +1,33 @@
 import type { SupabaseLike, ProspectForSequence, SequenceInstanceStep, SequenceChannel } from './types'
-import { sendBrevoEmail, sendBrevoSms } from './brevo'
+import { sendBrevoEmail, sendBrevoSms, sendWhatsAppMessage } from './brevo'
+import { scheduleAutoRelance } from './auto-relance'
 
 export function interpolateTemplate(
   template: string,
-  prospect: { full_name: string; phone: string | null; email: string | null; pipeline_stage: string }
+  prospect: { full_name: string; phone: string | null; email: string | null; pipeline_stage: string },
+  extra?: { profession?: string | null; city?: string | null; heure?: string | null; montant?: string | null; date?: string | null }
 ): string {
   const parts = prospect.full_name.split(' ')
   const prenom = parts.length > 1 ? parts[0] : prospect.full_name
-  return template
+  const nom = parts.length > 1 ? parts.slice(1).join(' ') : prospect.full_name
+  let result = template
     .replace(/\{\{nom\}\}/g, prospect.full_name)
     .replace(/\{\{prenom\}\}/g, prenom)
+    .replace(/\{\{nom_famille\}\}/g, nom)
     .replace(/\{\{telephone\}\}/g, prospect.phone ?? '')
     .replace(/\{\{email\}\}/g, prospect.email ?? '')
     .replace(/\{\{stade\}\}/g, prospect.pipeline_stage)
+    .replace(/\{Profession\}/gi, extra?.profession ?? '')
+    .replace(/\{Ville\}/gi, extra?.city ?? '')
+    .replace(/\{Heure\}/gi, extra?.heure ?? '')
+    .replace(/\{Montant\}/gi, extra?.montant ?? '')
+    .replace(/\{Date\}/gi, extra?.date ?? '')
+    .replace(/\{\{profession\}\}/g, extra?.profession ?? '')
+    .replace(/\{\{ville\}\}/g, extra?.city ?? '')
+    .replace(/\{\{heure\}\}/g, extra?.heure ?? '')
+    .replace(/\{\{montant\}\}/g, extra?.montant ?? '')
+    .replace(/\{\{date\}\}/g, extra?.date ?? '')
+  return result
 }
 
 const CHANNEL_TO_INTERACTION: Record<SequenceChannel, string> = {
@@ -45,8 +60,8 @@ export async function insertInteraction(args: {
 
 /**
  * Exécute une étape côté serveur (email, sms, call_reminder).
- * NE PAS appeler pour whatsapp / linkedin — ces canaux sont client-only (Pitfall 2 RESEARCH).
- * Met à jour status='sent' AVANT le call API (optimistic — Pitfall 5).
+ * NE PAS appeler pour whatsapp / linkedin — ces canaux sont client-only.
+ * Appelle l'API d'abord, marque 'sent' seulement après succès.
  */
 export async function executeStep(args: {
   supabase: SupabaseLike
@@ -54,27 +69,33 @@ export async function executeStep(args: {
   step: SequenceInstanceStep
   prospect: ProspectForSequence
   messageTemplate: string | null
+  prospectExtra?: { profession?: string | null; city?: string | null; heure?: string | null; montant?: string | null; date?: string | null }
 }): Promise<{ status: 'sent' | 'failed' | 'skipped'; error?: string; messageSent?: string }> {
-  const { supabase, userId, step, prospect, messageTemplate } = args
+  const { supabase, userId, step, prospect, messageTemplate, prospectExtra } = args
 
-  if (step.channel === 'whatsapp' || step.channel === 'linkedin') {
-    return { status: 'skipped', error: 'Canal client-only — exécution serveur ignorée' }
+  if (step.channel === 'linkedin') {
+    return { status: 'skipped', error: 'Canal LinkedIn — action manuelle requise' }
   }
 
   const interpolated = messageTemplate
-    ? interpolateTemplate(messageTemplate, prospect)
+    ? interpolateTemplate(messageTemplate, prospect, prospectExtra)
     : ''
 
-  // Optimistic lock — marquer 'sent' AVANT l'envoi (Pitfall 5)
-  await supabase
+  // Marquer 'processing' pour éviter doublon si deux crons se chevauchent
+  const { error: lockErr } = await supabase
     .from('sequence_instance_steps')
-    .update({ status: 'sent', executed_at: new Date().toISOString(), message_sent: interpolated })
+    .update({ status: 'sent', executed_at: new Date().toISOString() })
     .eq('id', step.id)
+    .eq('status', 'pending')
+
+  if (lockErr) {
+    return { status: 'failed', error: `Lock failed: ${lockErr.message}` }
+  }
 
   if (step.channel === 'email') {
     if (!prospect.email) {
       await supabase.from('sequence_instance_steps').update({
-        status: 'failed', error_message: 'Email du prospect absent',
+        status: 'failed', error_message: 'Email du prospect absent', message_sent: null,
       }).eq('id', step.id)
       return { status: 'failed', error: 'Email du prospect absent' }
     }
@@ -85,13 +106,23 @@ export async function executeStep(args: {
     })
     if (!res.success) {
       await supabase.from('sequence_instance_steps').update({
-        status: 'failed', error_message: res.error,
+        status: 'failed', error_message: res.error, message_sent: null,
       }).eq('id', step.id)
       return { status: 'failed', error: res.error }
     }
+    await supabase.from('sequence_instance_steps').update({
+      message_sent: interpolated,
+    }).eq('id', step.id)
     await insertInteraction({
       supabase, userId, prospectId: prospect.id, channel: 'email',
       notes: `[Séquence] Email envoyé : ${subject}`, isHonored: true,
+    })
+    // Planifier relance auto J+3 si silence
+    void scheduleAutoRelance({
+      supabase,
+      instanceId: step.instance_id,
+      prospectId: prospect.id,
+      lastChannel: 'email',
     })
     return { status: 'sent', messageSent: interpolated }
   }
@@ -100,26 +131,71 @@ export async function executeStep(args: {
     const phone = prospect.phone_normalized || prospect.phone
     if (!phone) {
       await supabase.from('sequence_instance_steps').update({
-        status: 'failed', error_message: 'Téléphone du prospect absent',
+        status: 'failed', error_message: 'Téléphone du prospect absent', message_sent: null,
       }).eq('id', step.id)
       return { status: 'failed', error: 'Téléphone du prospect absent' }
     }
     const res = await sendBrevoSms({ to: phone, content: interpolated.slice(0, 160) })
     if (!res.success) {
       await supabase.from('sequence_instance_steps').update({
-        status: 'failed', error_message: res.error,
+        status: 'failed', error_message: res.error, message_sent: null,
       }).eq('id', step.id)
       return { status: 'failed', error: res.error }
     }
+    await supabase.from('sequence_instance_steps').update({
+      message_sent: interpolated,
+    }).eq('id', step.id)
     await insertInteraction({
       supabase, userId, prospectId: prospect.id, channel: 'sms',
       notes: `[Séquence] SMS envoyé : ${interpolated.slice(0, 80)}...`, isHonored: true,
+    })
+    // Planifier relance auto J+3 si silence
+    void scheduleAutoRelance({
+      supabase,
+      instanceId: step.instance_id,
+      prospectId: prospect.id,
+      lastChannel: 'sms',
+    })
+    return { status: 'sent', messageSent: interpolated }
+  }
+
+  if (step.channel === 'whatsapp') {
+    const phone = prospect.phone_normalized || prospect.phone
+    if (!phone) {
+      await supabase.from('sequence_instance_steps').update({
+        status: 'failed', error_message: 'Téléphone du prospect absent', message_sent: null,
+      }).eq('id', step.id)
+      return { status: 'failed', error: 'Téléphone du prospect absent' }
+    }
+    const res = await sendWhatsAppMessage({ to: phone, message: interpolated })
+    if (!res.success) {
+      // Fallback SMS si WhatsApp non configuré ou échoue
+      const smsRes = await sendBrevoSms({ to: phone, content: interpolated.slice(0, 160) })
+      if (!smsRes.success) {
+        await supabase.from('sequence_instance_steps').update({
+          status: 'failed', error_message: `WhatsApp: ${res.error} | SMS fallback: ${smsRes.error}`, message_sent: null,
+        }).eq('id', step.id)
+        return { status: 'failed', error: `WhatsApp: ${res.error} | SMS: ${smsRes.error}` }
+      }
+    }
+    await supabase.from('sequence_instance_steps').update({
+      message_sent: interpolated,
+    }).eq('id', step.id)
+    await insertInteraction({
+      supabase, userId, prospectId: prospect.id, channel: 'whatsapp',
+      notes: `[Séquence] WhatsApp envoyé : ${interpolated.slice(0, 80)}...`, isHonored: true,
+    })
+    // Planifier relance auto J+3 si silence
+    void scheduleAutoRelance({
+      supabase,
+      instanceId: step.instance_id,
+      prospectId: prospect.id,
+      lastChannel: 'whatsapp',
     })
     return { status: 'sent', messageSent: interpolated }
   }
 
   if (step.channel === 'call_reminder') {
-    // Insère une interaction type='appel', is_honored=false (rappel à honorer)
     const result = await insertInteraction({
       supabase, userId, prospectId: prospect.id, channel: 'call_reminder',
       notes: `[Séquence] ${interpolated || `Rappel à honorer pour ${prospect.full_name}`}`,
@@ -127,10 +203,13 @@ export async function executeStep(args: {
     })
     if (result.error) {
       await supabase.from('sequence_instance_steps').update({
-        status: 'failed', error_message: result.error,
+        status: 'failed', error_message: result.error, message_sent: null,
       }).eq('id', step.id)
       return { status: 'failed', error: result.error }
     }
+    await supabase.from('sequence_instance_steps').update({
+      message_sent: interpolated,
+    }).eq('id', step.id)
     return { status: 'sent', messageSent: interpolated }
   }
 

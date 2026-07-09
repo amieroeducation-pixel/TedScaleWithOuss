@@ -51,6 +51,7 @@ const NAV_SECTIONS = [
     label: 'Pilotage',
     items: [
       { id: 'analytics', href: '/analytics', label: '📊 Analytics' },
+      { id: 'donnees', href: '/donnees', label: '📈 Données & KPI' },
       { id: 'assistant', href: '/assistant', label: '🤖 Assistant' },
       { id: 'settings', href: '/settings', label: '⚙️ Paramètres' },
       { id: 'scoring', href: '/scoring', label: 'Scoring patrimonial' },

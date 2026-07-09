@@ -850,6 +850,9 @@ export default function CrmPage() {
   const [callScripts, setCallScripts] = useState<Array<{ id: string; metier: string; titre: string; contenu: string }>>([])
   const [scriptsLoading, setScriptsLoading] = useState(false)
   const [scriptPreview, setScriptPreview] = useState<{ message: string; channel: 'whatsapp' | 'linkedin'; prospect: Prospect } | null>(null)
+  const [showScriptEditor, setShowScriptEditor] = useState(false)
+  const [editingScript, setEditingScript] = useState<{ id?: string; metier: string; titre: string; contenu: string }>({ metier: '', titre: '', contenu: '' })
+  const [scriptEditorLoading, setScriptEditorLoading] = useState(false)
   const [fetchError, setFetchError] = useState<string | null>(null)
   const [showNewProspect, setShowNewProspect] = useState(false)
   const [npForm, setNpForm] = useState({ full_name: '', profession: '', phone: '', email: '', city: '', source: 'autre', notes: '' })
@@ -1290,8 +1293,30 @@ export default function CrmPage() {
             <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 16, fontWeight: 600, color: C.textHi, marginBottom: 4, marginTop: 6 }}>
               SCRIPTS D'APPEL — {showScriptPicker.prospect.nom}
             </div>
-            <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.textLo, marginBottom: 18 }}>
-              {showScriptPicker.channel === 'whatsapp' ? 'Sélectionne un script pour WhatsApp' : 'Sélectionne un script pour LinkedIn'}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
+              <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.textLo }}>
+                {showScriptPicker.channel === 'whatsapp' ? 'Sélectionne un script pour WhatsApp' : 'Sélectionne un script pour LinkedIn'}
+              </div>
+              <button
+                onClick={() => {
+                  setEditingScript({ metier: '', titre: '', contenu: '' })
+                  setShowScriptEditor(true)
+                  setShowScriptPicker(null)
+                }}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: 6,
+                  background: `${C.gold}15`,
+                  border: `1px solid ${C.gold}40`,
+                  color: C.gold,
+                  fontFamily: 'Oswald,sans-serif',
+                  fontSize: 9,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                + NOUVEAU SCRIPT
+              </button>
             </div>
 
             {scriptsLoading && (
@@ -1313,27 +1338,23 @@ export default function CrmPage() {
                   <div
                     key={script.id}
                     onClick={() => {
-                      const prenom = showScriptPicker.prospect.nom.split(' ')[0]
-                      const nom = showScriptPicker.prospect.nom
+                      const nomComplet = showScriptPicker.prospect.nom
+                      const parts = nomComplet.split(' ')
+                      const prenom = parts[0] || ''
+                      const nomFamille = parts.slice(1).join(' ') || nomComplet
                       const profession = showScriptPicker.prospect.profession.toLowerCase()
 
                       // Titre professionnel intelligent
                       let titreProspect = prenom
                       if (profession.includes('médecin') || profession.includes('medecin')) {
-                        titreProspect = `Docteur ${nom}`
+                        titreProspect = `Docteur ${nomFamille}`
                       } else if (profession.includes('dentiste')) {
-                        titreProspect = `Docteur ${nom}`
-                      } else if (profession.includes('pharmacien')) {
-                        titreProspect = prenom
-                      } else if (profession.includes('kiné') || profession.includes('kinesitherapeute')) {
-                        titreProspect = prenom
-                      } else if (profession.includes('infirmier') || profession.includes('infirmière')) {
-                        titreProspect = prenom
+                        titreProspect = `Docteur ${nomFamille}`
                       }
 
                       const message = script.contenu
                         .replace(/\[Prénom\]/g, prenom)
-                        .replace(/\[Nom\]/g, nom)
+                        .replace(/\[Nom\]/g, nomFamille)
                         .replace(/Docteur \[Nom\]/g, titreProspect)
                         .replace(/Bonjour \[Prénom\]/g, `Bonjour ${titreProspect}`)
 
@@ -1363,9 +1384,30 @@ export default function CrmPage() {
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                      <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 12, fontWeight: 600, color: C.textHi }}>
+                      <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 12, fontWeight: 600, color: C.textHi, flex: 1 }}>
                         {script.titre}
                       </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setEditingScript({ id: script.id, metier: script.metier, titre: script.titre, contenu: script.contenu })
+                          setShowScriptEditor(true)
+                          setShowScriptPicker(null)
+                        }}
+                        style={{
+                          padding: '3px 8px',
+                          marginRight: 8,
+                          borderRadius: 4,
+                          background: `${C.indigo}15`,
+                          border: `1px solid ${C.indigo}40`,
+                          color: C.indigo,
+                          fontFamily: 'JetBrains Mono,monospace',
+                          fontSize: 8,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        ✎ Modifier
+                      </button>
                       <div style={{
                         fontSize: 8,
                         padding: '2px 8px',
@@ -1499,6 +1541,164 @@ export default function CrmPage() {
                 }}
               >
                 {scriptPreview.channel === 'whatsapp' ? '📱 OUVRIR WHATSAPP' : '📋 COPIER & OUVRIR LINKEDIN'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal éditeur de script */}
+      {showScriptEditor && (
+        <div onClick={() => setShowScriptEditor(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 10001, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: C.bgMid, border: `1px solid ${C.line}`, borderRadius: 14, padding: 24, width: '100%', maxWidth: 800, maxHeight: '90vh', overflow: 'auto', position: 'relative' }}>
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: C.ribbon, borderRadius: '14px 14px 0 0' }} />
+            <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 16, fontWeight: 600, color: C.textHi, marginBottom: 4, marginTop: 6 }}>
+              {editingScript.id ? 'MODIFIER LE SCRIPT' : 'NOUVEAU SCRIPT'}
+            </div>
+            <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.textLo, marginBottom: 18 }}>
+              Variables : <span style={{ color: C.gold }}>[Prénom]</span> <span style={{ color: C.gold }}>[Nom]</span> <span style={{ color: C.gold }}>Docteur [Nom]</span>
+            </div>
+
+            {/* Formulaire */}
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.textLo, display: 'block', marginBottom: 6 }}>Métier</label>
+              <input
+                value={editingScript.metier}
+                onChange={e => setEditingScript(s => ({ ...s, metier: e.target.value }))}
+                placeholder="kinesitherapeute, medecin, dentiste..."
+                style={{
+                  width: '100%',
+                  padding: '8px 10px',
+                  background: C.surface1,
+                  border: `1px solid ${C.line}`,
+                  borderRadius: 6,
+                  color: C.textHi,
+                  fontSize: 11,
+                  fontFamily: 'JetBrains Mono,monospace',
+                  boxSizing: 'border-box',
+                }}
+              />
+            </div>
+
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.textLo, display: 'block', marginBottom: 6 }}>Titre</label>
+              <input
+                value={editingScript.titre}
+                onChange={e => setEditingScript(s => ({ ...s, titre: e.target.value }))}
+                placeholder="Variante A — Approche directe BNC"
+                style={{
+                  width: '100%',
+                  padding: '8px 10px',
+                  background: C.surface1,
+                  border: `1px solid ${C.line}`,
+                  borderRadius: 6,
+                  color: C.textHi,
+                  fontSize: 11,
+                  fontFamily: 'JetBrains Mono,monospace',
+                  boxSizing: 'border-box',
+                }}
+              />
+            </div>
+
+            <div style={{ marginBottom: 20 }}>
+              <label style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.textLo, display: 'block', marginBottom: 6 }}>Script</label>
+              <textarea
+                value={editingScript.contenu}
+                onChange={e => setEditingScript(s => ({ ...s, contenu: e.target.value }))}
+                placeholder={`OUVERTURE\n"Bonjour [Prénom], c'est Ted..."\n\nQUALIFICATION\n"Est-ce que vous avez déjà..."\n\nPITCH\n"Mon diagnostic identifie..."`}
+                rows={18}
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  background: C.surface1,
+                  border: `1px solid ${C.line}`,
+                  borderRadius: 6,
+                  color: C.textHi,
+                  fontSize: 11,
+                  fontFamily: 'JetBrains Mono,monospace',
+                  boxSizing: 'border-box',
+                  resize: 'vertical',
+                  lineHeight: 1.6,
+                }}
+              />
+            </div>
+
+            {/* Actions */}
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                onClick={() => setShowScriptEditor(false)}
+                style={{
+                  flex: 1,
+                  padding: 12,
+                  borderRadius: 8,
+                  background: C.surface1,
+                  border: `1px solid ${C.line}`,
+                  color: C.textLo,
+                  fontFamily: 'Oswald,sans-serif',
+                  fontSize: 11,
+                  cursor: 'pointer',
+                }}
+              >
+                ANNULER
+              </button>
+              <button
+                onClick={async () => {
+                  if (!editingScript.titre.trim() || !editingScript.contenu.trim()) {
+                    toast.error('Titre et contenu requis')
+                    return
+                  }
+
+                  setScriptEditorLoading(true)
+                  try {
+                    const method = editingScript.id ? 'PATCH' : 'POST'
+                    const url = editingScript.id ? `/api/call-scripts/${editingScript.id}` : '/api/call-scripts'
+
+                    const res = await fetch(url, {
+                      method,
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        metier: editingScript.metier,
+                        titre: editingScript.titre,
+                        contenu: editingScript.contenu,
+                      }),
+                    })
+
+                    const json = await res.json()
+                    if (!json.success) throw new Error(json.error || 'Erreur serveur')
+
+                    toast.success(editingScript.id ? 'Script modifié' : 'Script créé')
+
+                    // Recharger la liste
+                    const listRes = await fetch('/api/call-scripts')
+                    const listJson = await listRes.json()
+                    if (listJson.success && Array.isArray(listJson.data)) {
+                      setCallScripts(listJson.data)
+                    }
+
+                    setShowScriptEditor(false)
+                    setEditingScript({ metier: '', titre: '', contenu: '' })
+                  } catch (err: any) {
+                    toast.error(err.message || 'Erreur')
+                  } finally {
+                    setScriptEditorLoading(false)
+                  }
+                }}
+                disabled={scriptEditorLoading || !editingScript.titre.trim() || !editingScript.contenu.trim()}
+                style={{
+                  flex: 2,
+                  padding: 12,
+                  borderRadius: 8,
+                  background: scriptEditorLoading ? C.surface1 : `${C.gold}15`,
+                  border: `1px solid ${scriptEditorLoading ? C.line : C.gold + '40'}`,
+                  color: scriptEditorLoading ? C.textLo : C.gold,
+                  fontFamily: 'Oswald,sans-serif',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: scriptEditorLoading || !editingScript.titre.trim() || !editingScript.contenu.trim() ? 'not-allowed' : 'pointer',
+                  opacity: scriptEditorLoading || !editingScript.titre.trim() || !editingScript.contenu.trim() ? 0.6 : 1,
+                }}
+              >
+                {scriptEditorLoading ? 'ENREGISTREMENT...' : (editingScript.id ? '💾 ENREGISTRER' : '✓ CRÉER')}
               </button>
             </div>
           </div>

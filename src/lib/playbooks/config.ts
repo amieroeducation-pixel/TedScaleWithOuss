@@ -5,6 +5,9 @@ export type PlaybookId =
   | 'a3-holdings'
   | 'a4-dividendes'
   | 'a5-dirigeants'
+  | 'a6-heritiers'
+  | 'a7-vendeurs-immo'
+  | 'a8-radiations'
   | 'b1-surveillance'
   | 'b2-rdv'
   | 'b3-liquidite'
@@ -17,6 +20,9 @@ export type SignalType =
   | 'holding'
   | 'dividendes'
   | 'dirigeant_55'
+  | 'heritage'
+  | 'vente_immo'
+  | 'radiation'
   | 'linkedin'
 
 export interface PlaybookConfig {
@@ -85,6 +91,39 @@ export const PLAYBOOKS: PlaybookConfig[] = [
     scheduleDescription: '1er du mois — vendredi 8h',
     urgencyDays: 30,
     sequenceSlug: 'dirigeant-55',
+    isOnDemand: false,
+  },
+  {
+    id: 'a6-heritiers',
+    name: 'Héritiers BODACC',
+    family: 'A',
+    description: 'Attestations et déclarations de succession publiées au BODACC — héritiers avec capital à placer',
+    signalType: 'heritage',
+    scheduleDescription: 'Chaque mercredi 8h',
+    urgencyDays: 30,
+    sequenceSlug: 'heritage',
+    isOnDemand: false,
+  },
+  {
+    id: 'a7-vendeurs-immo',
+    name: 'Vendeurs Immobilier IDF',
+    family: 'A',
+    description: 'Ventes immobilières > 400k€ en Île-de-France (DVF open data) — capital à réinvestir',
+    signalType: 'vente_immo',
+    scheduleDescription: '1er du mois — lundi 8h',
+    urgencyDays: 60,
+    sequenceSlug: 'vente-immo',
+    isOnDemand: false,
+  },
+  {
+    id: 'a8-radiations',
+    name: 'Radiations BODACC',
+    family: 'A',
+    description: 'Entreprises radiées (capital distribué aux associés) — capital disponible à placer',
+    signalType: 'radiation',
+    scheduleDescription: 'Chaque jeudi 8h',
+    urgencyDays: 45,
+    sequenceSlug: 'radiation',
     isOnDemand: false,
   },
   {

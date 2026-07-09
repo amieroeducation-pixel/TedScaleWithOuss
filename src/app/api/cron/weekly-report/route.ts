@@ -3,6 +3,7 @@ import { addDays, startOfDay, endOfDay, startOfWeek, endOfWeek, format } from 'd
 import { fr } from 'date-fns/locale'
 import { verifyCronSecret } from '@/lib/cron/auth'
 import { logCronRun } from '@/lib/cron/logger'
+import { isCronEnabled } from '@/lib/cron/toggles'
 import { buildWeeklyReportHtml } from '@/lib/cron/report-builder'
 import { createSupabaseCronClient } from '@/lib/supabase/cron-client'
 import { sendBrevoEmail } from '@/lib/sequences/brevo'
@@ -11,6 +12,10 @@ import { apiSuccess, apiError } from '@/lib/api'
 export async function GET(req: NextRequest) {
   const authError = verifyCronSecret(req)
   if (authError) return authError
+
+  if (!(await isCronEnabled('weekly-report'))) {
+    return apiSuccess({ status: 'disabled', message: 'Cron désactivé par l\'utilisateur' })
+  }
 
   const supabase = createSupabaseCronClient()
   const { data: users, error } = await supabase

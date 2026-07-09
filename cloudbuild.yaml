@@ -1,0 +1,12 @@
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '--build-arg=NEXT_PUBLIC_SUPABASE_URL=https://vqtzcxvmzznbepyvlcut.supabase.co'
+      - '--build-arg=NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZxdHpjeHZtenpuYmVweXZsY3V0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzOTU0NzcsImV4cCI6MjA5Mzk3MTQ3N30.8p2-9Sw_BGaO8Ig03rSr5R63Wmph-DRE3QurA7Hq38o'
+      - '-t'
+      - 'gcr.io/integration-make-365608/ted-scale-with-ouss'
+      - '.'
+images:
+  - 'gcr.io/integration-make-365608/ted-scale-with-ouss'
+timeout: '600s'

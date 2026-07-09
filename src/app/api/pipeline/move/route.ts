@@ -69,5 +69,65 @@ export async function POST(request: NextRequest) {
     toStage: to_stage,
   })
 
+  // Conversion auto : créer un client quand le prospect passe à 'converti'
+  if (to_stage === 'converti') {
+    void (async () => {
+      try {
+        // Vérifier qu'un client n'existe pas déjà
+        const { data: existingClient } = await supabase
+          .from('clients')
+          .select('id')
+          .eq('prospect_id', prospect_id)
+          .maybeSingle()
+
+        if (existingClient) {
+          console.log(`Client already exists for prospect ${prospect_id}`)
+          return
+        }
+
+        // Récupérer les infos du prospect
+        const { data: prospectData } = await supabase
+          .from('prospects')
+          .select('*')
+          .eq('id', prospect_id)
+          .single()
+
+        if (!prospectData) {
+          console.error(`Prospect ${prospect_id} not found`)
+          return
+        }
+
+        // Créer le client
+        const { error: clientError } = await supabase
+          .from('clients')
+          .insert({
+            user_id: user.id,
+            prospect_id: prospect_id,
+            total_aum: prospectData.capital_amount_detected ?? 0,
+            last_interaction_at: new Date().toISOString(),
+            alert_threshold_days: 90,
+            notes: `Converti depuis ${prospectData.source ?? 'inconnu'} — signal: ${prospectData.signal_type ?? 'N/A'}`,
+          })
+
+        if (clientError) {
+          console.error('Failed to create client:', clientError.message)
+        } else {
+          console.log(`Client created for prospect ${prospect_id}`)
+
+          // Mettre à jour le prospect
+          await supabase
+            .from('prospects')
+            .update({
+              temperature: 'hot',
+              last_engagement_at: new Date().toISOString(),
+            })
+            .eq('id', prospect_id)
+        }
+      } catch (err) {
+        console.error('Error in auto-conversion:', err)
+      }
+    })()
+  }
+
   return apiSuccess({ prospect_id, to_stage })
 }

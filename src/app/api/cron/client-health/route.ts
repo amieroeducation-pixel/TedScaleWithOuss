@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { verifyCronSecret } from '@/lib/cron/auth'
 import { logCronRun } from '@/lib/cron/logger'
+import { isCronEnabled } from '@/lib/cron/toggles'
 import { createSupabaseCronClient } from '@/lib/supabase/cron-client'
 import { sendBrevoEmail, sendBrevoSms } from '@/lib/sequences/brevo'
 import { apiSuccess, apiError } from '@/lib/api'
@@ -8,6 +9,10 @@ import { apiSuccess, apiError } from '@/lib/api'
 export async function GET(req: NextRequest) {
   const authError = verifyCronSecret(req)
   if (authError) return authError
+
+  if (!(await isCronEnabled('client-health'))) {
+    return apiSuccess({ status: 'disabled', message: 'Cron désactivé par l\'utilisateur' })
+  }
 
   const supabase = createSupabaseCronClient()
   const { data: users, error } = await supabase

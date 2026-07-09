@@ -83,6 +83,17 @@ export default function ProspectCard({ prospect, onClose, onAddToCRM, isContacte
   const [showSeqModal, setShowSeqModal] = useState(false)
   const [selectedTemplateId, setSelectedTemplateId] = useState('')
 
+  const [editing, setEditing] = useState(false)
+  const [editForm, setEditForm] = useState({
+    full_name: prospect.nom,
+    phone: prospect.telephone ?? '',
+    email: prospect.email ?? '',
+    profession: prospect.metier ?? '',
+    city: prospect.ville ?? '',
+    notes: '',
+  })
+  const [editSaving, setEditSaving] = useState(false)
+
   useEffect(() => {
     async function load() {
       try {
@@ -192,6 +203,27 @@ export default function ProspectCard({ prospect, onClose, onAddToCRM, isContacte
     finally { setSeqStarting(false) }
   }
 
+  async function saveEdit() {
+    if (!/^[0-9a-f-]{36}$/.test(String(prospect.id))) return
+    setEditSaving(true)
+    try {
+      const res = await fetch(`/api/prospects/${prospect.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editForm),
+      })
+      if (res.ok) {
+        setEditing(false)
+        prospect.nom = editForm.full_name
+        prospect.telephone = editForm.phone || null
+        prospect.email = editForm.email || null
+        prospect.metier = editForm.profession
+        prospect.ville = editForm.city
+      }
+    } catch { /* ignore */ }
+    finally { setEditSaving(false) }
+  }
+
   const telephone = prospect.telephone ?? enrich?.telephone ?? null
   const email = prospect.email ?? enrich?.email ?? null
   const linkedinUrl = enrich?.linkedinUrl ?? `https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(prospect.nom + ' ' + (prospect.entreprise ?? ''))}`
@@ -255,8 +287,8 @@ export default function ProspectCard({ prospect, onClose, onAddToCRM, isContacte
           )}
         </div>
 
-        {/* Onglets */}
-        <div style={{ display: 'flex', gap: 6, marginBottom: 14, borderBottom: `1px solid ${C.lineSoft}`, paddingBottom: 8 }}>
+        {/* Onglets + Modifier */}
+        <div style={{ display: 'flex', gap: 6, marginBottom: 14, borderBottom: `1px solid ${C.lineSoft}`, paddingBottom: 8, alignItems: 'center' }}>
           {(['info', 'history'] as CardTab[]).map(t => (
             <button
               key={t}
@@ -272,7 +304,56 @@ export default function ProspectCard({ prospect, onClose, onAddToCRM, isContacte
               {t === 'info' ? '📋 Infos' : '📞 Historique'}
             </button>
           ))}
+          {/^[0-9a-f-]{36}$/.test(String(prospect.id)) && (
+            <button
+              onClick={() => setEditing(!editing)}
+              style={{ marginLeft: 'auto', padding: '4px 10px', borderRadius: 6, border: `1px solid ${editing ? C.gold : C.line}`, background: editing ? `${C.gold}18` : 'transparent', color: editing ? C.gold : C.textLo, fontFamily: 'JetBrains Mono,monospace', fontSize: 8, cursor: 'pointer' }}
+            >
+              {editing ? '✕ Annuler' : '✏️ Modifier'}
+            </button>
+          )}
         </div>
+
+        {editing && (
+          <div style={{ background: C.surface1, borderRadius: 10, padding: 14, marginBottom: 14, border: `1px solid ${C.gold}40` }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+              <div>
+                <label style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.textLo, display: 'block', marginBottom: 4 }}>Nom</label>
+                <input type="text" value={editForm.full_name} onChange={e => setEditForm(f => ({ ...f, full_name: e.target.value }))}
+                  style={{ width: '100%', padding: '7px 10px', background: C.bgMid, border: `1px solid ${C.line}`, borderRadius: 6, color: C.textHi, fontSize: 11, fontFamily: 'JetBrains Mono,monospace', boxSizing: 'border-box' }} />
+              </div>
+              <div>
+                <label style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.textLo, display: 'block', marginBottom: 4 }}>Téléphone</label>
+                <input type="tel" value={editForm.phone} onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))}
+                  style={{ width: '100%', padding: '7px 10px', background: C.bgMid, border: `1px solid ${C.line}`, borderRadius: 6, color: C.textHi, fontSize: 11, fontFamily: 'JetBrains Mono,monospace', boxSizing: 'border-box' }} />
+              </div>
+              <div>
+                <label style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.textLo, display: 'block', marginBottom: 4 }}>Email</label>
+                <input type="email" value={editForm.email} onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))}
+                  style={{ width: '100%', padding: '7px 10px', background: C.bgMid, border: `1px solid ${C.line}`, borderRadius: 6, color: C.textHi, fontSize: 11, fontFamily: 'JetBrains Mono,monospace', boxSizing: 'border-box' }} />
+              </div>
+              <div>
+                <label style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.textLo, display: 'block', marginBottom: 4 }}>Métier</label>
+                <input type="text" value={editForm.profession} onChange={e => setEditForm(f => ({ ...f, profession: e.target.value }))}
+                  style={{ width: '100%', padding: '7px 10px', background: C.bgMid, border: `1px solid ${C.line}`, borderRadius: 6, color: C.textHi, fontSize: 11, fontFamily: 'JetBrains Mono,monospace', boxSizing: 'border-box' }} />
+              </div>
+              <div>
+                <label style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.textLo, display: 'block', marginBottom: 4 }}>Ville</label>
+                <input type="text" value={editForm.city} onChange={e => setEditForm(f => ({ ...f, city: e.target.value }))}
+                  style={{ width: '100%', padding: '7px 10px', background: C.bgMid, border: `1px solid ${C.line}`, borderRadius: 6, color: C.textHi, fontSize: 11, fontFamily: 'JetBrains Mono,monospace', boxSizing: 'border-box' }} />
+              </div>
+              <div>
+                <label style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.textLo, display: 'block', marginBottom: 4 }}>Notes</label>
+                <input type="text" value={editForm.notes} onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))}
+                  style={{ width: '100%', padding: '7px 10px', background: C.bgMid, border: `1px solid ${C.line}`, borderRadius: 6, color: C.textHi, fontSize: 11, fontFamily: 'JetBrains Mono,monospace', boxSizing: 'border-box' }} />
+              </div>
+            </div>
+            <button onClick={saveEdit} disabled={editSaving || !editForm.full_name}
+              style={{ width: '100%', padding: '9px 0', borderRadius: 8, background: '#1a1400', border: `1px solid ${C.gold}66`, color: C.gold, fontFamily: 'Oswald,sans-serif', fontSize: 11, fontWeight: 600, cursor: editSaving ? 'not-allowed' : 'pointer', letterSpacing: '0.08em' }}>
+              {editSaving ? 'SAUVEGARDE...' : '💾 SAUVEGARDER'}
+            </button>
+          </div>
+        )}
 
         {cardTab === 'info' && (
           <>

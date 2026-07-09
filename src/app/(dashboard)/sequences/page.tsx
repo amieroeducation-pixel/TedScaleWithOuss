@@ -33,12 +33,12 @@ const SEQ_PROSPECTION: Sequence[] = [
     name: 'Séquence post-premier contact TNS', desc: '6 étapes · Après appel initial', active: true,
     usecase: "Utilisée juste après un premier appel téléphonique avec un TNS pour maintenir le lien et obtenir un RDV 1.",
     steps: [
-      { type: 'mail', day: 'J+0', content: "Objet : Suite à notre échange — Introduction cabinet CGP" },
-      { type: 'wa', day: 'J+2', content: "Bonjour {Prénom}, j'espère que mon email vous a bien..." },
-      { type: 'mail', day: 'J+5', content: "Les TNS et la fiscalité 2026 — ce qui change pour vous" },
-      { type: 'sms', day: 'J+7', content: "Bonjour {Prénom}, avez-vous pu consulter mon email ?" },
-      { type: 'li', day: 'J+10', content: "InMail LinkedIn : Bonjour {Prénom}, je me permets..." },
-      { type: 'mail', day: 'J+14', content: "Dernière tentative — Proposition RDV découverte 20min" },
+      { type: 'mail', day: 'J+0', content: "Objet : Suite à notre échange — votre patrimoine de {Profession}\nPrésentation cabinet + problématiques TNS spécifiques + proposition diagnostic 20 min gratuit." },
+      { type: 'wa', day: 'J+2', content: "Bonjour {Prénom}, c'est Ted (CGP). J'espère que mon email vous a bien été transmis. Je suis spécialisé dans l'accompagnement des {Profession} sur la fiscalité et la retraite. Un créneau de 15 min ?" },
+      { type: 'mail', day: 'J+5', content: "Objet : Ce qui change en 2026 pour les {Profession}\n3 points fiscaux importants : plafond PER Madelin augmente, flat tax stable, cotisations Madelin toujours déductibles BNC. Économie moyenne : 4 200 €/an." },
+      { type: 'sms', day: 'J+7', content: "Bonjour {Prénom}, c'est Ted (CGP). Avez-vous pu consulter mon email sur la fiscalité 2026 des {Profession} ? Je peux vous rappeler pour un échange rapide." },
+      { type: 'li', day: 'J+10', content: "Bonjour {Prénom}, je me permets de vous contacter. CGP indépendant spécialisé {Profession} en IDF — optimisation fiscale et retraite. Ouvert à 15 min d'échange ?" },
+      { type: 'mail', day: 'J+14', content: "Objet : Dernière tentative — RDV découverte 20 min\nDernier message. Diagnostic gratuit sans engagement : votre stratégie est-elle optimale ou laissez-vous de l'argent sur la table ? Répondez même dans 6 mois." },
     ],
   },
   {
@@ -46,10 +46,10 @@ const SEQ_PROSPECTION: Sequence[] = [
     name: 'Relance post-RDV 1 sans réponse', desc: '4 étapes · J+3 après RDV 1', active: true,
     usecase: "Prospect qui a eu son RDV 1 mais n'a pas donné suite pour planifier un RDV 2.",
     steps: [
-      { type: 'mail', day: 'J+3', content: "Suite à notre RDV — les points que nous avons abordés" },
-      { type: 'wa', day: 'J+6', content: "Bonjour {Prénom}, avez-vous eu le temps de réfléchir ?" },
-      { type: 'sms', day: 'J+10', content: "Bonjour {Prénom}, je reste disponible pour un 2e RDV" },
-      { type: 'mail', day: 'J+15', content: "Étude personnalisée prête — souhaitez-vous la recevoir ?" },
+      { type: 'mail', day: 'J+3', content: "Objet : Suite à notre rendez-vous — récapitulatif\nRappel des points abordés + pistes d'optimisation identifiées pour {Profession}. Simulation chiffrée prête sur feu vert." },
+      { type: 'wa', day: 'J+6', content: "Bonjour {Prénom}, c'est Ted. Avez-vous eu le temps de réfléchir à notre échange ? Je peux vous envoyer la simulation personnalisée par email si vous le souhaitez." },
+      { type: 'sms', day: 'J+10', content: "Bonjour {Prénom}, Ted CGP. Je reste disponible pour un 2e RDV si vous souhaitez approfondir. Pas d'engagement, juste un échange." },
+      { type: 'mail', day: 'J+15', content: "Objet : Votre étude personnalisée est prête\nSimulation retraite avec/sans optimisation + 2-3 leviers fiscaux activables cette année + projection 10 ans. Un simple « oui » suffit." },
     ],
   },
   {
@@ -57,16 +57,22 @@ const SEQ_PROSPECTION: Sequence[] = [
     name: 'Confirmation RDV automatique', desc: '3 étapes · À la prise de RDV', active: true,
     usecase: "Déclenchée automatiquement dès qu'un RDV est planifié dans l'agenda.",
     steps: [
-      { type: 'mail', day: 'J+0', content: "Confirmation RDV + adresse + documents à préparer" },
-      { type: 'wa', day: 'J-1', content: "Rappel RDV demain à {Heure} — confirmez avec 👍" },
-      { type: 'sms', day: 'J-0 8h', content: "Bonjour {Prénom}, RDV aujourd'hui à {Heure}. À tout !" },
+      { type: 'mail', day: 'J+0', content: "Objet : Confirmation de votre RDV — documents à préparer\nConfirmation date/heure + liste facultative (avis d'imposition, relevés épargne, contrats prévoyance). Lieu ou lien visio." },
+      { type: 'wa', day: 'J-1', content: "Bonjour {Prénom}, petit rappel : notre RDV est prévu demain à {Heure}. Confirmez avec un pouce si c'est toujours bon pour vous. À demain !" },
+      { type: 'sms', day: 'J-0 8h', content: "Bonjour {Prénom}, rappel RDV aujourd'hui à {Heure} avec Ted (CGP). Au plaisir de vous retrouver !" },
     ],
   },
   {
     id: 'p4', icon: '💼', bg: '#180d2e', color: '#b07aee',
-    name: "Séquence chefs d'entreprise", desc: '0 étapes · Textes à définir', active: false,
-    usecase: "Séquence dédiée aux chefs d'entreprise — textes en cours de rédaction.",
-    steps: [],
+    name: "Séquence chefs d'entreprise", desc: '5 étapes · Dirigeants SAS/SARL', active: true,
+    usecase: "Séquence dédiée aux chefs d'entreprise (SAS, SASU, SARL) — optimisation holding, dividendes vs rémunération, cession.",
+    steps: [
+      { type: 'mail', day: 'J+0', content: "Objet : Optimisez la gestion de votre holding\nProblématiques dirigeant : arbitrage rémunération/dividendes, trésorerie excédentaire, préparation cession. Diagnostic 25 min." },
+      { type: 'wa', day: 'J+3', content: "Bonjour {Prénom}, souhaiteriez-vous un point sur votre situation patrimoniale de dirigeant ? Je peux vous envoyer un créneau cette semaine." },
+      { type: 'mail', day: 'J+7', content: "Objet : Dividendes vs rémunération — ce qui change en 2026\nFlat tax 30% vs barème progressif : quel est le point de bascule pour votre situation ? Simulation personnalisée offerte." },
+      { type: 'li', day: 'J+12', content: "Bonjour {Prénom}, j'accompagne des dirigeants comme vous sur l'optimisation fiscale et la structuration patrimoniale. 20 min sans engagement ?" },
+      { type: 'mail', day: 'J+18', content: "Objet : Dernière tentative de contact\nDernier message. Si un jour vous souhaitez optimiser votre situation de dirigeant, je reste à votre disposition." },
+    ],
   },
 ]
 

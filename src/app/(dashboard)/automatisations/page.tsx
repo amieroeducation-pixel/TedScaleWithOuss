@@ -96,17 +96,35 @@ export default function AutomatisationsPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch('/api/cron/logs')
-      .then(r => r.json())
-      .then(json => {
-        if (json.data) setLogs(json.data)
-      })
-      .catch(() => {/* silencieux — affiche [] */})
+    Promise.all([
+      fetch('/api/cron/logs').then(r => r.json()),
+      fetch('/api/cron/toggles').then(r => r.json()),
+    ]).then(([logsJson, togglesJson]) => {
+      if (logsJson.data) setLogs(logsJson.data)
+      if (togglesJson.data) {
+        const saved = togglesJson.data as Record<string, boolean>
+        setAutomations(prev => prev.map(a => ({
+          ...a,
+          active: saved[a.id] !== undefined ? saved[a.id] : a.active,
+        })))
+      }
+    }).catch(() => {})
       .finally(() => setLoading(false))
   }, [])
 
   function toggleAuto(id: string) {
-    setAutomations(prev => prev.map(a => a.id === id ? { ...a, active: !a.active } : a))
+    setAutomations(prev => {
+      const updated = prev.map(a => a.id === id ? { ...a, active: !a.active } : a)
+      const target = updated.find(a => a.id === id)
+      if (target) {
+        fetch('/api/cron/toggles', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ job_name: id, active: target.active }),
+        }).catch(() => {})
+      }
+      return updated
+    })
   }
 
   const activeCount = automations.filter(a => a.active).length

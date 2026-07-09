@@ -58,7 +58,7 @@ export async function GET(_req: NextRequest) {
     // Charger le prospect
     const { data: prospect } = await supabase
       .from('prospects')
-      .select('id, full_name, phone, phone_normalized, email, pipeline_stage, linkedin_url')
+      .select('id, full_name, phone, phone_normalized, email, pipeline_stage, linkedin_url, profession, city')
       .eq('id', instance.prospect_id)
       .single()
 
@@ -99,6 +99,7 @@ export async function GET(_req: NextRequest) {
       step,
       prospect: prospectTyped,
       messageTemplate: templateStep?.message_template ?? null,
+      prospectExtra: { profession: (prospect as any).profession, city: (prospect as any).city },
     })
 
     results.push({ step_id: rawStep.id, status: res.status, error: res.error })

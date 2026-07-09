@@ -33,6 +33,8 @@ export async function middleware(request: NextRequest) {
   const isAuthRoute = request.nextUrl.pathname.startsWith('/login')
   const isPublicRoute = request.nextUrl.pathname.startsWith('/_next') ||
     request.nextUrl.pathname.startsWith('/api/auth') ||
+    request.nextUrl.pathname.startsWith('/api/cron') ||
+    request.nextUrl.pathname.startsWith('/api/playbooks') ||
     request.nextUrl.pathname === '/favicon.ico' ||
     request.nextUrl.pathname.startsWith('/celebrations')
 

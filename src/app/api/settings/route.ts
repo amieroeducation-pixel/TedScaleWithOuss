@@ -25,6 +25,17 @@ const PatchSettingsSchema = z.object({
   rdv_per_week_target: z.number().int().min(0).optional(),
   blocks_per_day_target: z.number().int().min(0).optional(),
   message_templates: z.record(z.string(), z.record(z.string(), z.string())).optional(),
+  scoring_grids: z.object({
+    professions: z.array(z.object({ label: z.string(), val: z.number() })),
+    zones: z.array(z.object({ label: z.string(), val: z.number() })),
+  }).optional(),
+  completed_videos: z.array(z.string()).optional(),
+  daily_targets: z.object({
+    contacts: z.number(),
+    calls: z.number(),
+    rdv1: z.number(),
+    rdv2: z.number(),
+  }).optional(),
 })
 
 export async function GET(_request: NextRequest) {

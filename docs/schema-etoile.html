@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Schéma en Étoile — Ted Scale With Ouss</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #0a0e22; color: #d8e1ff; padding: 32px 28px; }
+
+  h1 { font-family: Georgia, serif; font-size: 20px; font-weight: 700; color: #e8c878; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 4px; }
+  .subtitle { font-size: 11px; color: #5a6ba8; margin-bottom: 28px; }
+
+  .section-label { font-size: 9px; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; padding: 5px 10px; border-radius: 4px; display: inline-block; margin-bottom: 14px; }
+  .label-fact { background: #e8c87820; color: #e8c878; border: 1px solid #e8c87850; }
+  .label-dim  { background: #7a92e820; color: #7a92e8; border: 1px solid #7a92e850; }
+
+  /* ─── FAIT ────────────────────────────────── */
+  .facts-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 12px; margin-bottom: 28px; }
+  .fact { background: #0e1230; border: 2px solid #e8c878; border-radius: 9px; padding: 12px; }
+  .fact-name { font-size: 10px; font-weight: 700; color: #e8c878; text-transform: uppercase; letter-spacing: .8px; margin-bottom: 8px; padding-bottom: 5px; border-bottom: 1px solid #e8c87830; }
+  .fact-grain { font-size: 8.5px; color: #7080a0; margin-bottom: 6px; font-style: italic; }
+  .m  { font-size: 9.5px; color: #a0b4d8; margin: 2px 0; }
+  .m b { color: #dde8ff; }
+  .fks { margin-top: 7px; padding-top: 6px; border-top: 1px dashed #1e2550; }
+  .fk { font-size: 8.5px; color: #4a5a80; margin: 1.5px 0; }
+  .fk b { color: #6a82c0; }
+
+  /* ─── DIM ─────────────────────────────────── */
+  .dims-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin-bottom: 28px; }
+  .dim { background: #0b0f28; border: 1px solid #2e3a70; border-radius: 9px; padding: 12px; }
+  .dim-name { font-size: 10px; font-weight: 700; color: #7a92e8; text-transform: uppercase; letter-spacing: .8px; margin-bottom: 8px; padding-bottom: 5px; border-bottom: 1px solid #2e3a70; }
+  .pk { font-size: 8.5px; color: #e8c878; font-weight: 700; margin: 2px 0; }
+  .pk::before { content: '🔑 '; }
+  .a  { font-size: 9px; color: #8090b8; margin: 2px 0; }
+  .a b { color: #b0c0e0; }
+  .hint { font-size: 8px; color: #3a4860; margin: 1px 0 3px 8px; }
+
+  /* ─── MATRICE ─────────────────────────────── */
+  table { width: 100%; border-collapse: collapse; font-size: 10px; margin-top: 14px; }
+  th { background: #0e1230; color: #7a92e8; font-weight: 700; text-align: center; padding: 7px 5px; border: 1px solid #1e2550; font-size: 8.5px; text-transform: uppercase; letter-spacing: .8px; white-space: nowrap; }
+  th:first-child { text-align: left; min-width: 170px; }
+  td { padding: 6px 5px; border: 1px solid #161e40; text-align: center; font-size: 9px; color: #3a4860; }
+  td:first-child { text-align: left; color: #e8c878; font-weight: 600; font-size: 9.5px; padding-left: 8px; }
+  tr:nth-child(even) td { background: #0b0f22; }
+  .yes { color: #e8c878; font-size: 12px; }
+
+  /* ─── INVENTAIRE ──────────────────────────── */
+  .inv-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 14px; }
+  .inv-card { background: #0b0f28; border: 1px solid #1e2550; border-radius: 7px; padding: 10px 12px; }
+  .inv-title { font-size: 9px; font-weight: 700; color: #5a6ba8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+  .inv-row { font-size: 9px; color: #7080a0; padding: 2px 0; border-bottom: 1px solid #12183a; }
+  .inv-row b { color: #9090c0; }
+
+  hr { border: none; border-top: 1px solid #1a2050; margin: 24px 0; }
+</style>
+</head>
+<body>
+
+<h1>Schéma en Étoile — Ted Scale With Ouss</h1>
+<p class="subtitle">Modèle dimensionnel complet · 27 tables · Dashboard CGP · Mai 2026</p>
+
+<!-- ══════════════════════════════ FAITS ══ -->
+<span class="section-label label-fact">⭐ 7 Tables de Faits</span>
+<div class="facts-grid">
+
+  <div class="fact">
+    <div class="fact-name">💰 Commission</div>
+    <div class="fact-grain">1 ligne = 1 contrat</div>
+    <div class="m">• <b>commission_amount</b> (€)</div>
+    <div class="m">• <b>commission_status</b></div>
+    <div class="m">• <b>commission_date</b></div>
+    <div class="m">• <b>signed_at</b></div>
+    <div class="m">• notes</div>
+    <div class="fks">
+      <div class="fk">→ <b>dim_date</b></div>
+      <div class="fk">→ <b>dim_client</b></div>
+      <div class="fk">→ <b>dim_produit</b></div>
+    </div>
+  </div>
+
+  <div class="fact">
+    <div class="fact-name">📞 Interaction</div>
+    <div class="fact-grain">1 ligne = 1 contact</div>
+    <div class="m">• <b>type</b> (appel/rdv/email…)</div>
+    <div class="m">• <b>duration_min</b></div>
+    <div class="m">• <b>is_honored</b></div>
+    <div class="m">• occurred_at</div>
+    <div class="m">• calendar_event_id</div>
+    <div class="fks">
+      <div class="fk">→ <b>dim_date</b></div>
+      <div class="fk">→ <b>dim_prospect</b></div>
+      <div class="fk">→ <b>dim_canal</b></div>
+    </div>
+  </div>
+
+  <div class="fact">
+    <div class="fact-name">📱 Appel Cold</div>
+    <div class="fact-grain">1 ligne = 1 appel cold</div>
+    <div class="m">• <b>statut_appel</b></div>
+    <div class="m">• <b>script_rating</b> (1-5)</div>
+    <div class="m">• <b>added_to_crm</b></div>
+    <div class="m">• objections_rencontrees</div>
+    <div class="m">• rappel_date</div>
+    <div class="fks">
+      <div class="fk">→ <b>dim_date</b></div>
+      <div class="fk">→ <b>dim_prospect</b></div>
+      <div class="fk">→ <b>dim_source</b></div>
+      <div class="fk">→ <b>dim_session_appel</b></div>
+    </div>
+  </div>
+
+  <div class="fact">
+    <div class="fact-name">🎯 Lead Playbook</div>
+    <div class="fact-grain">1 ligne = 1 lead détecté</div>
+    <div class="m">• <b>score</b> (0-10)</div>
+    <div class="m">• <b>ca_estime</b> (€)</div>
+    <div class="m">• <b>status</b> (pending…)</div>
+    <div class="m">• <b>selected_variant</b> (a/b/c)</div>
+    <div class="m">• linkedin_profile_url</div>
+    <div class="fks">
+      <div class="fk">→ <b>dim_date</b></div>
+      <div class="fk">→ <b>dim_playbook</b></div>
+      <div class="fk">→ <b>dim_signal</b></div>
+      <div class="fk">→ <b>dim_source</b></div>
+    </div>
+  </div>
+
+  <div class="fact">
+    <div class="fact-name">✉️ Message Séquence</div>
+    <div class="fact-grain">1 ligne = 1 message envoyé</div>
+    <div class="m">• <b>channel</b></div>
+    <div class="m">• <b>status</b> (sent/failed…)</div>
+    <div class="m">• <b>message_sent</b></div>
+    <div class="m">• scheduled_at</div>
+    <div class="m">• executed_at</div>
+    <div class="fks">
+      <div class="fk">→ <b>dim_date</b></div>
+      <div class="fk">→ <b>dim_prospect</b></div>
+      <div class="fk">→ <b>dim_canal</b></div>
+      <div class="fk">→ <b>dim_sequence</b></div>
+    </div>
+  </div>
+
+  <div class="fact">
+    <div class="fact-name">📊 KPI Journalier</div>
+    <div class="fact-grain">1 ligne = 1 jour</div>
+    <div class="m">• <b>contacts</b> (nb)</div>
+    <div class="m">• <b>calls</b> (nb)</div>
+    <div class="m">• <b>rdv1</b> (nb)</div>
+    <div class="m">• <b>rdv2</b> (nb)</div>
+    <div class="m">• <b>blocks</b> (nb)</div>
+    <div class="fks">
+      <div class="fk">→ <b>dim_date</b></div>
+      <div class="fk">→ <b>dim_objectif</b></div>
+    </div>
+  </div>
+
+  <div class="fact">
+    <div class="fact-name">🔀 Mouvement Pipeline</div>
+    <div class="fact-grain">1 ligne = 1 transition</div>
+    <div class="m">• <b>from_stage</b></div>
+    <div class="m">• <b>to_stage</b></div>
+    <div class="m">• occurred_at</div>
+    <div class="m">• notes</div>
+    <div class="fks">
+      <div class="fk">→ <b>dim_date</b></div>
+      <div class="fk">→ <b>dim_prospect</b></div>
+      <div class="fk">→ <b>dim_pipeline_stage</b></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════ DIMS ══ -->
+<span class="section-label label-dim">📐 13 Tables de Dimensions</span>
+<div class="dims-grid">
+
+  <div class="dim">
+    <div class="dim-name">📅 dim_date</div>
+    <div class="pk">date_id (YYYYMMDD)</div>
+    <div class="a">• <b>date_full</b></div>
+    <div class="a">• <b>jour</b> / <b>mois</b> / <b>annee</b></div>
+    <div class="a">• <b>semaine_iso</b></div>
+    <div class="a">• <b>trimestre</b> (Q1-Q4)</div>
+    <div class="a">• <b>jour_semaine</b> (Lun-Dim)</div>
+    <div class="a">• <b>mois_label</b> (Janvier…)</div>
+    <div class="a">• <b>est_week_end</b></div>
+    <div class="a">• <b>est_ferie</b></div>
+  </div>
+
+  <div class="dim">
+    <div class="dim-name">👤 dim_prospect</div>
+    <div class="pk">prospect_id (uuid)</div>
+    <div class="a">• <b>full_name</b></div>
+    <div class="a">• <b>company</b></div>
+    <div class="a">• <b>profession</b></div>
+    <div class="a">• <b>city</b> / <b>department</b></div>
+    <div class="a">• <b>pipeline_stage</b></div>
+    <div class="a">• <b>lead_score</b> (0-100)</div>
+    <div class="a">• <b>source</b></div>
+    <div class="a">• <b>tags[]</b></div>
+    <div class="a">• <b>linkedin_url</b></div>
+    <div class="a">• <b>signal_type</b></div>
+    <div class="a">• <b>playbook_id</b></div>
+  </div>
+
+  <div class="dim">
+    <div class="dim-name">🏦 dim_client</div>
+    <div class="pk">client_id (uuid)</div>
+    <div class="a">• <b>full_name</b></div>
+    <div class="a">• <b>company</b></div>
+    <div class="a">• <b>total_aum</b> (€)</div>
+    <div class="a">• <b>last_interaction_at</b></div>
+    <div class="a">• <b>alert_threshold_days</b></div>
+    <div class="a">• <b>nb_contrats</b></div>
+    <div class="a">• <b>anciennete_mois</b></div>
+    <div class="a">• <b>city</b></div>
+    <div class="a">• <b>segment_aum</b></div>
+    <div class="hint">&lt;100K · 100-500K · 500K+</div>
+  </div>
+
+  <div class="dim">
+    <div class="dim-name">📦 dim_produit</div>
+    <div class="pk">produit_id (uuid)</div>
+    <div class="a">• <b>name</b></div>
+    <div class="a">• <b>type</b></div>
+    <div class="hint">PER · AV · SCPI · PEA</div>
+    <div class="hint">prev_retraite · immobilier · autre</div>
+    <div class="a">• <b>provider</b></div>
+    <div class="a">• <b>categorie</b></div>
+    <div class="hint">épargne / immo / prévoyance</div>
+    <div class="a">• <b>taux_comm_pct</b></div>
+  </div>
+
+  <div class="dim">
+    <div class="dim-name">📡 dim_canal</div>
+    <div class="pk">canal_id</div>
+    <div class="a">• <b>label</b></div>
+    <div class="hint">WhatsApp · Email · SMS</div>
+    <div class="hint">Appel · LinkedIn · RDV</div>
+    <div class="a">• <b>type</b></div>
+    <div class="hint">digital / physique / hybrid</div>
+    <div class="a">• <b>cout_unitaire</b> (€)</div>
+    <div class="a">• <b>delai_reponse_moy_h</b></div>
+    <div class="a">• <b>taux_ouverture_historique</b></div>
+  </div>
+
+  <div class="dim">
+    <div class="dim-name">🔀 dim_pipeline_stage</div>
+    <div class="pk">stage_id</div>
+    <div class="a">• <b>label</b></div>
+    <div class="hint">a_contacter → rdv1 → rdv2</div>
+    <div class="hint">rdv3 → converti / perdu</div>
+    <div class="a">• <b>ordre</b> (1-6)</div>
+    <div class="a">• <b>est_terminal</b></div>
+    <div class="a">• <b>taux_conv_cible</b> (%)</div>
+    <div class="a">• <b>duree_moy_jours</b></div>
+  </div>
+
+  <div class="dim">
+    <div class="dim-name">🔍 dim_source</div>
+    <div class="pk">source_id</div>
+    <div class="a">• <b>label</b></div>
+    <div class="hint">TNS · Chefs entreprise</div>
+    <div class="hint">BODACC · Pappers · Gojiberry</div>
+    <div class="hint">Recommandation · LinkedIn</div>
+    <div class="a">• <b>type</b></div>
+    <div class="hint">data officielle / linkedin / manuel</div>
+    <div class="a">• <b>cout_par_lead</b> (€)</div>
+    <div class="a">• <b>taux_conv_historique</b></div>
+  </div>
+
+  <div class="dim">
+    <div class="dim-name">⚡ dim_signal</div>
+    <div class="pk">signal_id</div>
+    <div class="a">• <b>label</b></div>
+    <div class="hint">Cession · Holding · Dividendes</div>
+    <div class="hint">Dirigeant 55+ · Création · B2B</div>
+    <div class="hint">LinkedIn: Promo · Levée · Retraite…</div>
+    <div class="a">• <b>famille</b> (A / B / C)</div>
+    <div class="a">• <b>fenetre_urgence_jours</b></div>
+    <div class="a">• <b>score_base</b> (0-10)</div>
+    <div class="a">• <b>emoji</b></div>
+  </div>
+
+  <div class="dim">
+    <div class="dim-name">🎮 dim_playbook</div>
+    <div class="pk">playbook_id (text)</div>
+    <div class="a">• <b>name</b></div>
+    <div class="hint">a1-créations · a2-cessions</div>
+    <div class="hint">a3-holdings · a4-dividendes</div>
+    <div class="hint">a5-dirigeants · b1-surveillance</div>
+    <div class="hint">b3-liquidité · c1-linkedin…</div>
+    <div class="a">• <b>family</b> (A / B / C)</div>
+    <div class="a">• <b>schedule_cron</b></div>
+    <div class="a">• <b>urgency_days</b></div>
+  </div>
+
+  <div class="dim">
+    <div class="dim-name">📋 dim_sequence</div>
+    <div class="pk">sequence_id (uuid)</div>
+    <div class="a">• <b>name</b></div>
+    <div class="a">• <b>nb_steps</b></div>
+    <div class="a">• <b>duree_totale_jours</b></div>
+    <div class="a">• <b>auto_trigger</b></div>
+    <div class="a">• <b>pipeline_stage_trigger</b></div>
+    <div class="a">• <b>canaux_utilises[]</b></div>
+    <div class="hint">whatsapp / email / sms / call / linkedin</div>
+  </div>
+
+  <div class="dim">
+    <div class="dim-name">📱 dim_session_appel</div>
+    <div class="pk">session_id (uuid)</div>
+    <div class="a">• <b>titre</b></div>
+    <div class="a">• <b>metier</b></div>
+    <div class="a">• <b>ville</b></div>
+    <div class="a">• <b>source</b> (tns / chefs)</div>
+    <div class="a">• <b>statut</b> (active/terminée)</div>
+    <div class="a">• <b>nb_contacts</b></div>
+    <div class="a">• <b>taux_chaud</b> (%)</div>
+    <div class="a">• <b>taux_crm</b> (%)</div>
+  </div>
+
+  <div class="dim">
+    <div class="dim-name">🤝 dim_partenaire</div>
+    <div class="pk">partner_id (uuid)</div>
+    <div class="a">• <b>full_name</b></div>
+    <div class="a">• <b>role</b> / <b>cabinet</b></div>
+    <div class="a">• <b>city</b> / <b>location</b></div>
+    <div class="a">• <b>pressure</b></div>
+    <div class="hint">low / medium / high / max</div>
+    <div class="a">• <b>days_since</b> (dernier contact)</div>
+    <div class="a">• <b>clients</b> (nb apportés)</div>
+    <div class="a">• <b>mobile</b> / <b>email</b></div>
+    <div class="a">• <b>linkedin</b></div>
+  </div>
+
+  <div class="dim">
+    <div class="dim-name">🎯 dim_objectif</div>
+    <div class="pk">objectif_id (uuid)</div>
+    <div class="a">• <b>year</b> / <b>month</b></div>
+    <div class="a">• <b>amount</b> (€)</div>
+    <div class="a">• <b>product_type</b></div>
+    <div class="a">• <b>ca_monthly_target</b></div>
+    <div class="a">• <b>calls_per_day_target</b></div>
+    <div class="a">• <b>rdv_per_week_target</b></div>
+    <div class="a">• <b>closing_target_pct</b></div>
+    <div class="a">• <b>blocks_per_day_target</b></div>
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════ MATRICE ══ -->
+<hr>
+<span class="section-label label-dim" style="margin-bottom:0">🔗 Matrice Relations Faits ↔ Dimensions</span>
+<table>
+  <thead>
+    <tr>
+      <th>Table de Fait</th>
+      <th>dim_date</th>
+      <th>dim_prospect</th>
+      <th>dim_client</th>
+      <th>dim_produit</th>
+      <th>dim_canal</th>
+      <th>dim_pipeline</th>
+      <th>dim_source</th>
+      <th>dim_signal</th>
+      <th>dim_playbook</th>
+      <th>dim_sequence</th>
+      <th>dim_session_appel</th>
+      <th>dim_partenaire</th>
+      <th>dim_objectif</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>💰 fact_commission</td>
+      <td class="yes">✓</td><td>—</td><td class="yes">✓</td><td class="yes">✓</td><td>—</td><td class="yes">✓</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td>
+    </tr>
+    <tr>
+      <td>📞 fact_interaction</td>
+      <td class="yes">✓</td><td class="yes">✓</td><td>—</td><td>—</td><td class="yes">✓</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td>
+    </tr>
+    <tr>
+      <td>📱 fact_appel_cold</td>
+      <td class="yes">✓</td><td class="yes">✓</td><td>—</td><td>—</td><td>—</td><td>—</td><td class="yes">✓</td><td>—</td><td>—</td><td>—</td><td class="yes">✓</td><td>—</td><td>—</td>
+    </tr>
+    <tr>
+      <td>🎯 fact_lead_playbook</td>
+      <td class="yes">✓</td><td class="yes">✓</td><td>—</td><td>—</td><td>—</td><td>—</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td>—</td><td>—</td><td>—</td><td>—</td>
+    </tr>
+    <tr>
+      <td>✉️ fact_sequence_step</td>
+      <td class="yes">✓</td><td class="yes">✓</td><td>—</td><td>—</td><td class="yes">✓</td><td>—</td><td>—</td><td>—</td><td>—</td><td class="yes">✓</td><td>—</td><td>—</td><td>—</td>
+    </tr>
+    <tr>
+      <td>📊 fact_kpi_journalier</td>
+      <td class="yes">✓</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td class="yes">✓</td>
+    </tr>
+    <tr>
+      <td>🔀 fact_pipeline_move</td>
+      <td class="yes">✓</td><td class="yes">✓</td><td>—</td><td>—</td><td>—</td><td class="yes">✓</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- ══════════════════════════════ INVENTAIRE COMPLET ══ -->
+<hr>
+<span class="section-label" style="background:#1a2050; color:#5a6ba8; border:1px solid #1e2560; margin-bottom:14px">📋 Inventaire complet — 27 tables Supabase</span>
+<div class="inv-grid">
+  <div class="inv-card">
+    <div class="inv-title">CRM & Pipeline</div>
+    <div class="inv-row"><b>prospects</b> — leads, clients, pipeline, scoring</div>
+    <div class="inv-row"><b>interactions</b> — appels, RDV, emails, LinkedIn</div>
+    <div class="inv-row"><b>clients</b> — AUM, alertes inactivité</div>
+    <div class="inv-row"><b>pipeline_events</b> — historique mouvements</div>
+    <div class="inv-row"><b>partners</b> — cercle partenaires apporteurs</div>
+  </div>
+  <div class="inv-card">
+    <div class="inv-title">Finance & Produits</div>
+    <div class="inv-row"><b>contracts</b> — contrats signés, commissions</div>
+    <div class="inv-row"><b>financial_products</b> — PER, AV, SCPI, PEA…</div>
+    <div class="inv-row"><b>revenue_objectives</b> — objectifs CA mensuels/annuels</div>
+    <div class="inv-row"><b>daily_kpis</b> — contacts, calls, RDV par jour</div>
+    <div class="inv-row"><b>achievements</b> — badges CA, milestones clients</div>
+  </div>
+  <div class="inv-card">
+    <div class="inv-title">Séquences & Messaging</div>
+    <div class="inv-row"><b>sequence_templates</b> — templates multicanaux</div>
+    <div class="inv-row"><b>sequence_template_steps</b> — étapes des templates</div>
+    <div class="inv-row"><b>sequence_instances</b> — séquences lancées</div>
+    <div class="inv-row"><b>sequence_instance_steps</b> — messages envoyés</div>
+    <div class="inv-row"><b>sequence_versions</b> — A/B testing messages</div>
+  </div>
+  <div class="inv-card">
+    <div class="inv-title">Appels Cold (Calling)</div>
+    <div class="inv-row"><b>calling_sessions</b> — sessions TNS / Chefs</div>
+    <div class="inv-row"><b>calling_session_contacts</b> — contacts appelés</div>
+    <div class="inv-row"><b>call_scripts</b> — scripts par métier</div>
+    <div class="inv-row"><b>call_objections</b> — objections + réponses</div>
+    <div class="inv-row"><b>tasks</b> — Kanban tâches (todo/done)</div>
+  </div>
+  <div class="inv-card">
+    <div class="inv-title">Playbooks & Prospection Data</div>
+    <div class="inv-row"><b>playbook_runs</b> — exécutions automatiques</div>
+    <div class="inv-row"><b>playbook_prospects</b> — leads détectés (score, messages)</div>
+    <div class="inv-row"><b>scraping_jobs</b> — jobs Google Places / API</div>
+    <div class="inv-row"><b>scraping_results</b> — résultats bruts TNS</div>
+  </div>
+  <div class="inv-card">
+    <div class="inv-title">Système & Config</div>
+    <div class="inv-row"><b>user_settings</b> — objectifs KPI, tokens, templates</div>
+    <div class="inv-row"><b>telegram_config</b> — chat_id notifications</div>
+    <div class="inv-row"><b>cron_logs</b> — historique automatisations</div>
+    <div class="inv-row"><b>auth.users</b> (Supabase) — compte Ted</div>
+  </div>
+</div>
+
+<div style="margin-top:20px; font-size:9px; color:#2a3460; text-align:right">
+  Ted Scale With Ouss · Modèle Dimensionnel v2.0 · 27 tables · 7 faits · 13 dimensions · Mai 2026
+</div>
+
+</body>
+</html>

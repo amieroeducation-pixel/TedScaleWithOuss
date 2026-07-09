@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { C } from '@/lib/theme'
 
 interface Dept {
@@ -85,14 +85,42 @@ export default function MapPage() {
   const [mapLoading, setMapLoading] = useState<string | null>(null)
   const [mapError, setMapError] = useState<string | null>(null)
   const [searchedDept, setSearchedDept] = useState<Dept | null>(null)
+  const [deptStats, setDeptStats] = useState<Record<string, { prospects: number; contacted: number; rdv: number }>>({})
+
+  useEffect(() => {
+    fetch('/api/prospects?limit=200')
+      .then(r => r.json())
+      .then(json => {
+        if (!json.success || !Array.isArray(json.data)) return
+        const stats: Record<string, { prospects: number; contacted: number; rdv: number }> = {}
+        DEPARTMENTS.forEach(d => { stats[d.code] = { prospects: 0, contacted: 0, rdv: 0 } })
+        json.data.forEach((p: { department?: string; pipeline_stage?: string }) => {
+          const dept = p.department || ''
+          const code = dept.slice(0, 2)
+          if (!stats[code]) stats[code] = { prospects: 0, contacted: 0, rdv: 0 }
+          stats[code].prospects++
+          if (p.pipeline_stage && p.pipeline_stage !== 'a_contacter') stats[code].contacted++
+          if (p.pipeline_stage && ['rdv_planifie', 'proposition', 'converti'].includes(p.pipeline_stage)) stats[code].rdv++
+        })
+        setDeptStats(stats)
+      })
+      .catch(() => {})
+  }, [])
+
+  const departments = DEPARTMENTS.map(d => ({
+    ...d,
+    prospects: deptStats[d.code]?.prospects ?? d.prospects,
+    contacted: deptStats[d.code]?.contacted ?? d.contacted,
+    rdv: deptStats[d.code]?.rdv ?? d.rdv,
+  }))
 
   const totals = {
-    prospects: DEPARTMENTS.reduce((s, d) => s + d.prospects, 0),
-    contacted: DEPARTMENTS.reduce((s, d) => s + d.contacted, 0),
-    rdv: DEPARTMENTS.reduce((s, d) => s + d.rdv, 0),
-    converted: 34,
+    prospects: departments.reduce((s, d) => s + d.prospects, 0),
+    contacted: departments.reduce((s, d) => s + d.contacted, 0),
+    rdv: departments.reduce((s, d) => s + d.rdv, 0),
+    converted: departments.reduce((s, d) => s + d.rdv, 0),
   }
-  const avgScore = (DEPARTMENTS.reduce((s, d) => s + d.avgScore, 0) / DEPARTMENTS.length).toFixed(1)
+  const avgScore = (departments.reduce((s, d) => s + d.avgScore, 0) / departments.length).toFixed(1)
 
   async function lancerProspection(dept: Dept) {
     setMapLoading(dept.code)

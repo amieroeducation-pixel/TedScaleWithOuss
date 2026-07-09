@@ -130,13 +130,27 @@ export default function ChefsEntreprisePage() {
   const [workflowStats, setWorkflowStats] = useState<WorkflowStats | null>(null)
   const [lastWorkflowType, setLastWorkflowType] = useState<'hebdomadaire' | 'mensuel' | null>(null)
   const [addingLead, setAddingLead] = useState<string | null>(null)
+  const [existingPhones, setExistingPhones] = useState<Set<string>>(new Set())
+
+  function normPhone(p: string | null | undefined) { return (p ?? '').replace(/[\s.\-]/g, '') }
 
   useEffect(() => {
     async function loadChefs() {
       try {
-        const res = await fetch('/api/prospects?source=chefs_entreprise&limit=50')
-        const data = await res.json()
-        if (data.success) setChefs(data.data ?? [])
+        const [chefsRes, allRes] = await Promise.all([
+          fetch('/api/prospects?source=chefs_entreprise&limit=50'),
+          fetch('/api/prospects?limit=200'),
+        ])
+        const chefsData = await chefsRes.json()
+        const allData = await allRes.json()
+        if (chefsData.success) setChefs(chefsData.data ?? [])
+        if (allData.success && Array.isArray(allData.data)) {
+          const phones = new Set<string>()
+          allData.data.forEach((p: { phone?: string | null }) => {
+            if (p.phone) phones.add(normPhone(p.phone))
+          })
+          setExistingPhones(phones)
+        }
       } catch { /* silently */ }
       finally { setChefsLoading(false) }
     }
@@ -197,7 +211,7 @@ export default function ChefsEntreprisePage() {
   async function addLeadToCRM(lead: WorkflowLead) {
     setAddingLead(lead.id)
     try {
-      await fetch('/api/prospects', {
+      const res = await fetch('/api/prospects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -210,10 +224,16 @@ export default function ChefsEntreprisePage() {
           notes: `Forme: ${lead.forme} · Création: ${lead.dateCreation ?? 'N/A'} · Signal: ${lead.signalLabel}`,
         }),
       })
-      setWorkflowLeads(prev => prev.filter(l => l.id !== lead.id))
-      const res = await fetch('/api/prospects?source=chefs_entreprise&limit=50')
-      const data = await res.json()
-      if (data.success) setChefs(data.data ?? [])
+      const json = await res.json()
+      if (res.status === 409) {
+        setWorkflowLeads(prev => prev.map(l => l.id === lead.id ? { ...l, signal: 'duplicate', signalLabel: 'Déjà en base' } : l))
+      } else if (json.success) {
+        if (lead.phone) setExistingPhones(prev => new Set([...prev, normPhone(lead.phone)]))
+        setWorkflowLeads(prev => prev.filter(l => l.id !== lead.id))
+        const chefsRes = await fetch('/api/prospects?source=chefs_entreprise&limit=50')
+        const chefsData = await chefsRes.json()
+        if (chefsData.success) setChefs(chefsData.data ?? [])
+      }
     } catch { /* silently */ }
     finally { setAddingLead(null) }
   }

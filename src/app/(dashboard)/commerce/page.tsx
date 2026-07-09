@@ -89,6 +89,14 @@ export default function CommercePage() {
         }
       })
       .catch(() => {})
+    fetch('/api/settings')
+      .then(r => r.json())
+      .then(json => {
+        if (json.success && Array.isArray(json.data?.completed_videos)) {
+          setWatchedVideos(new Set(json.data.completed_videos))
+        }
+      })
+      .catch(() => {})
   }, [])
 
   const theme = THEMES.find(t => t.id === selectedTheme)!
@@ -100,6 +108,11 @@ export default function CommercePage() {
     setWatchedVideos(prev => {
       const next = new Set(prev)
       next.has(id) ? next.delete(id) : next.add(id)
+      fetch('/api/settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ completed_videos: Array.from(next) }),
+      }).catch(() => {})
       return next
     })
   }
