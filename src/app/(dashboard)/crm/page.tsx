@@ -22,6 +22,7 @@ import { C } from '@/lib/theme'
 import { openWhatsApp, openLinkedIn } from '@/lib/sequences/client-actions'
 import ProspectEditForm from '@/components/prospects/ProspectEditForm'
 import { saveLastSection } from '@/lib/navigation-state'
+import { detectCivilite } from '@/lib/civilite'
 
 // --- TYPES ---
 type Stage = 'À contacter' | 'RDV1' | 'RDV2' | 'RDV3' | 'Converti' | 'Perdu'
@@ -1338,18 +1339,17 @@ export default function CrmPage() {
                   <div
                     key={script.id}
                     onClick={() => {
-                      const nomComplet = showScriptPicker.prospect.nom
-                      const parts = nomComplet.split(' ')
-                      const prenom = parts[0] || ''
-                      const nomFamille = parts.slice(1).join(' ') || nomComplet
-                      const profession = showScriptPicker.prospect.profession.toLowerCase()
+                      const raw = showScriptPicker.prospect.nom || ''
+                      const sansMetier = raw.split(' - ')[0].trim()
+                      const nomFamille = sansMetier.split(' ')[0] || sansMetier
+                      const civilite = detectCivilite(
+                        sansMetier,
+                        showScriptPicker.prospect.profession
+                      )
 
                       const message = script.contenu
-                        .replace(/\[Prénom\]/g, prenom)
+                        .replace(/\[Civilité\]/g, civilite)
                         .replace(/\[Nom\]/g, nomFamille)
-                        .replace(/Docteur \[Nom\]/g, `Docteur ${nomFamille}`)
-                        .replace(/Monsieur \[Nom\]/g, `Monsieur ${nomFamille}`)
-                        .replace(/Madame \[Nom\]/g, `Madame ${nomFamille}`)
 
                       // Afficher preview au lieu d'ouvrir direct
                       setScriptPreview({
@@ -1549,7 +1549,7 @@ export default function CrmPage() {
               {editingScript.id ? 'MODIFIER LE SCRIPT' : 'NOUVEAU SCRIPT'}
             </div>
             <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.textLo, marginBottom: 18 }}>
-              Variables : <span style={{ color: C.gold }}>[Prénom]</span> <span style={{ color: C.gold }}>[Nom]</span> <span style={{ color: C.gold }}>Docteur [Nom]</span>
+              Variables : <span style={{ color: C.gold }}>[Civilité]</span> = Monsieur/Docteur auto &nbsp; <span style={{ color: C.gold }}>[Nom]</span> = nom de famille
             </div>
 
             {/* Formulaire */}
