@@ -849,6 +849,7 @@ export default function CrmPage() {
   const [showScriptPicker, setShowScriptPicker] = useState<{ prospect: Prospect; channel: 'whatsapp' | 'linkedin' } | null>(null)
   const [callScripts, setCallScripts] = useState<Array<{ id: string; metier: string; titre: string; contenu: string }>>([])
   const [scriptsLoading, setScriptsLoading] = useState(false)
+  const [scriptPreview, setScriptPreview] = useState<{ message: string; channel: 'whatsapp' | 'linkedin'; prospect: Prospect } | null>(null)
   const [fetchError, setFetchError] = useState<string | null>(null)
   const [showNewProspect, setShowNewProspect] = useState(false)
   const [npForm, setNpForm] = useState({ full_name: '', profession: '', phone: '', email: '', city: '', source: 'autre', notes: '' })
@@ -1336,16 +1337,12 @@ export default function CrmPage() {
                         .replace(/Docteur \[Nom\]/g, titreProspect)
                         .replace(/Bonjour \[Prénom\]/g, `Bonjour ${titreProspect}`)
 
-                      if (showScriptPicker.channel === 'whatsapp') {
-                        openWhatsApp(showScriptPicker.prospect.telephone, message)
-                      } else {
-                        openLinkedIn({
-                          linkedinUrl: null,
-                          prospectName: showScriptPicker.prospect.nom,
-                          inmailTemplate: message,
-                          onCopied: () => toast.success('Script copié dans le presse-papier'),
-                        })
-                      }
+                      // Afficher preview au lieu d'ouvrir direct
+                      setScriptPreview({
+                        message,
+                        channel: showScriptPicker.channel,
+                        prospect: showScriptPicker.prospect
+                      })
                       setShowScriptPicker(null)
                     }}
                     style={{
@@ -1415,6 +1412,95 @@ export default function CrmPage() {
             >
               ANNULER
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal preview script AVANT envoi WhatsApp */}
+      {scriptPreview && (
+        <div onClick={() => setScriptPreview(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: C.bgMid, border: `1px solid ${C.line}`, borderRadius: 14, padding: 24, width: '100%', maxWidth: 700, maxHeight: '90vh', overflow: 'auto', position: 'relative' }}>
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: scriptPreview.channel === 'whatsapp' ? '#25D366' : '#0A66C2', borderRadius: '14px 14px 0 0' }} />
+
+            <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 16, fontWeight: 600, color: C.textHi, marginBottom: 4, marginTop: 6 }}>
+              APERÇU DU SCRIPT
+            </div>
+            <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.textLo, marginBottom: 4 }}>
+              {scriptPreview.prospect.nom} — {scriptPreview.prospect.profession}
+            </div>
+            <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: scriptPreview.channel === 'whatsapp' ? '#25D366' : '#0A66C2', marginBottom: 18 }}>
+              {scriptPreview.channel === 'whatsapp' ? '💬 WhatsApp' : '📋 LinkedIn'} — {scriptPreview.prospect.telephone}
+            </div>
+
+            {/* Message complet interpolé */}
+            <div style={{
+              background: C.surface1,
+              border: `1px solid ${C.line}`,
+              borderRadius: 8,
+              padding: 16,
+              marginBottom: 20,
+              maxHeight: '60vh',
+              overflow: 'auto',
+            }}>
+              <div style={{
+                fontFamily: 'JetBrains Mono,monospace',
+                fontSize: 11,
+                color: C.textHi,
+                whiteSpace: 'pre-wrap',
+                lineHeight: 1.6,
+              }}>
+                {scriptPreview.message}
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                onClick={() => setScriptPreview(null)}
+                style={{
+                  flex: 1,
+                  padding: 12,
+                  borderRadius: 8,
+                  background: C.surface1,
+                  border: `1px solid ${C.line}`,
+                  color: C.textLo,
+                  fontFamily: 'Oswald,sans-serif',
+                  fontSize: 11,
+                  cursor: 'pointer',
+                }}
+              >
+                ← RETOUR
+              </button>
+              <button
+                onClick={() => {
+                  if (scriptPreview.channel === 'whatsapp') {
+                    openWhatsApp(scriptPreview.prospect.telephone, scriptPreview.message)
+                  } else {
+                    openLinkedIn({
+                      linkedinUrl: null,
+                      prospectName: scriptPreview.prospect.nom,
+                      inmailTemplate: scriptPreview.message,
+                      onCopied: () => toast.success('Script copié dans le presse-papier'),
+                    })
+                  }
+                  setScriptPreview(null)
+                }}
+                style={{
+                  flex: 2,
+                  padding: 12,
+                  borderRadius: 8,
+                  background: scriptPreview.channel === 'whatsapp' ? 'rgba(37,211,102,0.15)' : 'rgba(10,102,194,0.15)',
+                  border: `1px solid ${scriptPreview.channel === 'whatsapp' ? '#25D366' : '#0A66C2'}`,
+                  color: scriptPreview.channel === 'whatsapp' ? '#25D366' : '#0A66C2',
+                  fontFamily: 'Oswald,sans-serif',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                {scriptPreview.channel === 'whatsapp' ? '📱 OUVRIR WHATSAPP' : '📋 COPIER & OUVRIR LINKEDIN'}
+              </button>
+            </div>
           </div>
         </div>
       )}
