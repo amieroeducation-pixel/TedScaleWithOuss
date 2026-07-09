@@ -29,14 +29,26 @@ export async function PUT(
 
   const callStatuses = ['contacte', 'pas_repondu', 'pas_interesse', 'chaud']
   if (body.statut_appel && callStatuses.includes(body.statut_appel) && data.prospect_id) {
-    await supabase.from('interactions').insert({
-      user_id: user.id,
-      prospect_id: data.prospect_id,
-      type: 'appel',
-      notes: body.note || `Appel session — ${body.statut_appel}`,
-      is_honored: body.statut_appel !== 'pas_repondu',
-      occurred_at: new Date().toISOString(),
-    })
+    const sixtySecsAgo = new Date(Date.now() - 60_000).toISOString()
+    const { data: recentInteraction } = await supabase
+      .from('interactions')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('prospect_id', data.prospect_id)
+      .eq('type', 'appel')
+      .gte('occurred_at', sixtySecsAgo)
+      .maybeSingle()
+
+    if (!recentInteraction) {
+      await supabase.from('interactions').insert({
+        user_id: user.id,
+        prospect_id: data.prospect_id,
+        type: 'appel',
+        notes: body.note || `Appel session — ${body.statut_appel}`,
+        is_honored: body.statut_appel !== 'pas_repondu',
+        occurred_at: new Date().toISOString(),
+      })
+    }
     await supabase.from('prospects').update({
       last_contact_at: new Date().toISOString(),
     }).eq('id', data.prospect_id).eq('user_id', user.id)

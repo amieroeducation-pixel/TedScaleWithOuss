@@ -701,12 +701,6 @@ export default function TodayPage() {
         else if (next === 5) celebrate('objectif_blocs', 'ENCORE UN !')
         else celebrate('appel_passe')
       }, 0)
-      // POST session duration to daily_kpis
-      fetch('/api/today/kpis', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ blocks: next }),
-      }).catch(() => {})
       return next
     })
   }
