@@ -439,9 +439,7 @@ function ProspectDrawer({ prospect, onClose, onStageChange, onPressureChange, on
     }
   }
 
-  const waMsg = encodeURIComponent(
-    `Bonjour ${prospect.nom.split(' ').pop()}, je suis Ted, conseiller en gestion de patrimoine. Seriez-vous disponible pour un échange de 15 minutes cette semaine ?`
-  )
+  // waMsg removed: use script picker instead
 
   return (
     <div style={{
@@ -732,13 +730,13 @@ function ProspectDrawer({ prospect, onClose, onStageChange, onPressureChange, on
         <div style={{ fontSize: 9, color: C.textLo, marginBottom: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1 }}>Actions rapides</div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
           <button
-            onClick={() => window.open(`https://wa.me/33${prospect.telephone.replace(/\s/g,'').replace(/^0/,'').replace(/[^0-9]/g,'')}?text=${waMsg}`, '_blank')}
+            onClick={() => onOpenScriptPicker(prospect, 'whatsapp')}
             style={{ padding: '9px 0', borderRadius: 7, border: '1px solid #25D366', background: 'rgba(37,211,102,0.1)', color: '#25D366', fontWeight: 600, fontSize: 11, cursor: 'pointer' }}
-          >💬 WhatsApp</button>
+          >💬 Script WhatsApp</button>
           <button
-            onClick={() => window.open(`https://linkedin.com/search/results/people/?keywords=${encodeURIComponent(prospect.nom)}`, '_blank')}
+            onClick={() => onOpenScriptPicker(prospect, 'linkedin')}
             style={{ padding: '9px 0', borderRadius: 7, border: '1px solid #0A66C2', background: 'rgba(10,102,194,0.1)', color: '#0A66C2', fontWeight: 600, fontSize: 11, cursor: 'pointer' }}
-          >🔗 LinkedIn</button>
+          >📋 Script LinkedIn</button>
           <button
             onClick={() => { if (!prospect.email) { toast.error('Email inconnu pour ce prospect'); return }; setShowEmailModal(true) }}
             style={{ padding: '9px 0', borderRadius: 7, border: `1px solid ${C.indigo}`, background: C.indigo + '1a', color: C.indigo, fontWeight: 600, fontSize: 11, cursor: 'pointer' }}
