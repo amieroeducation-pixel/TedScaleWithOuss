@@ -165,13 +165,13 @@ export async function GET(request: NextRequest) {
     .eq('year', year)
     .eq('month', month)
     .is('product_type', null)
-    .single()
+    .maybeSingle()
 
   const { data: settings } = await supabase
     .from('user_settings')
     .select('calls_per_day_target, rdv_per_week_target, ca_monthly_target')
     .eq('id', user.id)
-    .single()
+    .maybeSingle()
 
   // Working days in month (approximate: 22)
   const joursOuvres = 22

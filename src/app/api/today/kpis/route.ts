@@ -1,14 +1,14 @@
-// src/app/api/today/kpis/route.ts
 import { NextRequest } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { apiSuccess, apiError, apiUnauthorized } from '@/lib/api'
+import { todayParis } from '@/lib/date-utils'
 
 export async function GET(_request: NextRequest) {
   const supabase = await createSupabaseServerClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return apiUnauthorized()
 
-  const today = new Date().toISOString().split('T')[0]
+  const today = todayParis()
 
   const [kpiRes, settingsRes] = await Promise.all([
     supabase
@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
   let body: { contacts?: number; calls?: number; rdv1?: number; rdv2?: number; blocks?: number }
   try { body = await request.json() } catch { return apiError('Corps invalide', 400) }
 
-  const today = new Date().toISOString().split('T')[0] // YYYY-MM-DD
+  const today = todayParis() // YYYY-MM-DD
 
   const { error } = await supabase
     .from('daily_kpis')

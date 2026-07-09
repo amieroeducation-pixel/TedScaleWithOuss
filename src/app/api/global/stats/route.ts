@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { apiSuccess, apiError, apiUnauthorized } from '@/lib/api'
+import { todayParis } from '@/lib/date-utils'
 
 export async function GET(_request: NextRequest) {
   const supabase = await createSupabaseServerClient()
@@ -38,7 +39,7 @@ export async function GET(_request: NextRequest) {
     .gte('created_at', todayIso)
 
   // Today manual KPIs
-  const todayDate = new Date().toISOString().split('T')[0]
+  const todayDate = todayParis()
   const { data: dailyRow } = await supabase
     .from('daily_kpis')
     .select('contacts, calls, rdv1, rdv2, blocks')

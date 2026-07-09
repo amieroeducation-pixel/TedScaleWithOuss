@@ -14,7 +14,7 @@ export async function GET(_request: NextRequest) {
   const monthStart = startOfMonth(now).toISOString()
   const monthEnd = endOfMonth(now).toISOString()
 
-  const [callsRes, rdvRes, prospectsRes, contractsRes, tasksRes, revenueRes, kpisRes] = await Promise.all([
+  const [callsRes, rdvRes, prospectsRes, contractsRes, tasksRes, revenueRes, kpisRes, settingsRes] = await Promise.all([
     supabase
       .from('calling_sessions')
       .select('id', { count: 'exact', head: true })
@@ -57,7 +57,7 @@ export async function GET(_request: NextRequest) {
       .select('target_amount')
       .eq('user_id', user.id)
       .eq('month', now.toISOString().slice(0, 7))
-      .single(),
+      .maybeSingle(),
 
     supabase
       .from('daily_kpis')
@@ -65,6 +65,12 @@ export async function GET(_request: NextRequest) {
       .eq('user_id', user.id)
       .gte('date', weekStart.split('T')[0])
       .lte('date', weekEnd.split('T')[0]),
+
+    supabase
+      .from('user_settings')
+      .select('calls_per_day_target, blocks_per_day_target, rdv_per_week_target')
+      .eq('id', user.id)
+      .maybeSingle(),
   ])
 
   const totalCalls = kpisRes.data?.reduce((sum, k) => sum + (k.calls || 0), 0) ?? callsRes.count ?? 0
@@ -75,11 +81,7 @@ export async function GET(_request: NextRequest) {
 
   const targetAmount = revenueRes.data?.target_amount ?? 0
 
-  const { data: settingsData } = await supabase
-    .from('user_settings')
-    .select('calls_per_day_target, blocks_per_day_target, rdv_per_week_target')
-    .eq('id', user.id)
-    .maybeSingle()
+  const settingsData = settingsRes.data
 
   const weeklyCallTarget = (settingsData?.calls_per_day_target ?? 8) * 5
   const weeklyBlockTarget = (settingsData?.blocks_per_day_target ?? 3) * 5

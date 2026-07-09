@@ -120,31 +120,34 @@ export default function ParticuliersPage() {
     if (!rows.length) return
     setImporting(true)
 
-    const results: Particulier[] = []
-    for (const row of rows) {
-      const res = await fetch('/api/prospects', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          full_name: `${row.prenom} ${row.nom}`.trim(),
-          email: row.email || undefined,
-          phone: row.telephone || undefined,
-          city: row.ville || undefined,
-          source: 'particuliers',
-          notes: row.patrimoine ? `Patrimoine: ${row.patrimoine}` : undefined,
-        }),
-      }).catch(() => null)
-      if (res && res.ok) {
-        results.push({
-          id: Date.now() + results.length,
+    const prospects = rows.map(row => ({
+      full_name: `${row.prenom} ${row.nom}`.trim(),
+      email: row.email || undefined,
+      phone: row.telephone || undefined,
+      city: row.ville || undefined,
+      source: 'particuliers' as const,
+      notes: row.patrimoine ? `Patrimoine: ${row.patrimoine}` : undefined,
+    }))
+
+    const res = await fetch('/api/prospects/batch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prospects }),
+    }).catch(() => null)
+
+    if (res && res.ok) {
+      const json = await res.json()
+      const inserted: Particulier[] = rows
+        .slice(0, json.data?.inserted ?? rows.length)
+        .map((row, i) => ({
+          id: Date.now() + i,
           nom: row.nom, prenom: row.prenom, email: row.email,
           telephone: row.telephone, ville: row.ville, age: row.age,
-          patrimoine: row.patrimoine, status: 'Non contacté',
-        })
-      }
+          patrimoine: row.patrimoine, status: 'Non contacté' as Status,
+        }))
+      if (inserted.length) setParticuliers(prev => [...inserted, ...prev])
     }
 
-    if (results.length) setParticuliers(prev => [...results, ...prev])
     setPreview(null)
     setFileName('')
     setMapping({})

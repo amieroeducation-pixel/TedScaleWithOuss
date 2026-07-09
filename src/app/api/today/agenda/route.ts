@@ -2,6 +2,7 @@
 import { NextRequest } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { apiSuccess, apiError, apiUnauthorized } from '@/lib/api'
+import { todayParis } from '@/lib/date-utils'
 
 /**
  * Agenda events — stored in `tasks` table with badge='agenda'
@@ -31,7 +32,7 @@ export async function GET(request: NextRequest) {
 
   // Get date from query params, default to today
   const { searchParams } = new URL(request.url)
-  const dateKey = searchParams.get('date') ?? new Date().toISOString().split('T')[0]
+  const dateKey = searchParams.get('date') ?? todayParis()
 
   const { data, error } = await supabase
     .from('tasks')
@@ -68,7 +69,7 @@ export async function POST(request: NextRequest) {
   if (!body.time) return apiError('time requis', 400)
 
   const eventType = body.type && VALID_TYPES.includes(body.type) ? body.type : 'autre'
-  const dateKey = body.date ?? new Date().toISOString().split('T')[0]
+  const dateKey = body.date ?? todayParis()
 
   const { data, error } = await supabase
     .from('tasks')
