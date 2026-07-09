@@ -1313,7 +1313,28 @@ export default function CrmPage() {
                     key={script.id}
                     onClick={() => {
                       const prenom = showScriptPicker.prospect.nom.split(' ')[0]
-                      const message = script.contenu.replace(/\[Prénom\]/g, prenom).replace(/\[Nom\]/g, showScriptPicker.prospect.nom)
+                      const nom = showScriptPicker.prospect.nom
+                      const profession = showScriptPicker.prospect.profession.toLowerCase()
+
+                      // Titre professionnel intelligent
+                      let titreProspect = prenom
+                      if (profession.includes('médecin') || profession.includes('medecin')) {
+                        titreProspect = `Docteur ${nom}`
+                      } else if (profession.includes('dentiste')) {
+                        titreProspect = `Docteur ${nom}`
+                      } else if (profession.includes('pharmacien')) {
+                        titreProspect = prenom
+                      } else if (profession.includes('kiné') || profession.includes('kinesitherapeute')) {
+                        titreProspect = prenom
+                      } else if (profession.includes('infirmier') || profession.includes('infirmière')) {
+                        titreProspect = prenom
+                      }
+
+                      const message = script.contenu
+                        .replace(/\[Prénom\]/g, prenom)
+                        .replace(/\[Nom\]/g, nom)
+                        .replace(/Docteur \[Nom\]/g, titreProspect)
+                        .replace(/Bonjour \[Prénom\]/g, `Bonjour ${titreProspect}`)
 
                       if (showScriptPicker.channel === 'whatsapp') {
                         openWhatsApp(showScriptPicker.prospect.telephone, message)
