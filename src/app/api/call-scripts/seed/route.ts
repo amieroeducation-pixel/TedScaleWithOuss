@@ -292,10 +292,31 @@ Ted`,
   },
 ]
 
-export async function POST(_request: NextRequest) {
+export async function POST(request: NextRequest) {
   const supabase = await createSupabaseServerClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return apiUnauthorized()
+
+  // Check if reset=true in query params
+  const url = new URL(request.url)
+  const reset = url.searchParams.get('reset') === 'true'
+
+  let deleted = 0
+  if (reset) {
+    // Delete all existing scripts
+    const { error: deleteError } = await supabase
+      .from('call_scripts')
+      .delete()
+      .eq('user_id', user.id)
+
+    if (!deleteError) {
+      const { count } = await supabase
+        .from('call_scripts')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+      deleted = count || 0
+    }
+  }
 
   let created = 0
   let skipped = 0
@@ -323,8 +344,11 @@ export async function POST(_request: NextRequest) {
   }
 
   return apiSuccess({
+    deleted,
     created,
     skipped,
-    message: `${created} scripts créés, ${skipped} déjà présents`,
+    message: reset
+      ? `${deleted} scripts supprimés, ${created} nouveaux créés`
+      : `${created} scripts créés, ${skipped} déjà présents`,
   })
 }
