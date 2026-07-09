@@ -1344,19 +1344,12 @@ export default function CrmPage() {
                       const nomFamille = parts.slice(1).join(' ') || nomComplet
                       const profession = showScriptPicker.prospect.profession.toLowerCase()
 
-                      // Titre professionnel intelligent
-                      let titreProspect = prenom
-                      if (profession.includes('médecin') || profession.includes('medecin')) {
-                        titreProspect = `Docteur ${nomFamille}`
-                      } else if (profession.includes('dentiste')) {
-                        titreProspect = `Docteur ${nomFamille}`
-                      }
-
                       const message = script.contenu
                         .replace(/\[Prénom\]/g, prenom)
                         .replace(/\[Nom\]/g, nomFamille)
-                        .replace(/Docteur \[Nom\]/g, titreProspect)
-                        .replace(/Bonjour \[Prénom\]/g, `Bonjour ${titreProspect}`)
+                        .replace(/Docteur \[Nom\]/g, `Docteur ${nomFamille}`)
+                        .replace(/Monsieur \[Nom\]/g, `Monsieur ${nomFamille}`)
+                        .replace(/Madame \[Nom\]/g, `Madame ${nomFamille}`)
 
                       // Afficher preview au lieu d'ouvrir direct
                       setScriptPreview({
