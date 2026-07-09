@@ -6,34 +6,33 @@ const SCRIPTS = [
   // KINESITHERAPEUTE — Variante A
   {
     metier: 'kinesitherapeute',
-    titre: 'Variante A — Premier contact professionnel',
+    titre: 'Message 1 — Premier contact',
     contenu: `Bonjour Monsieur [Nom],
 
-C'est Ted, conseiller en gestion de patrimoine indépendant.
+C'est Ted, conseiller en gestion de patrimoine.
 
 J'accompagne des kinésithérapeutes libéraux en Île-de-France sur l'optimisation fiscale et la préparation retraite.
 
-Est-ce que vous seriez disponible pour un diagnostic patrimonial gratuit de 20 min en visio cette semaine ?
+Je vous propose un diagnostic gratuit de 20 min cette semaine pour voir si vous laissez de l'argent sur la table.
 
-On regarde votre situation BNC, PER Madelin et prévoyance TNS — je vous dis si vous laissez de l'argent sur la table.
+Disponible ?
 
-Bonne journée,
 Ted`,
     is_default: true,
   },
   // KINESITHERAPEUTE — Variante B
   {
     metier: 'kinesitherapeute',
-    titre: 'Variante B — Angle retraite CARPIMKO',
+    titre: 'Message 2 — Retraite',
     contenu: `Bonjour Madame [Nom],
 
-C'est Ted, CGP spécialisé TNS.
+Ted, CGP spécialisé TNS.
 
-Question rapide : vous savez combien vous toucherez à la retraite avec la CARPIMKO seule ?
+Vous savez combien vous toucherez à la retraite avec la CARPIMKO seule ?
 
-La plupart de mes clients kinés découvrent que c'est autour de 1 400 €/mois... Même en cotisant beaucoup aujourd'hui.
+La plupart découvrent que c'est autour de 1 400 €/mois...
 
-Je vous propose un diagnostic gratuit de 15 min pour voir le gap et les leviers d'optimisation.
+Je vous propose un diagnostic gratuit de 15 min pour voir comment optimiser.
 
 Intéressée ?
 
@@ -43,18 +42,16 @@ Ted`,
   // KINESITHERAPEUTE — Variante C
   {
     metier: 'kinesitherapeute',
-    titre: 'Variante C — Social proof chiffré',
+    titre: 'Message 3 — Économies',
     contenu: `Bonjour Monsieur [Nom],
 
-C'est Ted, CGP indépendant.
+Ted, CGP.
 
-Je travaille avec 4 kinés libéraux à Paris et je viens de boucler un dossier : 6 800 € d'économies fiscales sur l'année.
+Je viens de faire économiser 6 800 € à un kiné parisien sur l'année.
 
-Avec un BNC entre 70K et 120K, il y a souvent 3 leviers légaux non exploités.
+Si vous avez un BNC entre 70K et 120K, il y a sûrement des leviers non exploités.
 
-Je vous propose un diagnostic gratuit de 20 min pour voir si c'est votre cas.
-
-Disponible cette semaine ?
+Diagnostic gratuit de 20 min ?
 
 Ted`,
     is_default: false,
@@ -62,40 +59,35 @@ Ted`,
   // DENTISTE — Variante A
   {
     metier: 'dentiste',
-    titre: 'Variante A — Approche professionnelle',
+    titre: 'Message 1 — Premier contact',
     contenu: `Bonjour Docteur [Nom],
 
-C'est Ted, conseiller en gestion de patrimoine.
+Ted, conseiller en gestion de patrimoine.
 
-J'accompagne des chirurgiens-dentistes libéraux sur l'optimisation fiscale et la structuration patrimoniale.
+J'accompagne des chirurgiens-dentistes sur l'optimisation fiscale.
 
-Entre le BNC, les revenus de la SCM et les charges sociales, il y a souvent 5 à 8 000 € d'économies fiscales non exploitées par an.
+Entre le BNC, la SCM et les charges sociales, il y a souvent 5 à 8 000 € d'économies par an non exploitées.
 
-Je vous propose un diagnostic gratuit de 20 min en visio pour identifier les leviers.
+Diagnostic gratuit de 20 min ?
 
-Intéressé ?
-
-Cordialement,
 Ted`,
     is_default: true,
   },
   // DENTISTE — Variante B
   {
     metier: 'dentiste',
-    titre: 'Variante B — Angle prévoyance CARCDSF',
+    titre: 'Message 2 — Prévoyance',
     contenu: `Bonjour Docteur [Nom],
 
-C'est Ted, CGP spécialisé professions libérales.
+Ted, CGP.
 
-Question directe : si vous êtes en arrêt de travail 6 mois demain, combien toucheriez-vous par mois ?
+Si vous êtes en arrêt 6 mois demain, vous toucheriez combien ?
 
-La CARCDSF couvre très mal : 90 jours de carence, 50% du revenu plafonné.
+La CARCDSF couvre mal : 90 jours de carence, 50% du revenu plafonné.
 
-Si vous gagnez 12 000 €/mois, vous tomberiez à 2 500 €.
+À 12 000 €/mois, vous tombez à 2 500 €.
 
-Mon diagnostic gratuit de 20 min identifie les trous dans votre couverture.
-
-Disponible cette semaine ?
+Diagnostic gratuit de 20 min pour voir les trous ?
 
 Ted`,
     is_default: false,
@@ -103,16 +95,16 @@ Ted`,
   // DENTISTE — Variante C
   {
     metier: 'dentiste',
-    titre: 'Variante C — Social proof Neuilly',
+    titre: 'Message 3 — Économies',
     contenu: `Bonjour Docteur [Nom],
 
-C'est Ted.
+Ted.
 
-Je viens de boucler un dossier pour un dentiste à Neuilly : 11 200 € d'économies fiscales sur l'année.
+Je viens de faire économiser 11 200 € à un dentiste de Neuilly.
 
-Avec un BNC entre 150K et 250K, il y a souvent 8 à 12K d'économies fiscales non exploitées.
+Si vous avez un BNC entre 150K et 250K, il y a sûrement 8 à 12K non exploités.
 
-Diagnostic gratuit de 20 min en visio pour voir si c'est votre cas ?
+Diagnostic gratuit de 20 min ?
 
 Ted`,
     is_default: false,
@@ -120,36 +112,31 @@ Ted`,
   // PHARMACIEN — Variante A
   {
     metier: 'pharmacien',
-    titre: 'Variante A — Valorisation officine',
+    titre: 'Message 1 — Cession',
     contenu: `Bonjour Monsieur [Nom],
 
-C'est Ted, CGP indépendant.
+Ted, CGP.
 
-Je travaille avec des pharmaciens titulaires en Île-de-France sur la valorisation du patrimoine professionnel et la préparation de la cession.
+Je travaille avec des pharmaciens titulaires sur la préparation de la cession.
 
-Si votre officine représente 80% de votre patrimoine, la fiscalité peut prendre 30 à 40% le jour de la cession si c'est mal préparé.
+Si votre officine = 80% de votre patrimoine, la fiscalité peut prendre 30-40% si c'est mal préparé.
 
-Mon rôle : anticiper ça 3-5 ans avant.
+Diagnostic gratuit de 20 min pour anticiper ?
 
-Diagnostic gratuit de 20 min en visio cette semaine ?
-
-Cordialement,
 Ted`,
     is_default: true,
   },
   // PHARMACIEN — Variante B
   {
     metier: 'pharmacien',
-    titre: 'Variante B — Diversification patrimoine',
+    titre: 'Message 2 — Diversification',
     contenu: `Bonjour Madame [Nom],
 
-C'est Ted, CGP spécialisé TNS.
+Ted, CGP.
 
-Question rapide : combien de votre patrimoine est concentré dans votre officine ? 70% ? 80% ? Plus ?
+Combien de votre patrimoine est dans l'officine ? 70% ? 80% ?
 
-Ce que je vois souvent : tout est dans l'officine, très peu diversifié à côté.
-
-Le jour où vous vendez, la fiscalité peut prendre 30 à 40%.
+Le jour de la vente, la fiscalité peut prendre 30-40%.
 
 Mon diagnostic de 20 min montre comment diversifier maintenant.
 
@@ -161,42 +148,37 @@ Ted`,
   // MEDECIN — Variante A
   {
     metier: 'medecin',
-    titre: 'Variante A — Prévoyance CARMF',
+    titre: 'Message 1 — Prévoyance',
     contenu: `Bonjour Docteur [Nom],
 
-C'est Ted, conseiller en gestion de patrimoine.
+Ted, CGP.
 
-J'accompagne des médecins libéraux sur la prévoyance, la retraite et l'optimisation fiscale.
+J'accompagne des médecins libéraux sur la prévoyance et l'optimisation fiscale.
 
-La CARMF couvre très mal l'arrêt de travail : 3 mois de carence, 50% du revenu max.
+La CARMF couvre mal l'arrêt de travail : 3 mois de carence, 50% du revenu max.
 
-Un accident ou une maladie et c'est la catastrophe financière.
-
-Mon diagnostic gratuit de 20 min identifie les trous dans votre couverture.
+Mon diagnostic de 20 min identifie les trous.
 
 Disponible cette semaine ?
 
-Cordialement,
 Ted`,
     is_default: true,
   },
   // MEDECIN — Variante B
   {
     metier: 'medecin',
-    titre: 'Variante B — Retraite CARMF plafonnée',
+    titre: 'Message 2 — Retraite',
     contenu: `Bonjour Docteur [Nom],
 
-C'est Ted, CGP spécialisé médecins libéraux.
+Ted, CGP.
 
-Question directe : vous savez combien vous toucherez à la retraite avec la CARMF seule ?
+Vous savez combien vous toucherez à la retraite avec la CARMF seule ?
 
-La retraite CARMF est plafonnée. Même avec un gros BNC, vous touchez max 2 500-3 000 €/mois.
+Même avec un gros BNC : max 2 500-3 000 €/mois.
 
-Si vous gagnez 10 000 €/mois aujourd'hui, vous tombez à 3 000 € demain.
+Si vous gagnez 10 000 € aujourd'hui, vous tombez à 3 000 € demain.
 
-Mon diagnostic gratuit de 15 min montre le gap et les leviers.
-
-Intéressé ?
+Diagnostic gratuit de 15 min ?
 
 Ted`,
     is_default: false,
@@ -204,18 +186,18 @@ Ted`,
   // MEDECIN — Variante C
   {
     metier: 'medecin',
-    titre: 'Variante C — Social proof secteur 2',
+    titre: 'Message 3 — Économies',
     contenu: `Bonjour Docteur [Nom],
 
-C'est Ted.
+Ted.
 
-Je viens de boucler un dossier pour un médecin secteur 2 à Paris : 13 400 € d'économies fiscales sur l'année.
+Je viens de faire économiser 13 400 € à un médecin secteur 2 parisien.
 
 Vous êtes secteur 1 ou 2 ?
 
-En secteur 2, le BNC est souvent élevé (180K, 220K+). Il y a généralement 10-15K d'économies fiscales non exploitées.
+En secteur 2, il y a généralement 10-15K non exploités.
 
-Diagnostic gratuit de 20 min en visio ?
+Diagnostic de 20 min ?
 
 Ted`,
     is_default: false,
@@ -223,22 +205,20 @@ Ted`,
   // INFIRMIER — Variante A
   {
     metier: 'infirmier',
-    titre: 'Variante A — Retraite CARPIMKO',
+    titre: 'Message 1 — Retraite',
     contenu: `Bonjour Madame [Nom],
 
-C'est Ted, CGP indépendant.
+Ted, CGP.
 
-J'accompagne des infirmiers libéraux en Île-de-France sur la retraite et la fiscalité.
+Vous savez combien vous toucherez à la retraite ?
 
-Vous savez combien vous toucherez à la retraite avec vos droits actuels ?
+La plupart découvrent : 1 200 €/mois...
 
-La plupart découvrent que c'est autour de 1 200 €/mois...
+Vous passez de 5 000 € à 1 200 €.
 
-Sans complément, vous passez de 5 000 €/mois à 1 200 €.
+Mon diagnostic de 15 min montre combien mettre de côté et où.
 
-Mon diagnostic de 15 min montre exactement combien il faut mettre de côté et où.
-
-Disponible entre deux tournées ?
+Disponible ?
 
 Ted`,
     is_default: true,
@@ -246,18 +226,16 @@ Ted`,
   // INFIRMIER — Variante B
   {
     metier: 'infirmier',
-    titre: 'Variante B — Charges sociales élevées',
+    titre: 'Message 2 — Charges',
     contenu: `Bonjour Monsieur [Nom],
 
-C'est Ted, CGP spécialisé TNS.
+Ted, CGP.
 
-Question rapide : vous payez combien de charges sociales par an ? 18K ? 22K ? Plus ?
+Vous payez combien de charges par an ? 18K ? 22K ?
 
-Vous payez énormément de charges, mais la retraite CARPIMKO est ridicule.
+Vous payez énormément mais la retraite CARPIMKO est ridicule : 1 200 €/mois.
 
-Vous travaillez comme un fou, et à 62 ans vous touchez 1 200 €/mois.
-
-Mon diagnostic gratuit de 15 min montre comment optimiser maintenant.
+Mon diagnostic de 15 min montre comment optimiser.
 
 Intéressé ?
 
@@ -267,20 +245,18 @@ Ted`,
   // INFIRMIER — Variante C
   {
     metier: 'infirmier',
-    titre: 'Variante C — Social proof 6 IDEL',
+    titre: 'Message 3 — Économies',
     contenu: `Bonjour Madame [Nom],
 
-C'est Ted.
+Ted.
 
 Je travaille avec 6 IDEL en Île-de-France.
 
-Moyenne d'économies fiscales : 4 200 € par an.
+Moyenne d'économies : 4 200 €/an.
 
-Vous mettez combien de côté pour la retraite chaque mois ? 200 € ? 300 € ? Rien ?
+Vous mettez combien de côté pour la retraite par mois ?
 
-Diagnostic gratuit de 15 min pour voir si vous laissez de l'argent sur la table ?
-
-Disponible entre deux tournées ?
+Diagnostic gratuit de 15 min ?
 
 Ted`,
     is_default: false,
@@ -288,39 +264,29 @@ Ted`,
   // GENERIQUE — Tous métiers
   {
     metier: 'generique',
-    titre: 'Script générique — Professions libérales',
+    titre: 'Message générique — Homme',
     contenu: `Bonjour Monsieur [Nom],
 
-C'est Ted, conseiller en gestion de patrimoine indépendant.
+Ted, conseiller en gestion de patrimoine.
 
-Je travaille avec des professionnels libéraux comme vous et ils ont souvent des problématiques sur la préparation à la retraite et l'optimisation fiscale.
+Je travaille avec des professionnels libéraux comme vous sur la préparation retraite et l'optimisation fiscale.
 
-Est-ce que vous seriez disponible pour qu'on se rencontre ?
+Bilan patrimonial gratuit de 20 min cette semaine ?
 
-Je vous propose un bilan patrimonial gratuit de 20 min en visio pour voir si vous laissez de l'argent sur la table.
-
-Intéressé ?
-
-Cordialement,
 Ted`,
     is_default: true,
   },
   {
     metier: 'generique',
-    titre: 'Script générique — Version féminine',
+    titre: 'Message générique — Femme',
     contenu: `Bonjour Madame [Nom],
 
-C'est Ted, conseiller en gestion de patrimoine indépendant.
+Ted, conseiller en gestion de patrimoine.
 
-Je travaille avec des professionnels libéraux comme vous et ils ont souvent des problématiques sur la préparation à la retraite et l'optimisation fiscale.
+Je travaille avec des professionnels libéraux comme vous sur la préparation retraite et l'optimisation fiscale.
 
-Est-ce que vous seriez disponible pour qu'on se rencontre ?
+Bilan patrimonial gratuit de 20 min cette semaine ?
 
-Je vous propose un bilan patrimonial gratuit de 20 min en visio pour voir si vous laissez de l'argent sur la table.
-
-Intéressée ?
-
-Cordialement,
 Ted`,
     is_default: false,
   },
