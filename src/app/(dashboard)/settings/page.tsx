@@ -160,8 +160,85 @@ function SetBtn({ onClick, color, bg, children }: { onClick?: () => void; color:
 }
 
 // ─── ONGLET GÉNÉRAL ──────────────────────────────────────────────────────────
-function TabGeneral() {
-  const [objCount, setObjCount] = useState(4)
+function TabGeneral({ settings, save, saving }: { settings: UserSettings | null; save: (p: Partial<UserSettings>) => Promise<unknown>; saving: boolean }) {
+  const [objCount, setObjCount] = useState(settings?.objectives_count ?? 4)
+  const [contacts, setContacts] = useState(settings?.daily_targets?.contacts ?? 10)
+  const [calls, setCalls] = useState(settings?.daily_targets?.calls ?? 20)
+  const [rdv1, setRdv1] = useState(settings?.daily_targets?.rdv1 ?? 5)
+  const [rdv2, setRdv2] = useState(settings?.daily_targets?.rdv2 ?? 3)
+  const [blocDuration, setBlocDuration] = useState(settings?.bloc_duration_minutes ?? 45)
+  const [blocsNormal, setBlocsNormal] = useState(settings?.blocs_per_day_normal ?? 4)
+  const [blocsMax, setBlocsMax] = useState(settings?.blocs_per_day_max ?? 6)
+  const [callsWeek, setCallsWeek] = useState((settings?.calls_per_day_target ?? 8) * 5)
+  const [blocsWeek, setBlocsWeek] = useState((settings?.blocks_per_day_target ?? 3) * 5)
+  const [relancesWeek, setRelancesWeek] = useState(settings?.rdv_per_week_target ?? 12)
+  const [closingPct, setClosingPct] = useState(settings?.closing_target_pct ?? 40)
+  const [delayEmail, setDelayEmail] = useState(settings?.sequence_delay_email ?? 3)
+  const [delaySms, setDelaySms] = useState(settings?.sequence_delay_sms ?? 5)
+  const [delayWa, setDelayWa] = useState(settings?.sequence_delay_whatsapp ?? 2)
+  const [stepsMax, setStepsMax] = useState(settings?.sequence_steps_max ?? 6)
+  const [stopDays, setStopDays] = useState(settings?.sequence_stop_days ?? 21)
+  const [coachText, setCoachText] = useState(settings?.coach_instructions ?? '')
+  const [rdvR1Annual, setRdvR1Annual] = useState(settings?.rdv_r1_annual ?? 240)
+  const [rdvR2Annual, setRdvR2Annual] = useState(settings?.rdv_r2_annual ?? 144)
+  const [collecteAnnual, setCollecteAnnual] = useState(settings?.collecte_annual ?? 600000)
+  const [intensity, setIntensity] = useState<Record<string, number>>(settings?.monthly_intensity ?? Object.fromEntries(MONTHS_ID.map(m => [m, 1.0])))
+  const [dirty, setDirty] = useState(false)
+
+  useEffect(() => {
+    if (settings) {
+      setObjCount(settings.objectives_count ?? 4)
+      setContacts(settings.daily_targets?.contacts ?? 10)
+      setCalls(settings.daily_targets?.calls ?? 20)
+      setRdv1(settings.daily_targets?.rdv1 ?? 5)
+      setRdv2(settings.daily_targets?.rdv2 ?? 3)
+      setBlocDuration(settings.bloc_duration_minutes ?? 45)
+      setBlocsNormal(settings.blocs_per_day_normal ?? 4)
+      setBlocsMax(settings.blocs_per_day_max ?? 6)
+      setCallsWeek((settings.calls_per_day_target ?? 8) * 5)
+      setBlocsWeek((settings.blocks_per_day_target ?? 3) * 5)
+      setRelancesWeek(settings.rdv_per_week_target ?? 12)
+      setClosingPct(settings.closing_target_pct ?? 40)
+      setDelayEmail(settings.sequence_delay_email ?? 3)
+      setDelaySms(settings.sequence_delay_sms ?? 5)
+      setDelayWa(settings.sequence_delay_whatsapp ?? 2)
+      setStepsMax(settings.sequence_steps_max ?? 6)
+      setStopDays(settings.sequence_stop_days ?? 21)
+      setCoachText(settings.coach_instructions ?? '')
+      setRdvR1Annual(settings.rdv_r1_annual ?? 240)
+      setRdvR2Annual(settings.rdv_r2_annual ?? 144)
+      setCollecteAnnual(settings.collecte_annual ?? 600000)
+      if (settings.monthly_intensity) setIntensity(settings.monthly_intensity)
+    }
+  }, [settings])
+
+  async function handleSave() {
+    await save({
+      objectives_count: objCount,
+      daily_targets: { contacts, calls, rdv1, rdv2 },
+      bloc_duration_minutes: blocDuration,
+      blocs_per_day_normal: blocsNormal,
+      blocs_per_day_max: blocsMax,
+      calls_per_day_target: Math.round(callsWeek / 5),
+      blocks_per_day_target: Math.round(blocsWeek / 5),
+      rdv_per_week_target: relancesWeek,
+      closing_target_pct: closingPct,
+      sequence_delay_email: delayEmail,
+      sequence_delay_sms: delaySms,
+      sequence_delay_whatsapp: delayWa,
+      sequence_steps_max: stepsMax,
+      sequence_stop_days: stopDays,
+      coach_instructions: coachText,
+      rdv_r1_annual: rdvR1Annual,
+      rdv_r2_annual: rdvR2Annual,
+      collecte_annual: collecteAnnual,
+      monthly_intensity: intensity,
+    })
+    setDirty(false)
+    toast.success('Paramètres généraux enregistrés')
+  }
+
+  function markDirty() { setDirty(true) }
 
   return (
     <>
@@ -172,6 +249,8 @@ function TabGeneral() {
         <div style={{ marginBottom: 12 }}>
           <label style={{ fontSize: 8, color: C.textLo, display: 'block', marginBottom: 6, fontFamily: 'JetBrains Mono,monospace' }}>Instructions pour le coach</label>
           <textarea
+            value={coachText}
+            onChange={e => { setCoachText(e.target.value); markDirty() }}
             placeholder="Ex: Sois direct et cash, focus sur les actions concrètes. Rappelle-moi mes objectifs financiers personnels. Motive-moi avec des comparaisons sportives..."
             style={{
               width: '100%', minHeight: 120, padding: 10,
@@ -185,7 +264,7 @@ function TabGeneral() {
             💡 Le coach utilisera ces instructions pour adapter son analyse et ses recommandations
           </div>
         </div>
-        <SetBtn color={C.green} bg="#0d1a0d">💾 Enregistrer les instructions</SetBtn>
+        <SetBtn onClick={handleSave} color={C.green} bg="#0d1a0d">{saving ? '⏳...' : '💾 Enregistrer les instructions'}</SetBtn>
       </SectionPanel>
 
       <SectionPanel title="🎯 Objectifs quotidiens">
@@ -203,7 +282,7 @@ function TabGeneral() {
                   borderRadius: 6, cursor: 'pointer',
                 }}
               >
-                <input type="radio" name="objectives-count" value={n} checked={objCount === n} onChange={() => setObjCount(n)} style={{ cursor: 'pointer' }} />
+                <input type="radio" name="objectives-count" value={n} checked={objCount === n} onChange={() => { setObjCount(n); markDirty() }} style={{ cursor: 'pointer' }} />
                 <span style={{ fontSize: 9, color: objCount === n ? C.gold : C.text, fontWeight: objCount === n ? 600 : 400, fontFamily: 'Inter,sans-serif' }}>{n} objectifs</span>
               </label>
             ))}
@@ -213,44 +292,56 @@ function TabGeneral() {
           </div>
         </div>
 
-        {[
-          { label: 'Nouveaux contacts / jour', desc: 'Prospects ajoutés quotidiennement', val: 10 },
-          { label: 'Appels / jour', desc: "Nombre d'appels quotidien visé", val: 20 },
-          { label: 'RDV R1 / jour', desc: 'Premiers rendez-vous à poser', val: 5 },
-          { label: 'RDV R2 / jour', desc: 'Deuxièmes rendez-vous à poser', val: 3 },
-        ].map((row, i) => (
-          <SetRow key={i}>
-            <SetLabel label={row.label} desc={row.desc} />
-            <NumInput value={row.val} min={1} max={100} />
-          </SetRow>
-        ))}
+        <SetRow>
+          <SetLabel label="Nouveaux contacts / jour" desc="Prospects ajoutés quotidiennement" />
+          <NumInput value={contacts} min={1} max={100} onChange={v => { setContacts(v); markDirty() }} />
+        </SetRow>
+        <SetRow>
+          <SetLabel label="Appels / jour" desc="Nombre d'appels quotidien visé" />
+          <NumInput value={calls} min={1} max={100} onChange={v => { setCalls(v); markDirty() }} />
+        </SetRow>
+        <SetRow>
+          <SetLabel label="RDV R1 / jour" desc="Premiers rendez-vous à poser" />
+          <NumInput value={rdv1} min={1} max={100} onChange={v => { setRdv1(v); markDirty() }} />
+        </SetRow>
+        <SetRow>
+          <SetLabel label="RDV R2 / jour" desc="Deuxièmes rendez-vous à poser" />
+          <NumInput value={rdv2} min={1} max={100} onChange={v => { setRdv2(v); markDirty() }} />
+        </SetRow>
       </SectionPanel>
 
       <SectionPanel title="⏱️ Chronomètre production">
-        {[
-          { label: "Durée d'un bloc (minutes)", desc: 'Deep work / Pomodoro — défaut 45 min', val: 45, min: 15, max: 120 },
-          { label: 'Blocs / jour (normal)', desc: 'Objectif standard de blocs quotidiens', val: 4, min: 2, max: 10 },
-          { label: 'Blocs / jour (grosse prod)', desc: 'Objectif max de blocs quotidiens', val: 6, min: 3, max: 12 },
-        ].map((row, i) => (
-          <SetRow key={i}>
-            <SetLabel label={row.label} desc={row.desc} />
-            <NumInput value={row.val} min={row.min} max={row.max} />
-          </SetRow>
-        ))}
+        <SetRow>
+          <SetLabel label="Durée d'un bloc (minutes)" desc="Deep work / Pomodoro — défaut 45 min" />
+          <NumInput value={blocDuration} min={15} max={120} onChange={v => { setBlocDuration(v); markDirty() }} />
+        </SetRow>
+        <SetRow>
+          <SetLabel label="Blocs / jour (normal)" desc="Objectif standard de blocs quotidiens" />
+          <NumInput value={blocsNormal} min={2} max={10} onChange={v => { setBlocsNormal(v); markDirty() }} />
+        </SetRow>
+        <SetRow>
+          <SetLabel label="Blocs / jour (grosse prod)" desc="Objectif max de blocs quotidiens" />
+          <NumInput value={blocsMax} min={3} max={12} onChange={v => { setBlocsMax(v); markDirty() }} />
+        </SetRow>
       </SectionPanel>
 
       <SectionPanel title="📊 Objectifs hebdomadaires">
-        {[
-          { label: 'Appels / semaine', desc: "Total d'appels visé sur la semaine", val: 40, min: 10, max: 200 },
-          { label: 'Blocs / semaine', desc: 'Total de blocs production', val: 15, min: 5, max: 50 },
-          { label: 'Relances / semaine', desc: 'Total de relances prospects', val: 12, min: 3, max: 50 },
-          { label: 'Taux closing objectif (%)', desc: 'Pourcentage de conversion visé', val: 40, min: 10, max: 80 },
-        ].map((row, i) => (
-          <SetRow key={i}>
-            <SetLabel label={row.label} desc={row.desc} />
-            <NumInput value={row.val} min={row.min} max={row.max} />
-          </SetRow>
-        ))}
+        <SetRow>
+          <SetLabel label="Appels / semaine" desc="Total d'appels visé sur la semaine" />
+          <NumInput value={callsWeek} min={10} max={200} onChange={v => { setCallsWeek(v); markDirty() }} />
+        </SetRow>
+        <SetRow>
+          <SetLabel label="Blocs / semaine" desc="Total de blocs production" />
+          <NumInput value={blocsWeek} min={5} max={50} onChange={v => { setBlocsWeek(v); markDirty() }} />
+        </SetRow>
+        <SetRow>
+          <SetLabel label="Relances / semaine" desc="Total de relances prospects" />
+          <NumInput value={relancesWeek} min={3} max={50} onChange={v => { setRelancesWeek(v); markDirty() }} />
+        </SetRow>
+        <SetRow>
+          <SetLabel label="Taux closing objectif (%)" desc="Pourcentage de conversion visé" />
+          <NumInput value={closingPct} min={10} max={80} onChange={v => { setClosingPct(v); markDirty() }} />
+        </SetRow>
       </SectionPanel>
 
       <SectionPanel title="🎯 Planification annuelle intelligente">
@@ -261,20 +352,18 @@ function TabGeneral() {
         <div style={{ background: C.surface1, border: `1px solid ${C.lineSoft}`, borderRadius: 8, padding: 14, marginBottom: 12 }}>
           <div style={{ fontSize: 10, fontWeight: 600, color: C.gold, marginBottom: 12, fontFamily: 'Oswald,sans-serif' }}>📊 Objectifs annuels 2026</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12 }}>
-            {[
-              { label: 'RDV R1 annuel', val: 240, color: C.indigo },
-              { label: 'RDV R2 annuel', val: 144, color: C.green },
-              { label: 'Collecte annuelle (€)', val: 600000, color: C.gold },
-            ].map((f, i) => (
-              <div key={i}>
-                <label style={{ fontSize: 8, color: C.textLo, display: 'block', marginBottom: 4, fontFamily: 'JetBrains Mono,monospace' }}>{f.label}</label>
-                <input
-                  type="number"
-                  defaultValue={f.val}
-                  style={{ width: '100%', padding: 8, background: C.surface2, border: `1px solid ${C.line}`, borderRadius: 6, color: f.color, fontSize: 14, fontWeight: 600, textAlign: 'center', boxSizing: 'border-box', fontFamily: 'JetBrains Mono,monospace' }}
-                />
-              </div>
-            ))}
+            <div>
+              <label style={{ fontSize: 8, color: C.textLo, display: 'block', marginBottom: 4, fontFamily: 'JetBrains Mono,monospace' }}>RDV R1 annuel</label>
+              <input type="number" value={rdvR1Annual} onChange={e => { setRdvR1Annual(Number(e.target.value)); markDirty() }} style={{ width: '100%', padding: 8, background: C.surface2, border: `1px solid ${C.line}`, borderRadius: 6, color: C.indigo, fontSize: 14, fontWeight: 600, textAlign: 'center', boxSizing: 'border-box', fontFamily: 'JetBrains Mono,monospace' }} />
+            </div>
+            <div>
+              <label style={{ fontSize: 8, color: C.textLo, display: 'block', marginBottom: 4, fontFamily: 'JetBrains Mono,monospace' }}>RDV R2 annuel</label>
+              <input type="number" value={rdvR2Annual} onChange={e => { setRdvR2Annual(Number(e.target.value)); markDirty() }} style={{ width: '100%', padding: 8, background: C.surface2, border: `1px solid ${C.line}`, borderRadius: 6, color: C.green, fontSize: 14, fontWeight: 600, textAlign: 'center', boxSizing: 'border-box', fontFamily: 'JetBrains Mono,monospace' }} />
+            </div>
+            <div>
+              <label style={{ fontSize: 8, color: C.textLo, display: 'block', marginBottom: 4, fontFamily: 'JetBrains Mono,monospace' }}>Collecte annuelle (€)</label>
+              <input type="number" value={collecteAnnual} onChange={e => { setCollecteAnnual(Number(e.target.value)); markDirty() }} style={{ width: '100%', padding: 8, background: C.surface2, border: `1px solid ${C.line}`, borderRadius: 6, color: C.gold, fontSize: 14, fontWeight: 600, textAlign: 'center', boxSizing: 'border-box', fontFamily: 'JetBrains Mono,monospace' }} />
+            </div>
           </div>
         </div>
 
@@ -285,7 +374,7 @@ function TabGeneral() {
             {MONTHS_ID.slice(0, 6).map((id, i) => (
               <div key={id} style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: 8, color: C.textLo, marginBottom: 4, fontFamily: 'JetBrains Mono,monospace' }}>{MONTHS_SHORT[i]} ({MONTHS_WEEKS[i]}s)</div>
-                <select defaultValue="1.0" style={{ width: '100%', padding: 4, background: C.surface2, border: `1px solid ${C.line}`, borderRadius: 4, color: C.text, fontSize: 11, textAlign: 'center' }}>
+                <select value={String(intensity[id] ?? 1.0)} onChange={e => { setIntensity(prev => ({ ...prev, [id]: parseFloat(e.target.value) })); markDirty() }} style={{ width: '100%', padding: 4, background: C.surface2, border: `1px solid ${C.line}`, borderRadius: 4, color: C.text, fontSize: 11, textAlign: 'center' }}>
                   <option value="0.7">↘↘</option>
                   <option value="0.9">↘</option>
                   <option value="1.0">-</option>
@@ -299,7 +388,7 @@ function TabGeneral() {
             {MONTHS_ID.slice(6).map((id, i) => (
               <div key={id} style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: 8, color: C.textLo, marginBottom: 4, fontFamily: 'JetBrains Mono,monospace' }}>{MONTHS_SHORT[i + 6]} ({MONTHS_WEEKS[i + 6]}s)</div>
-                <select defaultValue="1.0" style={{ width: '100%', padding: 4, background: C.surface2, border: `1px solid ${C.line}`, borderRadius: 4, color: C.text, fontSize: 11, textAlign: 'center' }}>
+                <select value={String(intensity[id] ?? 1.0)} onChange={e => { setIntensity(prev => ({ ...prev, [id]: parseFloat(e.target.value) })); markDirty() }} style={{ width: '100%', padding: 4, background: C.surface2, border: `1px solid ${C.line}`, borderRadius: 4, color: C.text, fontSize: 11, textAlign: 'center' }}>
                   <option value="0.7">↘↘</option>
                   <option value="0.9">↘</option>
                   <option value="1.0">-</option>
@@ -313,18 +402,26 @@ function TabGeneral() {
       </SectionPanel>
 
       <SectionPanel title="📧 Séquences — Délais par défaut">
-        {[
-          { label: 'Délai entre emails (jours)', desc: 'Espacement entre 2 emails dans une séquence', val: 3, min: 1, max: 30 },
-          { label: 'Délai entre SMS (jours)', desc: 'Espacement entre 2 SMS', val: 5, min: 1, max: 30 },
-          { label: 'Délai entre WhatsApp (jours)', desc: 'Espacement entre 2 messages WA', val: 2, min: 1, max: 30 },
-          { label: 'Étapes max par séquence', desc: "Nombre maximum d'étapes", val: 6, min: 3, max: 20 },
-          { label: 'Arrêt automatique si pas de réponse (jours)', desc: 'Stop séquence après X jours sans réponse', val: 21, min: 7, max: 60 },
-        ].map((row, i) => (
-          <SetRow key={i}>
-            <SetLabel label={row.label} desc={row.desc} />
-            <NumInput value={row.val} min={row.min} max={row.max} />
-          </SetRow>
-        ))}
+        <SetRow>
+          <SetLabel label="Délai entre emails (jours)" desc="Espacement entre 2 emails dans une séquence" />
+          <NumInput value={delayEmail} min={1} max={30} onChange={v => { setDelayEmail(v); markDirty() }} />
+        </SetRow>
+        <SetRow>
+          <SetLabel label="Délai entre SMS (jours)" desc="Espacement entre 2 SMS" />
+          <NumInput value={delaySms} min={1} max={30} onChange={v => { setDelaySms(v); markDirty() }} />
+        </SetRow>
+        <SetRow>
+          <SetLabel label="Délai entre WhatsApp (jours)" desc="Espacement entre 2 messages WA" />
+          <NumInput value={delayWa} min={1} max={30} onChange={v => { setDelayWa(v); markDirty() }} />
+        </SetRow>
+        <SetRow>
+          <SetLabel label="Étapes max par séquence" desc="Nombre maximum d'étapes" />
+          <NumInput value={stepsMax} min={3} max={20} onChange={v => { setStepsMax(v); markDirty() }} />
+        </SetRow>
+        <SetRow>
+          <SetLabel label="Arrêt automatique si pas de réponse (jours)" desc="Stop séquence après X jours sans réponse" />
+          <NumInput value={stopDays} min={7} max={60} onChange={v => { setStopDays(v); markDirty() }} />
+        </SetRow>
       </SectionPanel>
 
       <SectionPanel title="🎉 Célébrations">
@@ -341,6 +438,14 @@ function TabGeneral() {
           </SetRow>
         ))}
       </SectionPanel>
+
+      {dirty && (
+        <div style={{ position: 'sticky', bottom: 12, zIndex: 10, display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
+          <button onClick={handleSave} disabled={saving} style={{ padding: '10px 28px', background: C.green, border: 'none', borderRadius: 8, color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'Oswald,sans-serif', letterSpacing: '0.06em', boxShadow: '0 4px 20px rgba(74,222,128,0.3)' }}>
+            {saving ? '⏳ Enregistrement...' : '💾 Enregistrer tous les paramètres'}
+          </button>
+        </div>
+      )}
 
       <SectionPanel title="⚠️ Zone dangereuse">
         <SetRow>
@@ -361,13 +466,22 @@ function TabKPI({ settings, save, saving }: { settings: UserSettings | null; sav
   const [caMonthly, setCaMonthly] = useState(settings?.ca_monthly_target ?? 15000)
   const [caAnnual, setCaAnnual] = useState(settings?.ca_annual_target ?? 180000)
   const [healthDays, setHealthDays] = useState(settings?.client_health_threshold_days ?? 90)
+  const [rdvR1, setRdvR1] = useState(settings?.rdv_r1_annual ?? 64)
+  const [rdvR2, setRdvR2] = useState(settings?.rdv_r2_annual ?? 24)
+  const [interpro, setInterpro] = useState(settings?.interpro_daily_target ?? 3)
+  const [commerceMin, setCommerceMin] = useState(settings?.commerce_minutes_daily ?? 30)
+  const [sportWeekly, setSportWeekly] = useState(settings?.sport_weekly_target ?? 3)
 
-  // Synchroniser les valeurs locales quand settings charge depuis l'API
   useEffect(() => {
     if (settings) {
       setCaMonthly(settings.ca_monthly_target)
       setCaAnnual(settings.ca_annual_target)
       setHealthDays(settings.client_health_threshold_days)
+      setRdvR1(settings.rdv_r1_annual ?? 64)
+      setRdvR2(settings.rdv_r2_annual ?? 24)
+      setInterpro(settings.interpro_daily_target ?? 3)
+      setCommerceMin(settings.commerce_minutes_daily ?? 30)
+      setSportWeekly(settings.sport_weekly_target ?? 3)
     }
   }, [settings])
 
@@ -388,21 +502,26 @@ function TabKPI({ settings, save, saving }: { settings: UserSettings | null; sav
 
         <SetRow>
           <SetLabel label="🎯 Objectif annuel R1" desc="Total de RDV R1 pour 2026" />
-          <NumInput value={64} min={1} max={500} />
+          <NumInput value={rdvR1} min={1} max={500} onChange={setRdvR1} />
         </SetRow>
         <SetRow>
           <SetLabel label="🎯 Objectif annuel R2" desc="Total de RDV R2 pour 2026" />
-          <NumInput value={24} min={1} max={500} />
+          <NumInput value={rdvR2} min={1} max={500} onChange={setRdvR2} />
         </SetRow>
 
         <div style={{ background: '#1a1400', border: `1px solid ${C.gold}`, borderRadius: 6, padding: 12, marginBottom: 14 }}>
           <div style={{ fontSize: 10, color: C.gold, fontWeight: 600, marginBottom: 8, fontFamily: 'Oswald,sans-serif' }}>📊 Planification automatique</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 9, color: C.text, fontFamily: 'JetBrains Mono,monospace' }}>
-            <div><strong>R1 par mois :</strong> 5.3</div>
-            <div><strong>R2 par mois :</strong> 2</div>
-            <div><strong>R1 par semaine :</strong> 1.2</div>
-            <div><strong>R2 par semaine :</strong> 0.5</div>
+            <div><strong>R1 par mois :</strong> {(rdvR1 / 12).toFixed(1)}</div>
+            <div><strong>R2 par mois :</strong> {(rdvR2 / 12).toFixed(1)}</div>
+            <div><strong>R1 par semaine :</strong> {(rdvR1 / 50).toFixed(1)}</div>
+            <div><strong>R2 par semaine :</strong> {(rdvR2 / 50).toFixed(1)}</div>
           </div>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+          <SetBtn onClick={async () => { await save({ rdv_r1_annual: rdvR1, rdv_r2_annual: rdvR2 }); toast.success('Objectifs RDV enregistrés') }} color={C.green} bg="#0d1a0d">
+            {saving ? '⏳...' : '💾 Enregistrer RDV'}
+          </SetBtn>
         </div>
 
         <div style={{ fontSize: 10, fontWeight: 600, color: C.textHi, marginBottom: 8, fontFamily: 'Oswald,sans-serif' }}>Répartition mensuelle personnalisée (optionnel)</div>
@@ -461,15 +580,20 @@ function TabKPI({ settings, save, saving }: { settings: UserSettings | null; sav
         <div style={{ fontSize: 9, color: C.textLo, marginBottom: 12, fontFamily: 'JetBrains Mono,monospace' }}>Actions/contacts avec partenaires ID</div>
         <SetRow>
           <SetLabel label="🎯 Objectif quotidien" desc="Contacts ID par jour" />
-          <NumInput value={3} min={1} max={20} />
+          <NumInput value={interpro} min={1} max={20} onChange={setInterpro} />
         </SetRow>
         <div style={{ background: '#0d1a0d', border: `1px solid ${C.green}`, borderRadius: 6, padding: 12, marginTop: 12 }}>
           <div style={{ fontSize: 10, color: C.green, fontWeight: 600, marginBottom: 8, fontFamily: 'Oswald,sans-serif' }}>📊 Planification automatique</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 9, color: C.text, fontFamily: 'JetBrains Mono,monospace' }}>
-            <div><strong>Par semaine :</strong> 15 contacts</div>
-            <div><strong>Par mois :</strong> 65 contacts</div>
-            <div><strong>Par an :</strong> 780 contacts</div>
+            <div><strong>Par semaine :</strong> {interpro * 5} contacts</div>
+            <div><strong>Par mois :</strong> {interpro * 22} contacts</div>
+            <div><strong>Par an :</strong> {interpro * 260} contacts</div>
           </div>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
+          <SetBtn onClick={async () => { await save({ interpro_daily_target: interpro }); toast.success('Objectif interpro enregistré') }} color={C.green} bg="#0d1a0d">
+            {saving ? '⏳...' : '💾 Enregistrer'}
+          </SetBtn>
         </div>
       </SectionPanel>
 
@@ -478,17 +602,22 @@ function TabKPI({ settings, save, saving }: { settings: UserSettings | null; sav
         <SetRow>
           <SetLabel label="🎯 Objectif quotidien" desc="Minutes de formation par jour" />
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <NumInput value={30} min={5} max={120} step={5} />
+            <NumInput value={commerceMin} min={5} max={120} step={5} onChange={setCommerceMin} />
             <span style={{ fontSize: 9, color: C.textLo, fontFamily: 'JetBrains Mono,monospace' }}>min</span>
           </div>
         </SetRow>
         <div style={{ background: '#0d1a2e', border: `1px solid ${C.indigo}`, borderRadius: 6, padding: 12, marginTop: 12 }}>
           <div style={{ fontSize: 10, color: C.indigo, fontWeight: 600, marginBottom: 8, fontFamily: 'Oswald,sans-serif' }}>📊 Planification automatique</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 9, color: C.text, fontFamily: 'JetBrains Mono,monospace' }}>
-            <div><strong>Par semaine :</strong> 2.5 heures</div>
-            <div><strong>Par mois :</strong> 10 heures</div>
-            <div><strong>Par an :</strong> 120 heures</div>
+            <div><strong>Par semaine :</strong> {(commerceMin * 5 / 60).toFixed(1)} heures</div>
+            <div><strong>Par mois :</strong> {(commerceMin * 22 / 60).toFixed(0)} heures</div>
+            <div><strong>Par an :</strong> {(commerceMin * 260 / 60).toFixed(0)} heures</div>
           </div>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
+          <SetBtn onClick={async () => { await save({ commerce_minutes_daily: commerceMin }); toast.success('Objectif commerce enregistré') }} color={C.indigo} bg="#0d1a2e">
+            {saving ? '⏳...' : '💾 Enregistrer'}
+          </SetBtn>
         </div>
       </SectionPanel>
 
@@ -496,14 +625,19 @@ function TabKPI({ settings, save, saving }: { settings: UserSettings | null; sav
         <div style={{ fontSize: 9, color: C.textLo, marginBottom: 12, fontFamily: 'JetBrains Mono,monospace' }}>Séances de sport hebdomadaires</div>
         <SetRow>
           <SetLabel label="🎯 Objectif hebdomadaire" desc="Séances par semaine" />
-          <NumInput value={3} min={1} max={7} />
+          <NumInput value={sportWeekly} min={1} max={7} onChange={setSportWeekly} />
         </SetRow>
         <div style={{ background: '#1a1400', border: `1px solid ${C.gold}`, borderRadius: 6, padding: 12, marginTop: 12 }}>
           <div style={{ fontSize: 10, color: C.gold, fontWeight: 600, marginBottom: 8, fontFamily: 'Oswald,sans-serif' }}>📊 Planification automatique</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 9, color: C.text, fontFamily: 'JetBrains Mono,monospace' }}>
-            <div><strong>Par mois :</strong> 13 séances</div>
-            <div><strong>Par an :</strong> 156 séances</div>
+            <div><strong>Par mois :</strong> {Math.round(sportWeekly * 4.3)} séances</div>
+            <div><strong>Par an :</strong> {sportWeekly * 52} séances</div>
           </div>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
+          <SetBtn onClick={async () => { await save({ sport_weekly_target: sportWeekly }); toast.success('Objectif sport enregistré') }} color={C.gold} bg="#1a1400">
+            {saving ? '⏳...' : '💾 Enregistrer'}
+          </SetBtn>
         </div>
       </SectionPanel>
     </>
@@ -520,10 +654,41 @@ function TabNotifications({
   save: (p: Partial<UserSettings>) => Promise<unknown>
   saving: boolean
 }) {
-  const [pushOn, setPushOn] = useState(true)
-  const [emailOn, setEmailOn] = useState(false)
-  const [smsOn, setSmsOn] = useState(false)
-  const [telegramOn, setTelegramOn] = useState(false)
+  const [pushOn, setPushOn] = useState(settings?.notification_channels?.push ?? true)
+  const [emailOn, setEmailOn] = useState(settings?.notification_channels?.email ?? false)
+  const [smsOn, setSmsOn] = useState(settings?.notification_channels?.sms ?? false)
+  const [telegramOn, setTelegramOn] = useState(settings?.notification_channels?.telegram ?? false)
+  const [notifEmail, setNotifEmail] = useState(settings?.notification_email ?? '')
+  const [notifPhone, setNotifPhone] = useState(settings?.notification_phone ?? '')
+  const [telegramBot, setTelegramBot] = useState(settings?.notification_telegram_bot ?? '')
+  const [telegramChat, setTelegramChat] = useState(settings?.notification_telegram_chat ?? '')
+  const [rdvHours, setRdvHours] = useState(settings?.notification_rdv_hours ?? 24)
+
+  useEffect(() => {
+    if (settings) {
+      setPushOn(settings.notification_channels?.push ?? true)
+      setEmailOn(settings.notification_channels?.email ?? false)
+      setSmsOn(settings.notification_channels?.sms ?? false)
+      setTelegramOn(settings.notification_channels?.telegram ?? false)
+      setNotifEmail(settings.notification_email ?? '')
+      setNotifPhone(settings.notification_phone ?? '')
+      setTelegramBot(settings.notification_telegram_bot ?? '')
+      setTelegramChat(settings.notification_telegram_chat ?? '')
+      setRdvHours(settings.notification_rdv_hours ?? 24)
+    }
+  }, [settings])
+
+  async function handleSaveNotif() {
+    await save({
+      notification_channels: { push: pushOn, email: emailOn, sms: smsOn, telegram: telegramOn },
+      notification_email: notifEmail,
+      notification_phone: notifPhone,
+      notification_telegram_bot: telegramBot,
+      notification_telegram_chat: telegramChat,
+      notification_rdv_hours: rdvHours,
+    })
+    toast.success('Notifications enregistrées')
+  }
 
   // État éditeur de messages
   const [selectedChannel, setSelectedChannel] = useState<'whatsapp' | 'email' | 'sms'>('whatsapp')
@@ -531,7 +696,6 @@ function TabNotifications({
   const [editedText, setEditedText] = useState('')
   const [msgSaving, setMsgSaving] = useState(false)
 
-  // Synchroniser editedText depuis settings quand channel/stage changent
   useEffect(() => {
     const current = settings?.message_templates?.[selectedChannel]?.[selectedStage] ?? ''
     setEditedText(current)
@@ -566,7 +730,7 @@ function TabNotifications({
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: '#1a1400', borderRadius: 6, border: `1px solid ${C.gold}40`, marginBottom: 8 }}>
           <div style={{ flex: 1 }}>
             <SetLabel label="📧 Email" desc="Récapitulatif workflows + alertes urgence" />
-            <input type="email" placeholder="ton-email@exemple.fr" style={{ width: '100%', marginTop: 6, padding: 6, background: C.surface2, border: `1px solid ${C.line}`, borderRadius: 4, color: C.text, fontSize: 10, fontFamily: 'Inter,sans-serif', boxSizing: 'border-box' }} />
+            <input type="email" value={notifEmail} onChange={e => setNotifEmail(e.target.value)} placeholder="ton-email@exemple.fr" style={{ width: '100%', marginTop: 6, padding: 6, background: C.surface2, border: `1px solid ${C.line}`, borderRadius: 4, color: C.text, fontSize: 10, fontFamily: 'Inter,sans-serif', boxSizing: 'border-box' }} />
           </div>
           <div style={{ marginLeft: 12 }}><Toggle checked={emailOn} onChange={setEmailOn} /></div>
         </div>
@@ -574,7 +738,7 @@ function TabNotifications({
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: '#0d1a0d', borderRadius: 6, border: `1px solid ${C.green}40`, marginBottom: 8 }}>
           <div style={{ flex: 1 }}>
             <SetLabel label="📱 SMS (Mobile)" desc="Alertes urgence 48h uniquement • Via Twilio" />
-            <input type="tel" placeholder="+33 6 12 34 56 78" style={{ width: '100%', marginTop: 6, padding: 6, background: C.surface2, border: `1px solid ${C.line}`, borderRadius: 4, color: C.text, fontSize: 10, fontFamily: 'Inter,sans-serif', boxSizing: 'border-box' }} />
+            <input type="tel" value={notifPhone} onChange={e => setNotifPhone(e.target.value)} placeholder="+33 6 12 34 56 78" style={{ width: '100%', marginTop: 6, padding: 6, background: C.surface2, border: `1px solid ${C.line}`, borderRadius: 4, color: C.text, fontSize: 10, fontFamily: 'Inter,sans-serif', boxSizing: 'border-box' }} />
           </div>
           <div style={{ marginLeft: 12 }}><Toggle checked={smsOn} onChange={setSmsOn} /></div>
         </div>
@@ -583,8 +747,8 @@ function TabNotifications({
           <div style={{ flex: 1 }}>
             <SetLabel label="💬 Telegram" desc="Notifications via bot Telegram • Gratuit" />
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginTop: 6 }}>
-              <input type="text" placeholder="Bot Token" style={{ padding: 6, background: C.surface2, border: `1px solid ${C.line}`, borderRadius: 4, color: C.text, fontSize: 10, fontFamily: 'Inter,sans-serif' }} />
-              <input type="text" placeholder="Chat ID" style={{ padding: 6, background: C.surface2, border: `1px solid ${C.line}`, borderRadius: 4, color: C.text, fontSize: 10, fontFamily: 'Inter,sans-serif' }} />
+              <input type="text" value={telegramBot} onChange={e => setTelegramBot(e.target.value)} placeholder="Bot Token" style={{ padding: 6, background: C.surface2, border: `1px solid ${C.line}`, borderRadius: 4, color: C.text, fontSize: 10, fontFamily: 'Inter,sans-serif' }} />
+              <input type="text" value={telegramChat} onChange={e => setTelegramChat(e.target.value)} placeholder="Chat ID" style={{ padding: 6, background: C.surface2, border: `1px solid ${C.line}`, borderRadius: 4, color: C.text, fontSize: 10, fontFamily: 'Inter,sans-serif' }} />
             </div>
             <div style={{ fontSize: 8, color: C.textLo, marginTop: 4, fontFamily: 'JetBrains Mono,monospace' }}>
               📘{' '}
@@ -592,6 +756,12 @@ function TabNotifications({
             </div>
           </div>
           <div style={{ marginLeft: 12 }}><Toggle checked={telegramOn} onChange={setTelegramOn} /></div>
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
+          <SetBtn onClick={handleSaveNotif} color={C.green} bg="#0d1a0d">
+            {saving ? '⏳...' : '💾 Enregistrer canaux'}
+          </SetBtn>
         </div>
       </SectionPanel>
 
@@ -612,7 +782,7 @@ function TabNotifications({
         <SetRow>
           <SetLabel label="🔔 Rappel RDV (heures avant)" desc="Notification avant rendez-vous" />
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <input type="number" defaultValue={24} min={1} max={72} style={{ width: 60, padding: 6, background: C.surface2, border: `1px solid ${C.line}`, borderRadius: 4, color: C.text, fontSize: 10, fontFamily: 'JetBrains Mono,monospace' }} />
+            <input type="number" value={rdvHours} onChange={e => setRdvHours(Number(e.target.value))} min={1} max={72} style={{ width: 60, padding: 6, background: C.surface2, border: `1px solid ${C.line}`, borderRadius: 4, color: C.text, fontSize: 10, fontFamily: 'JetBrains Mono,monospace' }} />
             <span style={{ fontSize: 9, color: C.textLo, fontFamily: 'JetBrains Mono,monospace' }}>h avant</span>
           </div>
         </SetRow>
@@ -849,10 +1019,19 @@ function TabIntegrations() {
 }
 
 // ─── ONGLET SECTIONS ─────────────────────────────────────────────────────────
-function TabSections() {
+function TabSections({ settings, save, saving }: { settings: UserSettings | null; save: (p: Partial<UserSettings>) => Promise<unknown>; saving: boolean }) {
   const [checked, setChecked] = useState<Record<string, boolean>>(
-    Object.fromEntries(SECTIONS_LIST.map(s => [s.id, true]))
+    settings?.visible_sections ?? Object.fromEntries(SECTIONS_LIST.map(s => [s.id, true]))
   )
+
+  useEffect(() => {
+    if (settings?.visible_sections) setChecked(settings.visible_sections)
+  }, [settings])
+
+  async function handleSave() {
+    await save({ visible_sections: checked })
+    toast.success('Sections enregistrées')
+  }
 
   return (
     <SectionPanel title="👁️ Visibilité des sections">
@@ -868,12 +1047,17 @@ function TabSections() {
             </div>
             <input
               type="checkbox"
-              checked={checked[s.id]}
+              checked={checked[s.id] ?? true}
               onChange={e => setChecked(prev => ({ ...prev, [s.id]: e.target.checked }))}
               style={{ width: 20, height: 20, cursor: 'pointer' }}
             />
           </div>
         ))}
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
+        <SetBtn onClick={handleSave} color={C.green} bg="#0d1a0d">
+          {saving ? '⏳...' : '💾 Enregistrer sections'}
+        </SetBtn>
       </div>
     </SectionPanel>
   )
@@ -1281,10 +1465,27 @@ function TabTriggers() {
 }
 
 // ─── ONGLET MOBILE ────────────────────────────────────────────────────────────
-function TabMobile() {
+function TabMobile({ settings, save, saving }: { settings: UserSettings | null; save: (p: Partial<UserSettings>) => Promise<unknown>; saving: boolean }) {
   const [checked, setChecked] = useState<Record<string, boolean>>(
-    Object.fromEntries(MOBILE_SECTIONS.map(s => [s.id, s.defaultOn]))
+    settings?.mobile_sections ?? Object.fromEntries(MOBILE_SECTIONS.map(s => [s.id, s.defaultOn]))
   )
+  const [fontSize, setFontSize] = useState<'small' | 'medium' | 'large'>(settings?.mobile_font_size ?? 'medium')
+  const [compact, setCompact] = useState(settings?.mobile_compact ?? false)
+  const [bottomMenu, setBottomMenu] = useState(settings?.mobile_bottom_menu ?? true)
+
+  useEffect(() => {
+    if (settings) {
+      if (settings.mobile_sections) setChecked(settings.mobile_sections)
+      if (settings.mobile_font_size) setFontSize(settings.mobile_font_size)
+      setCompact(settings.mobile_compact ?? false)
+      setBottomMenu(settings.mobile_bottom_menu ?? true)
+    }
+  }, [settings])
+
+  async function handleSave() {
+    await save({ mobile_sections: checked, mobile_font_size: fontSize, mobile_compact: compact, mobile_bottom_menu: bottomMenu })
+    toast.success('Paramètres mobile enregistrés')
+  }
 
   return (
     <SectionPanel title="📱 Affichage mobile">
@@ -1298,7 +1499,7 @@ function TabMobile() {
               <span style={{ fontSize: 9, color: C.text, fontFamily: 'Inter,sans-serif' }}>{s.label}</span>
               <input
                 type="checkbox"
-                checked={checked[s.id]}
+                checked={checked[s.id] ?? s.defaultOn}
                 onChange={e => setChecked(prev => ({ ...prev, [s.id]: e.target.checked }))}
                 style={{ width: 18, height: 18, cursor: 'pointer' }}
               />
@@ -1309,7 +1510,7 @@ function TabMobile() {
 
       <div style={{ marginBottom: 16 }}>
         <div style={{ fontSize: 9, fontWeight: 600, color: C.gold, marginBottom: 8, fontFamily: 'Oswald,sans-serif' }}>Taille de police</div>
-        <select defaultValue="medium" style={{ width: '100%', padding: 8, background: C.surface2, border: `1px solid ${C.line}`, borderRadius: 6, color: C.text, fontSize: 9, fontFamily: 'Inter,sans-serif' }}>
+        <select value={fontSize} onChange={e => setFontSize(e.target.value as 'small' | 'medium' | 'large')} style={{ width: '100%', padding: 8, background: C.surface2, border: `1px solid ${C.line}`, borderRadius: 6, color: C.text, fontSize: 9, fontFamily: 'Inter,sans-serif' }}>
           <option value="small">Petit (lisible sur petit écran)</option>
           <option value="medium">Moyen (équilibré)</option>
           <option value="large">Grand (confort de lecture)</option>
@@ -1321,7 +1522,7 @@ function TabMobile() {
           <div style={{ fontSize: 10, fontWeight: 600, color: C.textHi, fontFamily: 'Inter,sans-serif' }}>Mode compact</div>
           <div style={{ fontSize: 8, color: C.textLo, fontFamily: 'JetBrains Mono,monospace' }}>{"Réduit l'espacement pour voir plus d'infos"}</div>
         </div>
-        <input type="checkbox" style={{ width: 20, height: 20, cursor: 'pointer' }} />
+        <input type="checkbox" checked={compact} onChange={e => setCompact(e.target.checked)} style={{ width: 20, height: 20, cursor: 'pointer' }} />
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 10, background: C.surface1, border: `1px solid ${C.lineSoft}`, borderRadius: 6, marginBottom: 16 }}>
@@ -1329,7 +1530,13 @@ function TabMobile() {
           <div style={{ fontSize: 10, fontWeight: 600, color: C.textHi, fontFamily: 'Inter,sans-serif' }}>Menu en bas</div>
           <div style={{ fontSize: 8, color: C.textLo, fontFamily: 'JetBrains Mono,monospace' }}>{"Barre de navigation fixée en bas d'écran"}</div>
         </div>
-        <input type="checkbox" defaultChecked style={{ width: 20, height: 20, cursor: 'pointer' }} />
+        <input type="checkbox" checked={bottomMenu} onChange={e => setBottomMenu(e.target.checked)} style={{ width: 20, height: 20, cursor: 'pointer' }} />
+      </div>
+
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+        <SetBtn onClick={handleSave} color={C.green} bg="#0d1a0d">
+          {saving ? '⏳...' : '💾 Enregistrer mobile'}
+        </SetBtn>
       </div>
 
       <div style={{ padding: 12, background: C.surface1, border: `1px solid ${C.indigo}40`, borderRadius: 6 }}>
@@ -1603,14 +1810,14 @@ export default function SettingsPage() {
       </div>
 
       {/* Tab content */}
-      {activeTab === 'general' && <TabGeneral />}
+      {activeTab === 'general' && <TabGeneral settings={settings} save={save} saving={saving} />}
       {activeTab === 'kpi' && <TabKPI settings={settings} save={save} saving={saving} />}
       {activeTab === 'notifications' && <TabNotifications settings={settings} save={save} saving={saving} />}
       {activeTab === 'integrations' && <TabIntegrations />}
-      {activeTab === 'sections' && <TabSections />}
-      {activeTab === 'mobile' && <TabMobile />}
+      {activeTab === 'sections' && <TabSections settings={settings} save={save} saving={saving} />}
+      {activeTab === 'mobile' && <TabMobile settings={settings} save={save} saving={saving} />}
       {activeTab === 'sequences' && <TabSequences />}
-      {activeTab === 'variantes' && <TabVariantes />}
+      {activeTab === 'variantes' && <TabVariantes settings={settings} save={save} saving={saving} />}
       {activeTab === 'triggers' && <TabTriggers />}
       {activeTab === 'scripts' && <TabScripts />}
     </>
@@ -1630,7 +1837,7 @@ type VariantSequence = {
   steps: VariantStep[]
 }
 
-function TabVariantes() {
+function TabVariantes({ settings, save, saving }: { settings: UserSettings | null; save: (p: Partial<UserSettings>) => Promise<unknown>; saving: boolean }) {
   const [sequences, setSequences] = useState<VariantSequence[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedSeq, setSelectedSeq] = useState<string | null>(null)
@@ -1795,9 +2002,12 @@ function TabVariantes() {
               {/* Bouton Activer */}
               <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
                 <button
-                  onClick={() => {
+                  onClick={async () => {
+                    if (!currentSeq || !currentStep) return
+                    const key = `${currentSeq.name}__step${currentStep.step_order}`
+                    const channelTemplates = { ...(settings?.message_templates?.['variantes'] ?? {}), [key]: currentStep.variants[selectedVar] }
+                    await save({ message_templates: { ...(settings?.message_templates ?? {}), variantes: channelTemplates } })
                     toast.success(`Variante ${String.fromCharCode(65 + selectedVar)} activée!`)
-                    // TODO: Implémenter la sauvegarde en DB
                   }}
                   style={{
                     padding: '10px 20px',
