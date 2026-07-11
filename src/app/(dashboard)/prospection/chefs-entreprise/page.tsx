@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { C } from '@/lib/theme'
+import { LinkButton, LinkChip } from '@/lib/cross-links'
 import ProspectCard, { type ProspectCardData } from '@/components/prospects/ProspectCard'
 
 type MainTab = 'portefeuille' | 'acquisition'
@@ -689,6 +690,14 @@ export default function ChefsEntreprisePage() {
           )}
         </>
       )}
+
+      {/* Navigation transversale */}
+      <div style={{ display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>
+        <LinkButton href="/crm" label="Voir dans Kanban" color="gold" />
+        <LinkButton href="/today" label="Planifier relances" color="cyan" params={{ tab: 'relances' }} />
+        <LinkButton href="/prospection/tns" label="TNS aussi" color="indigo" />
+        <LinkButton href="/scoring" label="Scoring patrimonial" color="purple" />
+      </div>
 
       {selectedProspect && (
         <ProspectCard

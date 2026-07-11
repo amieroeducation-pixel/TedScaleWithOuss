@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { C } from '@/lib/theme'
+import { LinkButton, LinkChip } from '@/lib/cross-links'
 import ProspectCard, { type ProspectCardData } from '@/components/prospects/ProspectCard'
 import CreateSessionModal from '@/components/calling/CreateSessionModal'
 
@@ -428,10 +429,17 @@ export default function TnsPage() {
     }
   }
 
+  async function handleDeleteProspect(id: string | number) {
+    try {
+      await fetch(`/api/prospects/${id}`, { method: 'DELETE' })
+      setProspects(prev => prev.filter(p => p.id !== id))
+    } catch { /* silent */ }
+  }
+
   const filtered = prospects.filter(p => {
     if (activeFilter !== 'all' && p.metierFilter !== activeFilter) return false
     const norm = p.telephone?.replace(/[\s.\-]/g, '') ?? ''
-    return !contactedPhones.has(norm) // Exclut les prospects déjà contactés
+    return !contactedPhones.has(norm)
   })
 
   return (
@@ -716,6 +724,15 @@ export default function TnsPage() {
 
                 {/* Status */}
                 <StatusBadge status={p.status} />
+
+                {/* Delete */}
+                <button
+                  onClick={e => { e.stopPropagation(); handleDeleteProspect(p.id) }}
+                  style={{ fontSize: 10, padding: '3px 6px', borderRadius: 4, background: 'transparent', border: 'none', color: C.textVlo, cursor: 'pointer', flexShrink: 0 }}
+                  title="Supprimer"
+                >
+                  🗑️
+                </button>
               </div>
             ))}
           </div>
@@ -747,6 +764,14 @@ export default function TnsPage() {
           }}
         />
       )}
+
+      {/* Navigation transversale */}
+      <div style={{ display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>
+        <LinkButton href="/crm" label="CRM — Voir prospects ajoutés" color="gold" />
+        <LinkButton href="/map" label="Carte zones IDF" color="indigo" />
+        <LinkButton href="/today" label="Commencer relances" color="cyan" params={{ tab: 'relances' }} />
+        <LinkButton href="/scoring" label="Scoring patrimonial" color="purple" />
+      </div>
 
       {selectedProspect && (
         <ProspectCard
