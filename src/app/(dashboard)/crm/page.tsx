@@ -24,6 +24,7 @@ import { openWhatsApp, openLinkedIn } from '@/lib/sequences/client-actions'
 import ProspectEditForm from '@/components/prospects/ProspectEditForm'
 import { saveLastSection } from '@/lib/navigation-state'
 import { detectCivilite } from '@/lib/civilite'
+import { LinkButton, LinkChip } from '@/lib/cross-links'
 
 // --- TYPES ---
 type Stage = 'À contacter' | 'RDV1' | 'RDV2' | 'RDV3' | 'Converti' | 'Perdu'
@@ -1161,6 +1162,14 @@ export default function CrmPage() {
           {activeProspect && <CardContent prospect={activeProspect} isDragging />}
         </DragOverlay>
       </DndContext>
+
+      {/* Navigation transversale */}
+      <div style={{ display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>
+        <LinkButton href="/today" label="Relancer aujourd'hui" color="cyan" params={{ tab: 'relances' }} />
+        <LinkButton href="/pipeline" label="Vue Pipeline" color="indigo" />
+        <LinkButton href="/scoring" label="Scoring patrimonial" color="purple" />
+        <LinkButton href="/sequences" label="Séquences actives" color="green" />
+      </div>
 
       {/* Drawer */}
       {selectedProspect && (

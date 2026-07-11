@@ -9,6 +9,7 @@ import { AgendaEventType, AgendaEvent, AGENDA_COLORS, loadDayAgenda, saveDayAgen
 import { saveLastSection } from '@/lib/navigation-state'
 import CallingSessionPanel from '@/components/calling/CallingSessionPanel'
 import { useCelebrations } from '@/hooks/useCelebrations'
+import { LinkButton, LinkChip, LinkInline } from '@/lib/cross-links'
 
 // ─── Objectifs du jour ────────────────────────────────────────────────────────
 interface TodayTargets { contacts: number; calls: number; rdv1: number; rdv2: number }
@@ -1070,6 +1071,15 @@ export default function TodayPage() {
           )}
         </div>
 
+      </div>
+
+      {/* Navigation transversale */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
+        <LinkChip href="/crm" label="Ouvrir CRM" color="gold" />
+        <LinkChip href="/pipeline" label="Pipeline" color="indigo" />
+        <LinkChip href="/scoring" label="Scoring" color="purple" />
+        <LinkChip href="/sequences" label="Séquences" color="green" />
+        <LinkChip href="/donnees" label="Données" color="gold" />
       </div>
 
       {/* Tab bar */}
