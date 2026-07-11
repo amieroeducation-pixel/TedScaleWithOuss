@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { C } from '@/lib/theme'
 
 // ─── TYPES ────────────────────────────────────────────────────────────────────
@@ -82,6 +82,8 @@ function PanelTitle({ title, accent = C.cyan }: { title: string; accent?: string
 // ─── PAGE ─────────────────────────────────────────────────────────────────────
 export default function ClientsPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const sortParam = searchParams.get('sort') as 'aum' | 'days' | 'name' | null
   const [clientsResp, setClientsResp] = useState<ClientsResp | null>(null)
   const [healthResp, setHealthResp] = useState<HealthResp | null>(null)
   const [contactModal, setContactModal] = useState<{ clientId: string; name: string } | null>(null)
@@ -91,7 +93,7 @@ export default function ClientsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
-  const [sort, setSort] = useState<'aum' | 'days' | 'name'>('days')
+  const [sort, setSort] = useState<'aum' | 'days' | 'name'>(sortParam || 'days')
 
   useEffect(() => {
     Promise.all([

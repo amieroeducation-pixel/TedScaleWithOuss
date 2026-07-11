@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import { C } from '@/lib/theme'
 
@@ -44,6 +45,8 @@ function ClosingTooltip({ active, payload }: any) {
 }
 
 export default function AnalyticsPage() {
+  const searchParams = useSearchParams()
+  const focusProduct = searchParams.get('focus')
   const [pipeline, setPipeline] = useState<PipelineResp | null>(null)
   const [closing, setClosing] = useState<ClosingResp | null>(null)
   const [loading, setLoading] = useState(true)

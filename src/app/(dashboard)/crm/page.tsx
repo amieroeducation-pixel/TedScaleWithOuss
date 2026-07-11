@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
 import {
   DndContext,
@@ -248,43 +249,42 @@ function CardContent({ prospect, isDragging }: { prospect: Prospect; isDragging?
       background: C.surface2,
       border: `1px solid ${isDragging ? C.gold : C.line}`,
       borderLeft: `3px solid ${STAGE_COLORS[prospect.stage]}`,
-      borderRadius: 8, padding: '10px 12px', cursor: 'grab',
-      marginBottom: 8, userSelect: 'none',
+      borderRadius: 6, padding: '7px 10px', cursor: 'grab',
+      marginBottom: 5, userSelect: 'none',
       boxShadow: isDragging ? '0 8px 24px rgba(0,0,0,0.5)' : 'none',
     }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-          {/* Avatar */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
           <div style={{
-            width: 24, height: 24, borderRadius: '50%', flexShrink: 0,
+            width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
             background: STAGE_COLORS[prospect.stage] + '30',
             border: `1px solid ${STAGE_COLORS[prospect.stage]}60`,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 8, fontWeight: 700, color: STAGE_COLORS[prospect.stage],
+            fontSize: 7, fontWeight: 700, color: STAGE_COLORS[prospect.stage],
           }}>{prospect.initials}</div>
-          <div style={{ fontSize: 12, fontWeight: 600, color: C.text }}>{prospect.nom}</div>
+          <div style={{ fontSize: 10, fontWeight: 600, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 100 }}>{prospect.nom}</div>
         </div>
         <div style={{
-          fontSize: 10, fontWeight: 700, color: scoreColor(prospect.leadScore),
+          fontSize: 9, fontWeight: 700, color: scoreColor(prospect.leadScore),
           background: scoreColor(prospect.leadScore) + '22',
-          borderRadius: 4, padding: '1px 5px',
+          borderRadius: 4, padding: '0px 4px',
         }}>{prospect.leadScore}</div>
       </div>
-      <div style={{ fontSize: 10, color: C.textLo, marginBottom: 5 }}>
+      <div style={{ fontSize: 9, color: C.textLo, marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         {prospect.profession} — {prospect.ville}
       </div>
-      <div style={{ fontSize: 10, color: C.gold, marginBottom: 5 }}>⚡ {prospect.nextAction}</div>
+      <div style={{ fontSize: 9, color: C.gold, marginBottom: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>⚡ {prospect.nextAction}</div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 3, flexWrap: 'nowrap', overflow: 'hidden' }}>
           {prospect.tags.slice(0, 2).map(t => (
             <span key={t} style={{
-              fontSize: 8, padding: '1px 5px', borderRadius: 3,
+              fontSize: 7, padding: '0px 4px', borderRadius: 3,
               background: C.surface3, color: C.green, border: `1px solid ${C.green}33`,
+              whiteSpace: 'nowrap',
             }}>{t}</span>
           ))}
         </div>
-        {/* Pressure dot */}
-        <div style={{ width: 7, height: 7, borderRadius: '50%', background: pressureColor, flexShrink: 0 }} />
+        <div style={{ width: 6, height: 6, borderRadius: '50%', background: pressureColor, flexShrink: 0 }} />
       </div>
     </div>
   )
@@ -846,6 +846,7 @@ export default function CrmPage() {
   const [activeId, setActiveId] = useState<string | null>(null)
   const [selectedProspect, setSelectedProspect] = useState<Prospect | null>(null)
   const [filter, setFilter] = useState<'Tous' | 'TNS' | 'Chefs' | '★★★★★'>('Tous')
+  const [sortBy, setSortBy] = useState<'default' | 'score_desc' | 'score_asc'>('default')
   const [isLoading, setIsLoading] = useState(true)
   const [showScriptPicker, setShowScriptPicker] = useState<{ prospect: Prospect; channel: 'whatsapp' | 'linkedin' } | null>(null)
   const [callScripts, setCallScripts] = useState<Array<{ id: string; metier: string; titre: string; contenu: string }>>([])
@@ -861,6 +862,24 @@ export default function CrmPage() {
   const [npError, setNpError] = useState<string | null>(null)
 
   useEffect(() => { saveLastSection('/crm') }, [])
+
+  const searchParams = useSearchParams()
+  const highlightProspectId = searchParams.get('prospect')
+  const filterStageParam = searchParams.get('stage')
+
+  useEffect(() => {
+    if (filterStageParam) {
+      const stageMap: Record<string, string> = {
+        'a_contacter': 'À contacter', 'rdv1': 'RDV1', 'rdv2': 'RDV2',
+        'rdv3': 'RDV3', 'converti': 'Converti', 'perdu': 'Perdu',
+      }
+      const target = stageMap[filterStageParam] || filterStageParam
+      setTimeout(() => {
+        const col = document.querySelector(`[data-stage="${target}"]`)
+        if (col) col.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }, 500)
+    }
+  }, [filterStageParam, prospects])
 
   // Fetch call scripts
   useEffect(() => {
@@ -972,6 +991,10 @@ export default function CrmPage() {
     if (filter === 'Chefs') return p.tags.includes('Chef entreprise')
     if (filter === '★★★★★') return p.leadScore >= 85
     return true
+  }).sort((a, b) => {
+    if (sortBy === 'score_desc') return b.leadScore - a.leadScore
+    if (sortBy === 'score_asc') return a.leadScore - b.leadScore
+    return 0
   })
 
   function findStageForProspect(id: string): Stage {
@@ -1050,6 +1073,15 @@ export default function CrmPage() {
             onClick={() => setShowNewProspect(true)}
             style={{ padding: '4px 10px', background: C.surface2, border: `1px solid ${C.green}`, color: C.green, borderRadius: 6, fontSize: 8, fontWeight: 600, cursor: 'pointer' }}
           >➕ Nouveau prospect</button>
+          <select
+            value={sortBy}
+            onChange={e => setSortBy(e.target.value as 'default' | 'score_desc' | 'score_asc')}
+            style={{ fontSize: 8, padding: '2px 6px', borderRadius: 5, background: C.surface2, border: `1px solid ${C.line}`, color: C.textMid, cursor: 'pointer' }}
+          >
+            <option value="default">Tri: défaut</option>
+            <option value="score_desc">Score ↓</option>
+            <option value="score_asc">Score ↑</option>
+          </select>
           <div style={{ display: 'flex', gap: 4 }}>
             {(['Tous', '★★★★★', 'TNS', 'Chefs'] as const).map(f => (
               <span key={f} onClick={() => setFilter(f)} style={{

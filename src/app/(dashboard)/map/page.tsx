@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { C } from '@/lib/theme'
 
 interface Dept {
@@ -79,8 +80,11 @@ function PanelTitle({ title, accent = C.indigo }: { title: string; accent?: stri
 }
 
 export default function MapPage() {
-  const [activeZone, setActiveZone] = useState<string | null>(null)
-  const [selectedMetier, setSelectedMetier] = useState('medecin_generaliste')
+  const searchParams = useSearchParams()
+  const deptParam = searchParams.get('dept')
+  const metierParam = searchParams.get('metier')
+  const [activeZone, setActiveZone] = useState<string | null>(deptParam)
+  const [selectedMetier, setSelectedMetier] = useState(metierParam || 'medecin_generaliste')
   const [mapResults, setMapResults] = useState<SearchResult[]>([])
   const [mapLoading, setMapLoading] = useState<string | null>(null)
   const [mapError, setMapError] = useState<string | null>(null)

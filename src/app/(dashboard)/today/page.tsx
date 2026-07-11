@@ -3,6 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { C } from '@/lib/theme'
 import { AgendaEventType, AgendaEvent, AGENDA_COLORS, loadDayAgenda, saveDayAgenda, todayDateKey, fantasticalUrl } from '@/lib/agenda'
 import { saveLastSection } from '@/lib/navigation-state'
@@ -64,7 +65,7 @@ interface Relance {
   id: string; name: string; priority: 1 | 2 | 3; status: RelanceStatus; note?: string
 }
 
-const BLOCK_DURATION = 52 * 60 // 52 minutes in seconds
+const BLOCK_DURATION = 52 * 60 * 100 // 52 minutes in centiseconds
 
 const TIMER_KEY = () => `today_timer_${new Date().toDateString()}`
 
@@ -81,7 +82,11 @@ function saveTimer(timerSec: number, running: boolean, startedAt: number) {
 }
 
 function pad(n: number) { return String(n).padStart(2, '0') }
-function formatSeconds(s: number) { return `${pad(Math.floor(s / 60))}:${pad(s % 60)}` }
+function formatCentis(cs: number) {
+  const totalSec = Math.floor(cs / 100)
+  const centis = cs % 100
+  return `${pad(Math.floor(totalSec / 60))}:${pad(totalSec % 60)}.${pad(centis)}`
+}
 
 // ─── Agenda helpers ────────────────────────────────────────────────────────
 function todayFrDate() {
@@ -537,7 +542,9 @@ function VideoPlayer() {
 // ─── Main page ────────────────────────────────────────────────────────────
 export default function TodayPage() {
   const { celebrate } = useCelebrations()
-  const [tab, setTab] = useState<TodayTab>('prospection')
+  const searchParams = useSearchParams()
+  const initialTab = searchParams.get('tab') as TodayTab | null
+  const [tab, setTab] = useState<TodayTab>(initialTab === 'relances' ? 'relances' : 'prospection')
   const [clock, setClock] = useState('--:--')
   const [displayDate, setDisplayDate] = useState('')
   useEffect(() => { setDisplayDate(todayFrDate()); saveLastSection('/today') }, [])
@@ -606,10 +613,9 @@ export default function TodayPage() {
   useEffect(() => {
     const stored = loadTimer()
     if (stored.running && stored.startedAt > 0) {
-      const elapsed = Math.floor((Date.now() - stored.startedAt) / 1000)
+      const elapsed = Math.floor((Date.now() - stored.startedAt) / 10)
       const resumeSec = Math.min(stored.timerSec + elapsed, BLOCK_DURATION - 1)
       setTimerSec(resumeSec)
-      // Auto-resume: start the interval since it was running before page reload
       setTimerRunning(true)
     } else {
       setTimerSec(stored.timerSec)
@@ -648,7 +654,7 @@ export default function TodayPage() {
       })
   }, [])
 
-  // Effect-based timer: starts/stops interval based on timerRunning state
+  // Effect-based timer: starts/stops interval based on timerRunning state (centiseconds)
   useEffect(() => {
     if (!timerRunning) {
       if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null }
@@ -671,17 +677,17 @@ export default function TodayPage() {
           saveTimer(0, false, 0)
           return 0
         }
-        saveTimer(s + 1, true, Date.now() - (s + 1) * 1000)
+        if ((s + 1) % 100 === 0) saveTimer(s + 1, true, Date.now() - (s + 1) * 10)
         return s + 1
       })
-    }, 1000)
+    }, 10)
     return () => { if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null } }
   }, [timerRunning, celebrate])
 
   const startTimer = () => {
     if (timerRunning) return
     setTimerRunning(true)
-    saveTimer(timerSec, true, Date.now() - timerSec * 1000)
+    saveTimer(timerSec, true, Date.now() - timerSec * 10)
   }
 
   const pauseTimer = () => {
@@ -1102,8 +1108,8 @@ export default function TodayPage() {
 
                 {/* Timer display */}
                 <div style={{ textAlign: 'center', margin: '15px 0 10px' }}>
-                  <div style={{ fontSize: 42, fontWeight: 300, color: C.gold, fontVariantNumeric: 'tabular-nums', letterSpacing: 2 }}>
-                    {formatSeconds(timerSec)}
+                  <div style={{ fontSize: 38, fontWeight: 300, color: C.gold, fontVariantNumeric: 'tabular-nums', letterSpacing: 1, fontFamily: 'JetBrains Mono,monospace' }}>
+                    {formatCentis(timerSec)}
                   </div>
                   <div style={{ fontSize: 9, color: C.textLo, marginTop: 6 }}>
                     Bloc {blocksCompleted + (timerSec > 0 ? 1 : 0)}/6 · {timerRunning ? 'En cours' : 'En pause'}
