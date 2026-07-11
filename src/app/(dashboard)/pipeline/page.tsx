@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import { C } from '@/lib/theme'
+import { LinkButton, LinkChip } from '@/lib/cross-links'
 
 type PipelineStage = {
   stage: string
@@ -336,6 +337,14 @@ export default function PipelinePage() {
             Historique mensuel non disponible.<br />Alimenté automatiquement après plusieurs mois d&apos;utilisation.
           </div>
         </div>
+      </div>
+
+      {/* Navigation transversale */}
+      <div style={{ display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>
+        <LinkButton href="/crm" label="CRM Kanban complet" color="gold" />
+        <LinkButton href="/analytics" label="Analyses conversion" color="green" />
+        <LinkButton href="/revenue" label="Impact CA" color="indigo" />
+        <LinkButton href="/today" label="Actions du jour" color="cyan" params={{ tab: 'relances' }} />
       </div>
     </>
   )

@@ -6,6 +6,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { C } from '@/lib/theme'
 import { AgendaEventType, AgendaEvent, AGENDA_COLORS, loadDayAgenda, saveDayAgenda, fantasticalUrl } from '@/lib/agenda'
 import { saveLastSection } from '@/lib/navigation-state'
+import { LinkButton, LinkChip } from '@/lib/cross-links'
 
 // ---------- TYPES ----------
 type WeeklyData = {
@@ -278,6 +279,14 @@ export default function WeeklyPage() {
             )
           })}
         </div>
+      </div>
+
+      {/* Navigation transversale */}
+      <div style={{ display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>
+        <LinkButton href="/today" label="Actions aujourd'hui" color="cyan" />
+        <LinkButton href="/global" label="Vue globale" color="gold" />
+        <LinkButton href="/donnees" label="Données semaine" color="indigo" />
+        <LinkButton href="/achievements" label="Progression" color="purple" />
       </div>
 
       {/* Modal ajout événement */}
