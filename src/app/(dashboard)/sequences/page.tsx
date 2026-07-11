@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { C } from '@/lib/theme'
+import { LinkButton, LinkChip } from '@/lib/cross-links'
 
 type StepType = 'mail' | 'wa' | 'sms' | 'li'
 
@@ -475,6 +476,15 @@ export default function SequencesPage() {
           </div>
         </div>
       )}
+
+      {/* Navigation transversale — Opérations */}
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 32, paddingTop: 20, borderTop: `1px solid ${C.gold}20` }}>
+        <LinkButton href="/crm" label="CRM" color="gold" />
+        <LinkButton href="/automatisations" label="Automatisations" color="cyan" />
+        <LinkButton href="/settings" label="Paramètres" color="indigo" />
+        <LinkChip href="/today" label="Aujourd'hui" color="green" />
+        <LinkChip href="/clients" label="Clients" color="purple" />
+      </div>
     </>
   )
 }

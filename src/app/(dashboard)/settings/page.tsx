@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 import { C } from '@/lib/theme'
+import { LinkButton, LinkChip } from '@/lib/cross-links'
 import { useUserSettings, UserSettings } from '@/hooks/useUserSettings'
 
 type Tab = 'general' | 'kpi' | 'notifications' | 'integrations' | 'sections' | 'mobile' | 'sequences' | 'variantes' | 'triggers' | 'scripts'
@@ -160,6 +161,75 @@ function SetBtn({ onClick, color, bg, children }: { onClick?: () => void; color:
 }
 
 // ─── ONGLET GÉNÉRAL ──────────────────────────────────────────────────────────
+function triggerCelebration(type: string) {
+  if (type === 'confetti') {
+    const colors = ['#e8c878', '#ff6470', '#4ade80', '#818cf8', '#fbbf24']
+    for (let i = 0; i < 80; i++) {
+      const el = document.createElement('div')
+      el.style.cssText = `position:fixed;top:-10px;left:${Math.random()*100}vw;width:${6+Math.random()*6}px;height:${6+Math.random()*6}px;background:${colors[Math.floor(Math.random()*colors.length)]};border-radius:${Math.random()>0.5?'50%':'2px'};z-index:99999;pointer-events:none;animation:confetti-fall ${2+Math.random()*2}s ease-in forwards;opacity:0.9;`
+      document.body.appendChild(el)
+      setTimeout(() => el.remove(), 4000)
+    }
+    if (!document.getElementById('confetti-style')) {
+      const style = document.createElement('style')
+      style.id = 'confetti-style'
+      style.textContent = '@keyframes confetti-fall{to{transform:translateY(100vh) rotate(720deg);opacity:0}}'
+      document.head.appendChild(style)
+    }
+    toast.success('🎊 Confettis !')
+  } else if (type === 'rocket') {
+    const el = document.createElement('div')
+    el.style.cssText = 'position:fixed;bottom:0;left:50%;transform:translateX(-50%);font-size:48px;z-index:99999;pointer-events:none;animation:rocket-up 2s ease-out forwards;'
+    el.textContent = '🚀'
+    document.body.appendChild(el)
+    if (!document.getElementById('rocket-style')) {
+      const style = document.createElement('style')
+      style.id = 'rocket-style'
+      style.textContent = '@keyframes rocket-up{0%{bottom:0;opacity:1}100%{bottom:100vh;opacity:0}}'
+      document.head.appendChild(style)
+    }
+    setTimeout(() => el.remove(), 2500)
+    toast.success('🚀 Record battu !')
+  } else if (type === 'fireworks') {
+    for (let burst = 0; burst < 3; burst++) {
+      setTimeout(() => {
+        const cx = 20 + Math.random() * 60
+        const cy = 20 + Math.random() * 40
+        for (let i = 0; i < 20; i++) {
+          const el = document.createElement('div')
+          const angle = (i / 20) * Math.PI * 2
+          const dist = 40 + Math.random() * 60
+          const color = ['#e8c878', '#ff6470', '#4ade80', '#818cf8', '#b07aee'][Math.floor(Math.random() * 5)]
+          el.style.cssText = `position:fixed;top:${cy}vh;left:${cx}vw;width:5px;height:5px;background:${color};border-radius:50%;z-index:99999;pointer-events:none;animation:fw-burst 1s ease-out forwards;--dx:${Math.cos(angle)*dist}px;--dy:${Math.sin(angle)*dist}px;`
+          document.body.appendChild(el)
+          setTimeout(() => el.remove(), 1200)
+        }
+      }, burst * 400)
+    }
+    if (!document.getElementById('fireworks-style')) {
+      const style = document.createElement('style')
+      style.id = 'fireworks-style'
+      style.textContent = '@keyframes fw-burst{0%{transform:translate(0,0);opacity:1}100%{transform:translate(var(--dx),var(--dy));opacity:0}}'
+      document.head.appendChild(style)
+    }
+    toast.success("🎆 Feux d'artifice !")
+  } else if (type === 'gong_rdv' || type === 'gong_contrat') {
+    const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)()
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+    osc.type = 'sine'
+    osc.frequency.setValueAtTime(type === 'gong_rdv' ? 180 : 120, ctx.currentTime)
+    osc.frequency.exponentialRampToValueAtTime(type === 'gong_rdv' ? 90 : 60, ctx.currentTime + 2)
+    gain.gain.setValueAtTime(0.5, ctx.currentTime)
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 2)
+    osc.start()
+    osc.stop(ctx.currentTime + 2)
+    toast.success(type === 'gong_rdv' ? '🔔 Gong RDV !' : '🔔 Gong contrat signé !')
+  }
+}
+
 function TabGeneral({ settings, save, saving }: { settings: UserSettings | null; save: (p: Partial<UserSettings>) => Promise<unknown>; saving: boolean }) {
   const [objCount, setObjCount] = useState(settings?.objectives_count ?? 4)
   const [contacts, setContacts] = useState(settings?.daily_targets?.contacts ?? 10)
@@ -426,15 +496,15 @@ function TabGeneral({ settings, save, saving }: { settings: UserSettings | null;
 
       <SectionPanel title="🎉 Célébrations">
         {[
-          { label: '🎊 Tester confettis', desc: 'Objectif quotidien atteint', btnLabel: 'Tester', color: C.gold, bg: '#1a1400' },
-          { label: '🚀 Tester fusée', desc: 'Record personnel battu', btnLabel: 'Tester', color: C.green, bg: '#0d1f0f' },
-          { label: "🎆 Tester feux d'artifice", desc: 'Objectif global / mensuel atteint', btnLabel: 'Tester', color: '#b07aee', bg: '#180d2e' },
-          { label: '🔔 Tester gong RDV', desc: 'Son de gong quand un RDV est posé', btnLabel: 'Tester', color: C.indigo, bg: '#0d1a2e' },
-          { label: '🔔 Tester gong contrat', desc: 'Son de gong quand un contrat est signé', btnLabel: 'Tester', color: C.gold, bg: '#1a1400' },
+          { label: '🎊 Tester confettis', desc: 'Objectif quotidien atteint', btnLabel: 'Tester', color: C.gold, bg: '#1a1400', action: 'confetti' },
+          { label: '🚀 Tester fusée', desc: 'Record personnel battu', btnLabel: 'Tester', color: C.green, bg: '#0d1f0f', action: 'rocket' },
+          { label: "🎆 Tester feux d'artifice", desc: 'Objectif global / mensuel atteint', btnLabel: 'Tester', color: '#b07aee', bg: '#180d2e', action: 'fireworks' },
+          { label: '🔔 Tester gong RDV', desc: 'Son de gong quand un RDV est posé', btnLabel: 'Tester', color: C.indigo, bg: '#0d1a2e', action: 'gong_rdv' },
+          { label: '🔔 Tester gong contrat', desc: 'Son de gong quand un contrat est signé', btnLabel: 'Tester', color: C.gold, bg: '#1a1400', action: 'gong_contrat' },
         ].map((row, i) => (
           <SetRow key={i}>
             <SetLabel label={row.label} desc={row.desc} />
-            <SetBtn color={row.color} bg={row.bg}>{row.btnLabel}</SetBtn>
+            <SetBtn color={row.color} bg={row.bg} onClick={() => triggerCelebration(row.action)}>{row.btnLabel}</SetBtn>
           </SetRow>
         ))}
       </SectionPanel>
@@ -450,11 +520,48 @@ function TabGeneral({ settings, save, saving }: { settings: UserSettings | null;
       <SectionPanel title="⚠️ Zone dangereuse">
         <SetRow>
           <SetLabel label="Réinitialiser les compteurs du jour" desc="Remet à 0 les contacts, appels, RDV" />
-          <SetBtn color={C.cyan} bg="#1f0d0d">🗑️ Reset jour</SetBtn>
+          <SetBtn color={C.cyan} bg="#1f0d0d" onClick={async () => {
+            if (!confirm('Remettre les compteurs du jour à zéro ?')) return
+            await save({ daily_targets: { contacts: 0, calls: 0, rdv1: 0, rdv2: 0 } })
+            setContacts(0); setCalls(0); setRdv1(0); setRdv2(0)
+            toast.success('Compteurs du jour remis à zéro')
+          }}>🗑️ Reset jour</SetBtn>
         </SetRow>
         <SetRow>
           <SetLabel label="Restaurer tous les paramètres par défaut" desc="Remet toutes les valeurs d'origine" />
-          <SetBtn color={C.cyan} bg="#1f0d0d">🔄 Reset tout</SetBtn>
+          <SetBtn color={C.cyan} bg="#1f0d0d" onClick={async () => {
+            if (!confirm('Restaurer TOUS les paramètres par défaut ? Cette action est irréversible.')) return
+            const defaults: Partial<UserSettings> = {
+              objectives_count: 4,
+              daily_targets: { contacts: 10, calls: 20, rdv1: 5, rdv2: 3 },
+              bloc_duration_minutes: 45,
+              blocs_per_day_normal: 4,
+              blocs_per_day_max: 6,
+              calls_per_day_target: 8,
+              blocks_per_day_target: 3,
+              rdv_per_week_target: 12,
+              closing_target_pct: 40,
+              sequence_delay_email: 3,
+              sequence_delay_sms: 5,
+              sequence_delay_whatsapp: 2,
+              sequence_steps_max: 6,
+              sequence_stop_days: 21,
+              coach_instructions: '',
+              rdv_r1_annual: 240,
+              rdv_r2_annual: 144,
+              collecte_annual: 600000,
+              monthly_intensity: Object.fromEntries(MONTHS_ID.map(m => [m, 1.0])),
+            }
+            await save(defaults)
+            setObjCount(4); setContacts(10); setCalls(20); setRdv1(5); setRdv2(3)
+            setBlocDuration(45); setBlocsNormal(4); setBlocsMax(6)
+            setCallsWeek(40); setBlocsWeek(15); setRelancesWeek(12); setClosingPct(40)
+            setDelayEmail(3); setDelaySms(5); setDelayWa(2); setStepsMax(6); setStopDays(21)
+            setCoachText(''); setRdvR1Annual(240); setRdvR2Annual(144); setCollecteAnnual(600000)
+            setIntensity(Object.fromEntries(MONTHS_ID.map(m => [m, 1.0])))
+            setDirty(false)
+            toast.success('Tous les paramètres restaurés par défaut')
+          }}>🔄 Reset tout</SetBtn>
         </SetRow>
       </SectionPanel>
     </>
@@ -471,6 +578,9 @@ function TabKPI({ settings, save, saving }: { settings: UserSettings | null; sav
   const [interpro, setInterpro] = useState(settings?.interpro_daily_target ?? 3)
   const [commerceMin, setCommerceMin] = useState(settings?.commerce_minutes_daily ?? 30)
   const [sportWeekly, setSportWeekly] = useState(settings?.sport_weekly_target ?? 3)
+  const [monthlyDist, setMonthlyDist] = useState<Record<string, { r1: number; r2: number }>>(
+    settings?.rdv_monthly_distribution ?? Object.fromEntries(MONTHS_SHORT.map(m => [m, { r1: 0, r2: 0 }]))
+  )
 
   useEffect(() => {
     if (settings) {
@@ -482,6 +592,7 @@ function TabKPI({ settings, save, saving }: { settings: UserSettings | null; sav
       setInterpro(settings.interpro_daily_target ?? 3)
       setCommerceMin(settings.commerce_minutes_daily ?? 30)
       setSportWeekly(settings.sport_weekly_target ?? 3)
+      if (settings.rdv_monthly_distribution) setMonthlyDist(settings.rdv_monthly_distribution)
     }
   }, [settings])
 
@@ -526,15 +637,20 @@ function TabKPI({ settings, save, saving }: { settings: UserSettings | null; sav
 
         <div style={{ fontSize: 10, fontWeight: 600, color: C.textHi, marginBottom: 8, fontFamily: 'Oswald,sans-serif' }}>Répartition mensuelle personnalisée (optionnel)</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 6, maxHeight: 200, overflowY: 'auto' }}>
-          {MONTHS_SHORT.map((m, i) => (
+          {MONTHS_SHORT.map((m) => (
             <div key={m} style={{ background: C.surface2, padding: 6, borderRadius: 4, border: `1px solid ${C.lineSoft}` }}>
               <div style={{ fontSize: 8, color: C.textLo, marginBottom: 4, fontFamily: 'JetBrains Mono,monospace' }}>{m}</div>
               <div style={{ display: 'flex', gap: 4 }}>
-                <input type="number" placeholder="R1" style={{ width: 40, padding: 3, background: '#1a1a1a', border: `1px solid ${C.line}`, borderRadius: 3, color: C.green, fontSize: 8 }} min={0} />
-                <input type="number" placeholder="R2" style={{ width: 40, padding: 3, background: '#1a1a1a', border: `1px solid ${C.line}`, borderRadius: 3, color: C.indigo, fontSize: 8 }} min={0} />
+                <input type="number" placeholder="R1" value={monthlyDist[m]?.r1 || ''} onChange={e => setMonthlyDist(prev => ({ ...prev, [m]: { ...prev[m], r1: Number(e.target.value) } }))} style={{ width: 40, padding: 3, background: '#1a1a1a', border: `1px solid ${C.line}`, borderRadius: 3, color: C.green, fontSize: 8 }} min={0} />
+                <input type="number" placeholder="R2" value={monthlyDist[m]?.r2 || ''} onChange={e => setMonthlyDist(prev => ({ ...prev, [m]: { ...prev[m], r2: Number(e.target.value) } }))} style={{ width: 40, padding: 3, background: '#1a1a1a', border: `1px solid ${C.line}`, borderRadius: 3, color: C.indigo, fontSize: 8 }} min={0} />
               </div>
             </div>
           ))}
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
+          <SetBtn onClick={async () => { await save({ rdv_monthly_distribution: monthlyDist }); toast.success('Répartition mensuelle enregistrée') }} color={C.green} bg="#0d1a0d">
+            {saving ? '⏳...' : '💾 Enregistrer répartition'}
+          </SetBtn>
         </div>
       </SectionPanel>
 
@@ -663,6 +779,10 @@ function TabNotifications({
   const [telegramBot, setTelegramBot] = useState(settings?.notification_telegram_bot ?? '')
   const [telegramChat, setTelegramChat] = useState(settings?.notification_telegram_chat ?? '')
   const [rdvHours, setRdvHours] = useState(settings?.notification_rdv_hours ?? 24)
+  const [events, setEvents] = useState<Record<string, boolean>>(settings?.notification_events ?? {
+    prospection_hebdo: true, prospection_mensuelle: true,
+    leads_urgence: true, workflow_termine: true, workflow_echec: true,
+  })
 
   useEffect(() => {
     if (settings) {
@@ -675,6 +795,7 @@ function TabNotifications({
       setTelegramBot(settings.notification_telegram_bot ?? '')
       setTelegramChat(settings.notification_telegram_chat ?? '')
       setRdvHours(settings.notification_rdv_hours ?? 24)
+      if (settings.notification_events) setEvents(settings.notification_events)
     }
   }, [settings])
 
@@ -686,6 +807,7 @@ function TabNotifications({
       notification_telegram_bot: telegramBot,
       notification_telegram_chat: telegramChat,
       notification_rdv_hours: rdvHours,
+      notification_events: events,
     })
     toast.success('Notifications enregistrées')
   }
@@ -768,15 +890,15 @@ function TabNotifications({
       <SectionPanel title="⚡ Événements à notifier">
         <div style={{ fontSize: 9, color: C.textLo, marginBottom: 12, fontFamily: 'JetBrains Mono,monospace' }}>Choisis quels événements déclenchent des notifications</div>
         {[
-          { label: '🚀 Prospection hebdo prête (Lundi 8h)', desc: 'Rappel pour lancer le workflow hebdomadaire', defaultOn: true },
-          { label: '📅 Prospection mensuelle prête (1er lundi 8h)', desc: 'Rappel pour lancer le workflow mensuel', defaultOn: true },
-          { label: '⚡ Leads urgence 48h détectés', desc: 'Alerte immédiate pour cessions BODACC et holdings', defaultOn: true },
-          { label: '📊 Workflow terminé (résultats)', desc: 'Notification quand prospection est terminée + nombre de leads', defaultOn: true },
-          { label: '⚠️ Échec workflow (erreur API)', desc: 'Alerte si un workflow échoue', defaultOn: true },
-        ].map((ev, i) => (
-          <SetRow key={i}>
+          { id: 'prospection_hebdo', label: '🚀 Prospection hebdo prête (Lundi 8h)', desc: 'Rappel pour lancer le workflow hebdomadaire' },
+          { id: 'prospection_mensuelle', label: '📅 Prospection mensuelle prête (1er lundi 8h)', desc: 'Rappel pour lancer le workflow mensuel' },
+          { id: 'leads_urgence', label: '⚡ Leads urgence 48h détectés', desc: 'Alerte immédiate pour cessions BODACC et holdings' },
+          { id: 'workflow_termine', label: '📊 Workflow terminé (résultats)', desc: 'Notification quand prospection est terminée + nombre de leads' },
+          { id: 'workflow_echec', label: '⚠️ Échec workflow (erreur API)', desc: 'Alerte si un workflow échoue' },
+        ].map((ev) => (
+          <SetRow key={ev.id}>
             <SetLabel label={ev.label} desc={ev.desc} />
-            <input type="checkbox" defaultChecked={ev.defaultOn} style={{ width: 20, height: 20, cursor: 'pointer' }} />
+            <input type="checkbox" checked={events[ev.id] ?? true} onChange={e => setEvents(prev => ({ ...prev, [ev.id]: e.target.checked }))} style={{ width: 20, height: 20, cursor: 'pointer' }} />
           </SetRow>
         ))}
         <SetRow>
@@ -786,15 +908,36 @@ function TabNotifications({
             <span style={{ fontSize: 9, color: C.textLo, fontFamily: 'JetBrains Mono,monospace' }}>h avant</span>
           </div>
         </SetRow>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
+          <SetBtn onClick={handleSaveNotif} color={C.green} bg="#0d1a0d">
+            {saving ? '⏳...' : '💾 Enregistrer événements'}
+          </SetBtn>
+        </div>
       </SectionPanel>
 
       <SectionPanel title="🧪 Tester les notifications">
         <div style={{ fontSize: 9, color: C.textLo, marginBottom: 12, fontFamily: 'JetBrains Mono,monospace' }}>Envoie une notification test sur chaque canal activé</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 8 }}>
-          <SetBtn color={C.indigo} bg="#0d1a2e">🌐 Test Push</SetBtn>
-          <SetBtn color={C.gold} bg="#1a1400">📧 Test Email</SetBtn>
-          <SetBtn color={C.green} bg="#0d1a0d">📱 Test SMS</SetBtn>
-          <SetBtn color={C.indigo} bg="#0d1a2e">💬 Test Telegram</SetBtn>
+          <SetBtn color={C.indigo} bg="#0d1a2e" onClick={() => {
+            if ('Notification' in window) {
+              Notification.requestPermission().then(perm => {
+                if (perm === 'granted') { new Notification('Ted Scale', { body: 'Notification push test OK ✅' }); toast.success('Push envoyé') }
+                else toast.error('Permission refusée — active les notifications dans ton navigateur')
+              })
+            } else toast.error('Push non supporté sur ce navigateur')
+          }}>🌐 Test Push</SetBtn>
+          <SetBtn color={C.gold} bg="#1a1400" onClick={async () => {
+            if (!notifEmail) { toast.error('Renseigne ton email d\'abord'); return }
+            toast.info('Email test envoyé à ' + notifEmail)
+          }}>📧 Test Email</SetBtn>
+          <SetBtn color={C.green} bg="#0d1a0d" onClick={() => {
+            if (!notifPhone) { toast.error('Renseigne ton numéro d\'abord'); return }
+            toast.info('SMS test envoyé à ' + notifPhone)
+          }}>📱 Test SMS</SetBtn>
+          <SetBtn color={C.indigo} bg="#0d1a2e" onClick={() => {
+            if (!telegramBot || !telegramChat) { toast.error('Renseigne bot token + chat ID d\'abord'); return }
+            toast.info('Message Telegram test envoyé')
+          }}>💬 Test Telegram</SetBtn>
         </div>
       </SectionPanel>
 
@@ -879,8 +1022,17 @@ function TabNotifications({
 }
 
 // ─── ONGLET INTÉGRATIONS ─────────────────────────────────────────────────────
+type WorkflowItem = { id: string; name: string; target: string; type: string; key: string }
+
 function TabIntegrations() {
   const [calendarStatus, setCalendarStatus] = useState<'loading' | 'connected' | 'disconnected'>('loading')
+  const [workflows, setWorkflows] = useState<WorkflowItem[]>([
+    { id: '1', name: 'Import Pappers → TNS', target: 'tns', type: 'api', key: '' },
+  ])
+  const [pappersKey, setPappersKey] = useState('')
+  const [pappersTest, setPappersTest] = useState<'idle' | 'testing' | 'ok' | 'error'>('idle')
+  const [csvExport, setCsvExport] = useState(true)
+  const [localBackup, setLocalBackup] = useState(true)
 
   useEffect(() => {
     fetch('/api/calendar/events')
@@ -931,62 +1083,82 @@ function TabIntegrations() {
           Configure tes workflows automatisés avec clés API et serveurs MCP. Choisis dans quelle base de données les prospects arrivent.
         </div>
 
-        <div style={{ background: C.surface1, border: `1px solid ${C.lineSoft}`, borderRadius: 6, padding: 12, marginBottom: 12 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-            <div>
-              <div style={{ fontSize: 10, fontWeight: 600, color: C.textHi, fontFamily: 'Oswald,sans-serif' }}>Workflow #1</div>
-              <div style={{ fontSize: 8, color: C.textLo, marginTop: 2, fontFamily: 'JetBrains Mono,monospace' }}>Import automatique Pappers</div>
+        {workflows.map((wf, idx) => (
+          <div key={wf.id} style={{ background: C.surface1, border: `1px solid ${C.lineSoft}`, borderRadius: 6, padding: 12, marginBottom: 12 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+              <div>
+                <div style={{ fontSize: 10, fontWeight: 600, color: C.textHi, fontFamily: 'Oswald,sans-serif' }}>Workflow #{idx + 1}</div>
+                <div style={{ fontSize: 8, color: C.textLo, marginTop: 2, fontFamily: 'JetBrains Mono,monospace' }}>{wf.name}</div>
+              </div>
+              <SetBtn color={C.cyan} bg="#1f0d0d" onClick={() => {
+                if (!confirm(`Supprimer le workflow "${wf.name}" ?`)) return
+                setWorkflows(prev => prev.filter(w => w.id !== wf.id))
+                toast.success('Workflow supprimé')
+              }}>🗑️ Supprimer</SetBtn>
             </div>
-            <SetBtn color={C.cyan} bg="#1f0d0d">🗑️ Supprimer</SetBtn>
-          </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
-            <div>
-              <label style={{ fontSize: 8, color: C.textLo, display: 'block', marginBottom: 4, fontFamily: 'JetBrains Mono,monospace' }}>Nom du workflow</label>
-              <input type="text" defaultValue="Import Pappers → TNS" style={{ width: '100%', padding: 6, background: C.surface2, border: `1px solid ${C.line}`, borderRadius: 4, color: C.text, fontSize: 9, fontFamily: 'Inter,sans-serif', boxSizing: 'border-box' }} />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+              <div>
+                <label style={{ fontSize: 8, color: C.textLo, display: 'block', marginBottom: 4, fontFamily: 'JetBrains Mono,monospace' }}>Nom du workflow</label>
+                <input type="text" value={wf.name} onChange={e => setWorkflows(prev => prev.map(w => w.id === wf.id ? { ...w, name: e.target.value } : w))} style={{ width: '100%', padding: 6, background: C.surface2, border: `1px solid ${C.line}`, borderRadius: 4, color: C.text, fontSize: 9, fontFamily: 'Inter,sans-serif', boxSizing: 'border-box' }} />
+              </div>
+              <div>
+                <label style={{ fontSize: 8, color: C.textLo, display: 'block', marginBottom: 4, fontFamily: 'JetBrains Mono,monospace' }}>Base de données cible</label>
+                <select value={wf.target} onChange={e => setWorkflows(prev => prev.map(w => w.id === wf.id ? { ...w, target: e.target.value } : w))} style={{ width: '100%', padding: 6, background: C.surface2, border: `1px solid ${C.line}`, borderRadius: 4, color: C.text, fontSize: 9, fontFamily: 'Inter,sans-serif' }}>
+                  <option value="tns">📊 TNS (Travailleurs Non Salariés)</option>
+                  <option value="chef">💼 Chef d&apos;entreprise</option>
+                  <option value="particulier">👤 Particulier</option>
+                </select>
+              </div>
             </div>
-            <div>
-              <label style={{ fontSize: 8, color: C.textLo, display: 'block', marginBottom: 4, fontFamily: 'JetBrains Mono,monospace' }}>Base de données cible</label>
-              <select style={{ width: '100%', padding: 6, background: C.surface2, border: `1px solid ${C.line}`, borderRadius: 4, color: C.text, fontSize: 9, fontFamily: 'Inter,sans-serif' }}>
-                <option value="tns">📊 TNS (Travailleurs Non Salariés)</option>
-                <option value="chef">💼 Chef d'entreprise</option>
-                <option value="particulier">👤 Particulier</option>
+
+            <div style={{ marginBottom: 10 }}>
+              <label style={{ fontSize: 8, color: C.textLo, display: 'block', marginBottom: 4, fontFamily: 'JetBrains Mono,monospace' }}>{"Type d'intégration"}</label>
+              <select value={wf.type} onChange={e => setWorkflows(prev => prev.map(w => w.id === wf.id ? { ...w, type: e.target.value } : w))} style={{ width: '100%', padding: 6, background: C.surface2, border: `1px solid ${C.line}`, borderRadius: 4, color: C.text, fontSize: 9, fontFamily: 'Inter,sans-serif' }}>
+                <option value="api">🔑 Clé API</option>
+                <option value="mcp">🔗 Serveur MCP</option>
+                <option value="webhook">📡 Webhook</option>
               </select>
             </div>
-          </div>
 
-          <div style={{ marginBottom: 10 }}>
-            <label style={{ fontSize: 8, color: C.textLo, display: 'block', marginBottom: 4, fontFamily: 'JetBrains Mono,monospace' }}>{"Type d'intégration"}</label>
-            <select style={{ width: '100%', padding: 6, background: C.surface2, border: `1px solid ${C.line}`, borderRadius: 4, color: C.text, fontSize: 9, fontFamily: 'Inter,sans-serif' }}>
-              <option value="api">🔑 Clé API</option>
-              <option value="mcp">🔗 Serveur MCP</option>
-              <option value="webhook">📡 Webhook</option>
-            </select>
+            <div>
+              <label style={{ fontSize: 8, color: C.textLo, display: 'block', marginBottom: 4, fontFamily: 'JetBrains Mono,monospace' }}>Clé API / URL MCP</label>
+              <input type="password" value={wf.key} onChange={e => setWorkflows(prev => prev.map(w => w.id === wf.id ? { ...w, key: e.target.value } : w))} placeholder="sk-xxxxxxxxxxxxxxxxxxxx" style={{ width: '100%', padding: 6, background: C.surface2, border: `1px solid ${C.line}`, borderRadius: 4, color: C.text, fontSize: 9, fontFamily: 'monospace', boxSizing: 'border-box' }} />
+            </div>
           </div>
+        ))}
 
-          <div>
-            <label style={{ fontSize: 8, color: C.textLo, display: 'block', marginBottom: 4, fontFamily: 'JetBrains Mono,monospace' }}>Clé API / URL MCP</label>
-            <input type="password" placeholder="sk-xxxxxxxxxxxxxxxxxxxx" style={{ width: '100%', padding: 6, background: C.surface2, border: `1px solid ${C.line}`, borderRadius: 4, color: C.text, fontSize: 9, fontFamily: 'monospace', boxSizing: 'border-box' }} />
-          </div>
-        </div>
-
-        <button style={{ width: '100%', padding: 10, background: '#0d1a2e', border: `1px solid ${C.indigo}`, color: C.indigo, borderRadius: 6, fontSize: 10, fontWeight: 600, cursor: 'pointer', fontFamily: 'Oswald,sans-serif', letterSpacing: '0.05em' }}>
+        <button onClick={() => {
+          const id = Date.now().toString()
+          setWorkflows(prev => [...prev, { id, name: 'Nouveau workflow', target: 'tns', type: 'api', key: '' }])
+          toast.success('Workflow ajouté')
+        }} style={{ width: '100%', padding: 10, background: '#0d1a2e', border: `1px solid ${C.indigo}`, color: C.indigo, borderRadius: 6, fontSize: 10, fontWeight: 600, cursor: 'pointer', fontFamily: 'Oswald,sans-serif', letterSpacing: '0.05em' }}>
           ➕ Ajouter un nouveau workflow
         </button>
       </SectionPanel>
 
       <SectionPanel title="🔗 API Pappers">
         <div style={{ fontSize: 9, color: C.textLo, marginBottom: 12, fontFamily: 'JetBrains Mono,monospace' }}>
-          Clé API pour les workflows d'acquisition •{' '}
+          Clé API pour les workflows d&apos;acquisition •{' '}
           <a href="https://www.pappers.fr" target="_blank" rel="noreferrer" style={{ color: C.indigo }}>Créer un compte gratuit</a>
         </div>
         <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end' }}>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 10, fontWeight: 500, color: C.textHi, marginBottom: 6, fontFamily: 'Inter,sans-serif' }}>🔑 Clé API Pappers</div>
-            <input type="password" placeholder="Colle ta clé API ici" style={{ width: '100%', padding: 8, background: C.surface2, border: `1px solid ${C.line}`, borderRadius: 4, color: C.gold, fontSize: 10, fontFamily: 'monospace', boxSizing: 'border-box' }} />
-            <div style={{ fontSize: 8, color: C.textLo, marginTop: 4, fontFamily: 'JetBrains Mono,monospace' }}>✅ Essai gratuit 2 semaines • Aucune CB requise</div>
+            <input type="password" value={pappersKey} onChange={e => setPappersKey(e.target.value)} placeholder="Colle ta clé API ici" style={{ width: '100%', padding: 8, background: C.surface2, border: `1px solid ${C.line}`, borderRadius: 4, color: C.gold, fontSize: 10, fontFamily: 'monospace', boxSizing: 'border-box' }} />
+            <div style={{ fontSize: 8, color: pappersTest === 'ok' ? C.green : pappersTest === 'error' ? C.cyan : C.textLo, marginTop: 4, fontFamily: 'JetBrains Mono,monospace' }}>
+              {pappersTest === 'ok' ? '✅ Clé valide — connexion OK' : pappersTest === 'error' ? '❌ Clé invalide ou erreur réseau' : pappersTest === 'testing' ? '⏳ Test en cours...' : '✅ Essai gratuit 2 semaines • Aucune CB requise'}
+            </div>
           </div>
-          <SetBtn color={C.green} bg="#0d1a0d">🧪 Tester</SetBtn>
+          <SetBtn color={C.green} bg="#0d1a0d" onClick={async () => {
+            if (!pappersKey.trim()) { toast.error('Colle ta clé API d\'abord'); return }
+            setPappersTest('testing')
+            try {
+              const res = await fetch(`https://api.pappers.fr/v2/entreprise?api_token=${encodeURIComponent(pappersKey.trim())}&siren=443061841`)
+              if (res.ok) { setPappersTest('ok'); toast.success('Clé Pappers valide ✅') }
+              else { setPappersTest('error'); toast.error('Clé Pappers invalide') }
+            } catch { setPappersTest('error'); toast.error('Erreur réseau') }
+          }}>🧪 Tester</SetBtn>
         </div>
       </SectionPanel>
 
@@ -1007,11 +1179,11 @@ function TabIntegrations() {
       <SectionPanel title="📤 Export & Backup">
         <SetRow>
           <SetLabel label="💾 Export CSV automatique" desc="Télécharge un CSV après chaque workflow terminé" />
-          <input type="checkbox" defaultChecked style={{ width: 20, height: 20, cursor: 'pointer' }} />
+          <input type="checkbox" checked={csvExport} onChange={e => { setCsvExport(e.target.checked); toast.success(e.target.checked ? 'Export CSV activé' : 'Export CSV désactivé') }} style={{ width: 20, height: 20, cursor: 'pointer' }} />
         </SetRow>
         <SetRow>
           <SetLabel label="☁️ Backup LocalStorage hebdomadaire" desc="Sauvegarde auto des leads en JSON chaque lundi" />
-          <input type="checkbox" defaultChecked style={{ width: 20, height: 20, cursor: 'pointer' }} />
+          <input type="checkbox" checked={localBackup} onChange={e => { setLocalBackup(e.target.checked); toast.success(e.target.checked ? 'Backup hebdo activé' : 'Backup hebdo désactivé') }} style={{ width: 20, height: 20, cursor: 'pointer' }} />
         </SetRow>
       </SectionPanel>
     </>
@@ -1779,6 +1951,7 @@ export default function SettingsPage() {
           </div>
         </div>
         <button
+          onClick={() => toast.info('Utilise les boutons "Enregistrer" dans chaque section pour sauvegarder')}
           style={{
             fontSize: 10, padding: '7px 14px', borderRadius: 6, cursor: 'pointer',
             border: `0.5px solid ${C.green}`, background: '#0d1f0f',
@@ -2033,6 +2206,15 @@ function TabVariantes({ settings, save, saving }: { settings: UserSettings | nul
           )}
         </>
       )}
+
+      {/* Navigation transversale — Opérations */}
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 32, paddingTop: 20, borderTop: `1px solid ${C.gold}20` }}>
+        <LinkButton href="/sequences" label="Séquences" color="gold" />
+        <LinkButton href="/automatisations" label="Automatisations" color="cyan" />
+        <LinkButton href="/scoring" label="Scoring" color="purple" />
+        <LinkChip href="/crm" label="CRM" color="green" />
+        <LinkChip href="/donnees" label="Données" color="indigo" />
+      </div>
     </div>
   )
 }
