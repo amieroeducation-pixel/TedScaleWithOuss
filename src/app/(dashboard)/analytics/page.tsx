@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import { C } from '@/lib/theme'
+import { LinkButton, LinkChip } from '@/lib/cross-links'
 
 // --- Types ---
 type StageRow = { stage: string; label: string; total: number; conversion_rate_pct: number }
@@ -319,6 +320,14 @@ export default function AnalyticsPage() {
           </div>
         </>
       )}
+
+      {/* Navigation transversale */}
+      <div style={{ display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>
+        <LinkButton href="/crm" label="CRM Kanban" color="gold" />
+        <LinkButton href="/revenue" label="Détail commissions" color="green" />
+        <LinkButton href="/scoring" label="Scoring grilles" color="purple" />
+        <LinkButton href="/donnees" label="Historique KPIs" color="indigo" />
+      </div>
     </>
   )
 }

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { C } from '@/lib/theme'
+import { LinkButton, LinkChip } from '@/lib/cross-links'
 
 // ─── TYPES ────────────────────────────────────────────────────────────────────
 type ClientRow = {
@@ -352,6 +353,14 @@ export default function ClientsPage() {
           )}
         </Panel>
       )}
+      {/* Navigation transversale */}
+      <div style={{ display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>
+        <LinkButton href="/revenue" label="Revenue détail" color="gold" />
+        <LinkButton href="/cercle" label="Réseau partenaires" color="purple" />
+        <LinkButton href="/sequences" label="Séquences fidélisation" color="green" />
+        <LinkButton href="/today" label="Planifier relances" color="cyan" params={{ tab: 'relances' }} />
+      </div>
+
       {/* Modal Contacter */}
       {contactModal && (
         <div onClick={() => setContactModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
