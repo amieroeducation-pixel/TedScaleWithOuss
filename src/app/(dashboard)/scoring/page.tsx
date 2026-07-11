@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { C } from '@/lib/theme'
+import { LinkButton, LinkChip } from '@/lib/cross-links'
 
 type ScoreRow = { label: string; val: number }
 
@@ -237,6 +238,14 @@ export default function ScoringPage() {
         >
           {saving ? '⏳ Sauvegarde...' : saved ? '✅ Grilles sauvegardées !' : '💾 SAUVEGARDER LES GRILLES'}
         </button>
+      </div>
+
+      {/* Navigation transversale */}
+      <div style={{ display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>
+        <LinkButton href="/crm" label="CRM Kanban" color="gold" />
+        <LinkButton href="/map" label="Carte prospection" color="indigo" />
+        <LinkButton href="/prospection/tns" label="Prospecter TNS" color="cyan" />
+        <LinkButton href="/settings" label="Config scoring" color="purple" />
       </div>
     </>
   )
