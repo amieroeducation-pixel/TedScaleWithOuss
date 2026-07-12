@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
 import {
@@ -843,6 +843,14 @@ function KanbanColumn({ stage, prospects, onCardClick }: {
 
 // --- PAGE ---
 export default function CrmPage() {
+  return (
+    <Suspense fallback={null}>
+      <CrmPageContent />
+    </Suspense>
+  )
+}
+
+function CrmPageContent() {
   const [prospects, setProspects] = useState<Prospect[]>([])
   const [activeId, setActiveId] = useState<string | null>(null)
   const [selectedProspect, setSelectedProspect] = useState<Prospect | null>(null)

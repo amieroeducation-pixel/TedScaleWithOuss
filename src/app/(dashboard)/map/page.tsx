@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { C } from '@/lib/theme'
 import { LinkButton, LinkChip } from '@/lib/cross-links'
@@ -81,6 +81,14 @@ function PanelTitle({ title, accent = C.indigo }: { title: string; accent?: stri
 }
 
 export default function MapPage() {
+  return (
+    <Suspense fallback={null}>
+      <MapPageContent />
+    </Suspense>
+  )
+}
+
+function MapPageContent() {
   const searchParams = useSearchParams()
   const deptParam = searchParams.get('dept')
   const metierParam = searchParams.get('metier')
