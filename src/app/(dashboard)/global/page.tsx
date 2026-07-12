@@ -277,6 +277,7 @@ type HistoryPoint = {
 type ComparisonData = { week: number; year: number; appels: number; contacts: number; rdv_pris: number; rdv_faits: number }
 
 function SuiviTabContent() {
+  const router = useRouter()
   const [period, setPeriod] = useState<SuiviPeriod>('week')
   const [kpiData, setKpiData] = useState<KpiData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -403,12 +404,12 @@ function SuiviTabContent() {
           {/* KPI Cards */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 10, marginBottom: 16 }}>
             {([
-              { label: 'Appels', realise: kpiData.realise.appels, obj: kpiData.objectifs.appels, ecart: kpiData.ecarts.appels, tendance: kpiData.tendances.appels, prev: kpiData.prev_period.appels, color: C.green },
-              { label: 'Contacts', realise: kpiData.realise.contacts, obj: kpiData.objectifs.contacts, ecart: kpiData.ecarts.contacts, tendance: kpiData.tendances.contacts, prev: kpiData.prev_period.contacts, color: C.indigo },
-              { label: 'RDV Pris', realise: kpiData.realise.rdv_pris, obj: kpiData.objectifs.rdv_pris, ecart: kpiData.ecarts.rdv_pris, tendance: kpiData.tendances.rdv_pris, prev: kpiData.prev_period.rdv_pris, color: C.gold },
-              { label: 'RDV Faits', realise: kpiData.realise.rdv_faits, obj: kpiData.objectifs.rdv_faits, ecart: kpiData.ecarts.rdv_faits, tendance: kpiData.tendances.rdv_faits, prev: kpiData.prev_period.rdv_faits, color: '#b07aee' },
-            ] as Array<{ label: string; realise: number; obj: number; ecart: number; tendance: string; prev: number; color: string }>).map(({ label, realise, obj, ecart, tendance, prev, color }) => (
-              <div key={label} style={{ background: C.bgMid, border: `1px solid ${C.line}`, borderRadius: 8, padding: 14 }}>
+              { label: 'Appels', realise: kpiData.realise.appels, obj: kpiData.objectifs.appels, ecart: kpiData.ecarts.appels, tendance: kpiData.tendances.appels, prev: kpiData.prev_period.appels, color: C.green, href: '/today' },
+              { label: 'Contacts', realise: kpiData.realise.contacts, obj: kpiData.objectifs.contacts, ecart: kpiData.ecarts.contacts, tendance: kpiData.tendances.contacts, prev: kpiData.prev_period.contacts, color: C.indigo, href: '/crm' },
+              { label: 'RDV Pris', realise: kpiData.realise.rdv_pris, obj: kpiData.objectifs.rdv_pris, ecart: kpiData.ecarts.rdv_pris, tendance: kpiData.tendances.rdv_pris, prev: kpiData.prev_period.rdv_pris, color: C.gold, href: '/pipeline?stage=rdv1' },
+              { label: 'RDV Faits', realise: kpiData.realise.rdv_faits, obj: kpiData.objectifs.rdv_faits, ecart: kpiData.ecarts.rdv_faits, tendance: kpiData.tendances.rdv_faits, prev: kpiData.prev_period.rdv_faits, color: '#b07aee', href: '/analytics' },
+            ] as Array<{ label: string; realise: number; obj: number; ecart: number; tendance: string; prev: number; color: string; href: string }>).map(({ label, realise, obj, ecart, tendance, prev, color, href }) => (
+              <div key={label} onClick={() => router.push(href)} style={{ background: C.bgMid, border: `1px solid ${C.line}`, borderRadius: 8, padding: 14, cursor: 'pointer' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                   <div style={{ fontSize: 9, color: C.textMid }}>{label}</div>
                   <div style={{ fontSize: 9 }}>{tendanceIcon(tendance)}</div>
@@ -445,14 +446,14 @@ function SuiviTabContent() {
           <div style={{ background: C.bgMid, border: `1px solid ${C.line}`, borderRadius: 8, padding: 16, marginBottom: 16 }}>
             <div style={{ fontSize: 10, fontWeight: 600, color: C.gold, marginBottom: 12 }}>🔗 Taux de conversion</div>
             <div style={{ display: 'flex', gap: 16 }}>
-              <div style={{ flex: 1, textAlign: 'center' }}>
+              <div onClick={() => router.push('/analytics')} style={{ flex: 1, textAlign: 'center', cursor: 'pointer' }}>
                 <div style={{ fontSize: 20, fontWeight: 700, color: C.textHi }}>{kpiData.ratios.appels_to_rdv}%</div>
-                <div style={{ fontSize: 8, color: C.textLo, marginTop: 4 }}>Appels → RDV</div>
+                <div style={{ fontSize: 8, color: C.green, marginTop: 4 }}>Appels → RDV →</div>
               </div>
               <div style={{ width: 1, background: C.line }} />
-              <div style={{ flex: 1, textAlign: 'center' }}>
+              <div onClick={() => router.push('/pipeline')} style={{ flex: 1, textAlign: 'center', cursor: 'pointer' }}>
                 <div style={{ fontSize: 20, fontWeight: 700, color: C.textHi }}>{kpiData.ratios.rdv_pris_to_faits}%</div>
-                <div style={{ fontSize: 8, color: C.textLo, marginTop: 4 }}>RDV Pris → Faits</div>
+                <div style={{ fontSize: 8, color: C.gold, marginTop: 4 }}>RDV Pris → Faits →</div>
               </div>
             </div>
           </div>
@@ -681,12 +682,12 @@ export default function GlobalPage() {
             return (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8, marginBottom: 16 }}>
                 {([
-                  { label: 'Performance Jour',    value: perfJour !== null ? `${perfJour}%` : '–',  sub: perfJour === null ? 'Chargement…' : perfJour >= 80 ? '🟢 Excellente' : perfJour >= 50 ? '🟡 En cours' : '🔴 À rattraper', subColor: perfJour !== null && perfJour >= 80 ? C.green : C.gold },
-                  { label: 'Prospects sem.',      value: kpi ? String(kpi.prospection.prospects_this_week) : '–', sub: 'Ajoutés cette semaine', subColor: C.green },
-                  { label: 'Objectifs atteints',  value: kpi ? `${objAtteints}/${totalObj}` : '–', sub: 'Prospection · Tâches · RDV', subColor: C.gold },
-                  { label: 'Tâches actives',      value: kpi ? String(kpi.tasks.active) : '–', sub: `${kpi?.tasks.this_week ?? '–'} cette semaine`, subColor: C.indigo },
-                ] as Array<{ label: string; value: string; sub: string; subColor: string }>).map(({ label, value, sub, subColor }) => (
-                  <div key={label} style={{ background: C.surface1, border: `0.5px solid ${C.line}`, borderRadius: 8, padding: 12 }}>
+                  { label: 'Performance Jour',    value: perfJour !== null ? `${perfJour}%` : '–',  sub: perfJour === null ? 'Chargement…' : perfJour >= 80 ? '🟢 Excellente' : perfJour >= 50 ? '🟡 En cours' : '🔴 À rattraper', subColor: perfJour !== null && perfJour >= 80 ? C.green : C.gold, href: '/today' },
+                  { label: 'Prospects sem.',      value: kpi ? String(kpi.prospection.prospects_this_week) : '–', sub: 'Ajoutés cette semaine', subColor: C.green, href: '/crm' },
+                  { label: 'Objectifs atteints',  value: kpi ? `${objAtteints}/${totalObj}` : '–', sub: 'Prospection · Tâches · RDV', subColor: C.gold, href: '/donnees' },
+                  { label: 'Tâches actives',      value: kpi ? String(kpi.tasks.active) : '–', sub: `${kpi?.tasks.this_week ?? '–'} cette semaine`, subColor: C.indigo, href: '/tasks' },
+                ] as Array<{ label: string; value: string; sub: string; subColor: string; href: string }>).map(({ label, value, sub, subColor, href }) => (
+                  <div key={label} onClick={() => router.push(href)} style={{ background: C.surface1, border: `0.5px solid ${C.line}`, borderRadius: 8, padding: 12, cursor: 'pointer', transition: 'border-color 0.2s' }}>
                     <div style={{ fontSize: 9, color: C.textMid, marginBottom: 4 }}>{label}</div>
                     <div style={{ fontSize: 22, fontWeight: 700, color: C.textHi, marginBottom: 4 }}>{value}</div>
                     <div style={{ fontSize: 9, color: subColor }}>{sub}</div>
@@ -720,15 +721,15 @@ export default function GlobalPage() {
                         <div style={{ fontSize: 10, color: C.textHi, fontWeight: 600 }}>{contactsVal}<span style={{ color: C.textLo }}>/{TARGET_CONTACTS}</span></div>
                       </div>
                       {kpi && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div onClick={() => router.push('/pipeline?stage=rdv1')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
                           <div style={{ fontSize: 9, color: C.textMid }}>RDV pris auj.</div>
-                          <div style={{ fontSize: 9, color: C.textLo }}>{kpi.prospection.rdv1_today}{dailyObj ? ` / ${dailyObj.rdv1}` : ''}</div>
+                          <div style={{ fontSize: 9, color: C.green, fontWeight: 500 }}>{kpi.prospection.rdv1_today}{dailyObj ? ` / ${dailyObj.rdv1}` : ''} →</div>
                         </div>
                       )}
                       {kpi && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div onClick={() => router.push('/crm')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
                           <div style={{ fontSize: 9, color: C.textMid }}>Prospects cette semaine</div>
-                          <div style={{ fontSize: 9, color: C.textLo }}>{kpi.prospection.prospects_this_week}</div>
+                          <div style={{ fontSize: 9, color: C.green, fontWeight: 500 }}>{kpi.prospection.prospects_this_week} →</div>
                         </div>
                       )}
                     </div>
@@ -756,13 +757,13 @@ export default function GlobalPage() {
                       <div style={{ background: C.gold, height: '100%', width: `${pct}%`, transition: 'width 0.3s' }} />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div onClick={() => router.push('/cercle')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
                         <div style={{ fontSize: 9, color: C.textMid }}>Partenaires actifs</div>
-                        <div style={{ fontSize: 10, color: C.textHi, fontWeight: 600 }}>{interproCount}<span style={{ color: C.textLo }}>/{TARGET_INTERPRO}</span></div>
+                        <div style={{ fontSize: 10, color: C.gold, fontWeight: 600 }}>{interproCount}<span style={{ color: C.textLo }}>/{TARGET_INTERPRO}</span> →</div>
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div onClick={() => router.push('/clients')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
                         <div style={{ fontSize: 9, color: C.textMid }}>Dernier contact</div>
-                        <div style={{ fontSize: 9, color: C.textLo }}>{interpro?.lastContact ?? '–'}</div>
+                        <div style={{ fontSize: 9, color: C.gold, fontWeight: 500 }}>{interpro?.lastContact ?? '–'} →</div>
                       </div>
                     </div>
                     <button onClick={() => router.push('/cercle')} style={{ width: '100%', marginTop: 10, padding: 6, background: '#1a1400', border: `0.5px solid ${C.gold}40`, color: C.gold, borderRadius: 4, fontSize: 8, cursor: 'pointer', fontWeight: 600 }}>
@@ -790,18 +791,18 @@ export default function GlobalPage() {
                       <div style={{ background: C.indigo, height: '100%', width: `${pct}%`, transition: 'width 0.3s' }} />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div onClick={() => router.push('/today')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
                         <div style={{ fontSize: 9, color: C.textMid }}>Tâches complétées auj.</div>
-                        <div style={{ fontSize: 10, color: C.textHi, fontWeight: 600 }}>{doneTodayVal}<span style={{ color: C.textLo }}>/{TARGET_TASKS}</span></div>
+                        <div style={{ fontSize: 10, color: C.indigo, fontWeight: 600 }}>{doneTodayVal}<span style={{ color: C.textLo }}>/{TARGET_TASKS}</span> →</div>
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div onClick={() => router.push('/tasks')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
                         <div style={{ fontSize: 9, color: C.textMid }}>Haute priorité restantes</div>
-                        <div style={{ fontSize: 9, color: highPrio === '–' || highPrio === 0 ? C.textLo : C.warn }}>{String(highPrio)}</div>
+                        <div style={{ fontSize: 9, color: highPrio === '–' || highPrio === 0 ? C.textLo : C.warn, fontWeight: 500 }}>{String(highPrio)} →</div>
                       </div>
                       {kpi && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div onClick={() => router.push('/sequences')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
                           <div style={{ fontSize: 9, color: C.textMid }}>Actives en cours</div>
-                          <div style={{ fontSize: 9, color: C.textLo }}>{kpi.tasks.active}</div>
+                          <div style={{ fontSize: 9, color: C.indigo, fontWeight: 500 }}>{kpi.tasks.active} →</div>
                         </div>
                       )}
                     </div>
@@ -828,13 +829,13 @@ export default function GlobalPage() {
                       <div style={{ background: '#b07aee', height: '100%', width: `${pct}%`, transition: 'width 0.3s' }} />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div onClick={() => router.push('/pipeline')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
                         <div style={{ fontSize: 9, color: C.textMid }}>Contrats ce mois</div>
-                        <div style={{ fontSize: 10, color: C.textHi, fontWeight: 600 }}>{commerce?.contracts ?? 0}</div>
+                        <div style={{ fontSize: 10, color: '#b07aee', fontWeight: 600 }}>{commerce?.contracts ?? 0} →</div>
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div onClick={() => router.push('/revenue')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
                         <div style={{ fontSize: 9, color: C.textMid }}>CA vs Objectif</div>
-                        <div style={{ fontSize: 9, color: C.textLo }}>{commerce ? `${(commerce.revenue / 1000).toFixed(0)}k / ${(commerce.target / 1000).toFixed(0)}k€` : '–'}</div>
+                        <div style={{ fontSize: 9, color: '#b07aee', fontWeight: 500 }}>{commerce ? `${(commerce.revenue / 1000).toFixed(0)}k / ${(commerce.target / 1000).toFixed(0)}k€` : '–'} →</div>
                       </div>
                     </div>
                     <button onClick={() => router.push('/commerce')} style={{ width: '100%', marginTop: 10, padding: 6, background: '#140d1e', border: '0.5px solid #b07aee40', color: '#b07aee', borderRadius: 4, fontSize: 8, cursor: 'pointer', fontWeight: 600 }}>
