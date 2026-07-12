@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { C } from '@/lib/theme'
 import { AgendaEventType, AgendaEvent, AGENDA_COLORS, loadDayAgenda, saveDayAgenda, todayDateKey, fantasticalUrl } from '@/lib/agenda'
@@ -542,6 +542,14 @@ function VideoPlayer() {
 
 // ─── Main page ────────────────────────────────────────────────────────────
 export default function TodayPage() {
+  return (
+    <Suspense fallback={null}>
+      <TodayPageContent />
+    </Suspense>
+  )
+}
+
+function TodayPageContent() {
   const { celebrate } = useCelebrations()
   const searchParams = useSearchParams()
   const initialTab = searchParams.get('tab') as TodayTab | null
