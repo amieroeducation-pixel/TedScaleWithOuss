@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { C } from '@/lib/theme'
+import { LinkButton, LinkChip } from '@/lib/cross-links'
 
 type Status = 'Non contacté' | 'En cours' | 'Converti' | 'Perdu'
 
@@ -422,6 +423,15 @@ export default function ParticuliersPage() {
             Aucun particulier trouvé
           </div>
         )}
+      </div>
+
+      {/* Navigation transversale — Prospection particuliers */}
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 32, paddingTop: 20, borderTop: `1px solid ${C.gold}20` }}>
+        <LinkButton href="/crm" label="CRM" color="gold" />
+        <LinkButton href="/today" label="Aujourd'hui" color="green" />
+        <LinkButton href="/scoring" label="Scoring" color="purple" />
+        <LinkChip href="/prospection/tns" label="TNS" color="cyan" />
+        <LinkChip href="/prospection/chefs-entreprise" label="Chefs" color="indigo" />
       </div>
     </>
   )
