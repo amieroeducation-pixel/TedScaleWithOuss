@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import {
   DndContext,
@@ -244,6 +244,8 @@ function ProspectCard({
 
 function CardContent({ prospect, isDragging }: { prospect: Prospect; isDragging?: boolean }) {
   const pressureColor = PRESSURE_COLORS[prospect.pressure]
+  const router = useRouter()
+
   return (
     <div style={{
       background: C.surface2,
@@ -264,18 +266,23 @@ function CardContent({ prospect, isDragging }: { prospect: Prospect; isDragging?
           }}>{prospect.initials}</div>
           <div style={{ fontSize: 10, fontWeight: 600, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 100 }}>{prospect.nom}</div>
         </div>
-        <div style={{
-          fontSize: 9, fontWeight: 700, color: scoreColor(prospect.leadScore),
-          background: scoreColor(prospect.leadScore) + '22',
-          borderRadius: 4, padding: '0px 4px',
-        }}>{prospect.leadScore}</div>
+        <div
+          onClick={(e) => { e.stopPropagation(); router.push('/scoring') }}
+          style={{
+            fontSize: 9, fontWeight: 700, color: scoreColor(prospect.leadScore),
+            background: scoreColor(prospect.leadScore) + '22',
+            borderRadius: 4, padding: '0px 4px', cursor: 'pointer',
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.8' }}
+          onMouseLeave={(e) => { e.currentTarget.style.opacity = '1' }}
+        >{prospect.leadScore}</div>
       </div>
       <div style={{ fontSize: 9, color: C.textLo, marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         {prospect.profession} — {prospect.ville}
       </div>
       <div style={{ fontSize: 9, color: C.gold, marginBottom: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>⚡ {prospect.nextAction}</div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ display: 'flex', gap: 3, flexWrap: 'nowrap', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', gap: 3, flexWrap: 'nowrap', overflow: 'hidden', alignItems: 'center' }}>
           {prospect.tags.slice(0, 2).map(t => (
             <span key={t} style={{
               fontSize: 7, padding: '0px 4px', borderRadius: 3,
@@ -283,6 +290,15 @@ function CardContent({ prospect, isDragging }: { prospect: Prospect; isDragging?
               whiteSpace: 'nowrap',
             }}>{t}</span>
           ))}
+          <span
+            onClick={(e) => { e.stopPropagation(); router.push('/today?tab=relances') }}
+            style={{
+              fontSize: 8, color: C.textLo, cursor: 'pointer',
+              fontWeight: 600, marginLeft: 2,
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = C.gold }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = C.textLo }}
+          >→ Relancer</span>
         </div>
         <div style={{ width: 6, height: 6, borderRadius: '50%', background: pressureColor, flexShrink: 0 }} />
       </div>
@@ -800,6 +816,18 @@ function KanbanColumn({ stage, prospects, onCardClick }: {
   onCardClick: (p: Prospect) => void
 }) {
   const color = STAGE_COLORS[stage]
+  const router = useRouter()
+
+  // Contextual links per column
+  const getColumnLink = () => {
+    if (stage === 'À contacter') return { text: '→ TNS', href: '/prospection/tns' }
+    if (stage === 'RDV1' || stage === 'RDV2') return { text: '→ Pipeline', href: '/pipeline' }
+    if (stage === 'Converti') return { text: '→ Revenue', href: '/revenue' }
+    return null
+  }
+
+  const columnLink = getColumnLink()
+
   return (
     <div style={{
       minWidth: 190, flex: 1,
@@ -814,7 +842,22 @@ function KanbanColumn({ stage, prospects, onCardClick }: {
         borderTop: `3px solid ${color}`, borderRadius: '10px 10px 0 0',
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color }}>{stage}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color }}>{stage}</div>
+            {columnLink && (
+              <span
+                onClick={(e) => { e.stopPropagation(); router.push(columnLink.href) }}
+                style={{
+                  fontSize: 9, color: C.textLo, cursor: 'pointer',
+                  textDecoration: 'none', fontWeight: 600,
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = C.gold }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = C.textLo }}
+              >
+                {columnLink.text}
+              </span>
+            )}
+          </div>
           <div style={{
             fontSize: 10, fontWeight: 700, background: color + '22', color,
             borderRadius: '50%', width: 20, height: 20,
