@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { C } from '@/lib/theme'
-import { LinkButton, LinkChip } from '@/lib/cross-links'
 
 type Period = 'jour' | 'semaine' | 'mois'
 type MetricKey = 'appels' | 'prospects' | 'rdv' | 'blocs' | 'relances' | 'contrats' | 'ca'
@@ -493,16 +492,6 @@ export default function DonneesPage() {
           )}
         </>
       )}
-      {/* Navigation transversale — Triangle pilotage */}
-      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 32, paddingTop: 20, borderTop: `1px solid ${C.gold}20` }}>
-        <LinkButton href="/global" label="Vue Globale" color="gold" />
-        <LinkButton href="/revenue" label="Revenue" color="green" />
-        <LinkButton href="/analytics" label="Analytics" color="cyan" />
-        <LinkButton href="/today" label="Aujourd'hui" color="indigo" />
-        <LinkChip href="/clients" label="Clients" color="green" />
-        <LinkChip href="/pipeline" label="Pipeline" color="cyan" />
-        <LinkChip href="/scoring" label="Scoring" color="purple" />
-      </div>
     </>
   )
 }

@@ -1,9 +1,8 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { C } from '@/lib/theme'
-import { LinkButton, LinkChip } from '@/lib/cross-links'
 
 interface Dept {
   code: string
@@ -81,14 +80,6 @@ function PanelTitle({ title, accent = C.indigo }: { title: string; accent?: stri
 }
 
 export default function MapPage() {
-  return (
-    <Suspense fallback={null}>
-      <MapPageContent />
-    </Suspense>
-  )
-}
-
-function MapPageContent() {
   const searchParams = useSearchParams()
   const deptParam = searchParams.get('dept')
   const metierParam = searchParams.get('metier')
@@ -360,14 +351,6 @@ function MapPageContent() {
           </div>
         </div>
       </Panel>
-
-      {/* Navigation transversale */}
-      <div style={{ display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>
-        <LinkButton href="/prospection/tns" label="Recherche TNS" color="cyan" />
-        <LinkButton href="/prospection/chefs-entreprise" label="Chefs entreprise" color="indigo" />
-        <LinkButton href="/scoring" label="Scoring patrimonial" color="purple" />
-        <LinkButton href="/crm" label="Voir dans CRM" color="gold" />
-      </div>
     </>
   )
 }

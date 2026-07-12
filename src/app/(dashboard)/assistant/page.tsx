@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { C } from '@/lib/theme'
-import { LinkButton, LinkChip } from '@/lib/cross-links'
 
 type Message = { role: 'assistant' | 'user'; text: string; time: string }
 
@@ -237,15 +236,6 @@ export default function AssistantPage() {
           ))}
         </div>
       </Panel>
-
-      {/* Navigation transversale — Assistant */}
-      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 32, paddingTop: 20, borderTop: `1px solid ${C.gold}20` }}>
-        <LinkButton href="/today" label="Aujourd'hui" color="gold" />
-        <LinkButton href="/crm" label="CRM" color="green" />
-        <LinkButton href="/sequences" label="Séquences" color="cyan" />
-        <LinkChip href="/settings" label="Paramètres" color="indigo" />
-        <LinkChip href="/scoring" label="Scoring" color="purple" />
-      </div>
     </>
   )
 }

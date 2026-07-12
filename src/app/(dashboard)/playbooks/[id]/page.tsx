@@ -6,7 +6,6 @@ import { useParams } from 'next/navigation'
 import { getPlaybook } from '@/lib/playbooks/config'
 import ProspectValidationRow from '@/components/playbooks/ProspectValidationRow'
 import { C } from '@/lib/theme'
-import { LinkButton, LinkChip } from '@/lib/cross-links'
 
 export default function PlaybookDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -174,13 +173,6 @@ export default function PlaybookDetailPage() {
           <p style={{ fontSize: 11, color: C.textLo, margin: '6px 0 0' }}>Lancez le playbook depuis la page liste pour générer des prospects.</p>
         </div>
       )}
-      {/* Navigation transversale */}
-      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 32, paddingTop: 20, borderTop: `1px solid ${C.gold}20` }}>
-        <LinkButton href="/playbooks" label="Playbooks" color="gold" />
-        <LinkButton href="/crm" label="CRM" color="green" />
-        <LinkChip href="/prospection/tns" label="TNS" color="cyan" />
-        <LinkChip href="/scoring" label="Scoring" color="purple" />
-      </div>
     </div>
   )
 }

@@ -2,14 +2,13 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useState, useEffect, useRef, useCallback, Suspense } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { C } from '@/lib/theme'
 import { AgendaEventType, AgendaEvent, AGENDA_COLORS, loadDayAgenda, saveDayAgenda, todayDateKey, fantasticalUrl } from '@/lib/agenda'
 import { saveLastSection } from '@/lib/navigation-state'
 import CallingSessionPanel from '@/components/calling/CallingSessionPanel'
 import { useCelebrations } from '@/hooks/useCelebrations'
-import { LinkButton, LinkChip, LinkInline } from '@/lib/cross-links'
 
 // ─── Objectifs du jour ────────────────────────────────────────────────────────
 interface TodayTargets { contacts: number; calls: number; rdv1: number; rdv2: number }
@@ -542,14 +541,6 @@ function VideoPlayer() {
 
 // ─── Main page ────────────────────────────────────────────────────────────
 export default function TodayPage() {
-  return (
-    <Suspense fallback={null}>
-      <TodayPageContent />
-    </Suspense>
-  )
-}
-
-function TodayPageContent() {
   const { celebrate } = useCelebrations()
   const searchParams = useSearchParams()
   const initialTab = searchParams.get('tab') as TodayTab | null
@@ -1079,15 +1070,6 @@ function TodayPageContent() {
           )}
         </div>
 
-      </div>
-
-      {/* Navigation transversale */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
-        <LinkChip href="/crm" label="Ouvrir CRM" color="gold" />
-        <LinkChip href="/pipeline" label="Pipeline" color="indigo" />
-        <LinkChip href="/scoring" label="Scoring" color="purple" />
-        <LinkChip href="/sequences" label="Séquences" color="green" />
-        <LinkChip href="/donnees" label="Données" color="gold" />
       </div>
 
       {/* Tab bar */}

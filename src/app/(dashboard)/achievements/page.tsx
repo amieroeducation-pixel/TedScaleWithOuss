@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import { C } from '@/lib/theme'
-import { LinkButton, LinkChip } from '@/lib/cross-links'
 import type { Achievement } from '@/types/achievements'
 
 const TYPE_CONFIG: Record<string, { icon: string; color: string; bg: string }> = {
@@ -176,14 +175,6 @@ export default function AchievementsPage() {
           })}
         </div>
       )}
-      {/* Navigation transversale — Progression */}
-      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 32, paddingTop: 20, borderTop: `1px solid ${C.gold}20` }}>
-        <LinkButton href="/dashboard" label="Dashboard" color="gold" />
-        <LinkButton href="/global" label="Global" color="cyan" />
-        <LinkButton href="/today" label="Aujourd'hui" color="green" />
-        <LinkChip href="/commerce" label="Commerce" color="indigo" />
-        <LinkChip href="/donnees" label="Données" color="purple" />
-      </div>
     </div>
   )
 }

@@ -13,7 +13,6 @@ import {
   Bar,
 } from 'recharts'
 import { C } from '@/lib/theme'
-import { LinkButton, LinkChip } from '@/lib/cross-links'
 
 // --- TYPES ---
 type MonthlyDataPoint = {
@@ -475,13 +474,6 @@ export default function RevenuePage() {
             )
           })}
         </div>
-      </div>
-      {/* Navigation transversale */}
-      <div style={{ display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>
-        <LinkButton href="/analytics" label="Analyse conversion" color="green" />
-        <LinkButton href="/pipeline" label="Pipeline actif" color="indigo" />
-        <LinkButton href="/clients" label="Portefeuille clients" color="gold" />
-        <LinkButton href="/donnees" label="Historique données" color="purple" />
       </div>
     </>
   )

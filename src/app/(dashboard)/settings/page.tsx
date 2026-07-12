@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 import { C } from '@/lib/theme'
-import { LinkButton, LinkChip } from '@/lib/cross-links'
 import { useUserSettings, UserSettings } from '@/hooks/useUserSettings'
 
 type Tab = 'general' | 'kpi' | 'notifications' | 'integrations' | 'sections' | 'mobile' | 'sequences' | 'variantes' | 'triggers' | 'scripts'
@@ -2206,15 +2205,6 @@ function TabVariantes({ settings, save, saving }: { settings: UserSettings | nul
           )}
         </>
       )}
-
-      {/* Navigation transversale — Opérations */}
-      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 32, paddingTop: 20, borderTop: `1px solid ${C.gold}20` }}>
-        <LinkButton href="/sequences" label="Séquences" color="gold" />
-        <LinkButton href="/automatisations" label="Automatisations" color="cyan" />
-        <LinkButton href="/scoring" label="Scoring" color="purple" />
-        <LinkChip href="/crm" label="CRM" color="green" />
-        <LinkChip href="/donnees" label="Données" color="indigo" />
-      </div>
     </div>
   )
 }

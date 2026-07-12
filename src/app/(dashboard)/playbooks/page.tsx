@@ -6,7 +6,6 @@ import { PLAYBOOKS } from '@/lib/playbooks/config'
 import PlaybookCard from '@/components/playbooks/PlaybookCard'
 import Link from 'next/link'
 import { C } from '@/lib/theme'
-import { LinkButton, LinkChip } from '@/lib/cross-links'
 
 const FAMILIES = [
   { key: 'A', label: 'Famille A — Prospection Data Officielle', accent: C.gold },
@@ -84,15 +83,6 @@ export default function PlaybooksPage() {
           </div>
         )
       })}
-
-      {/* Navigation transversale — Playbooks */}
-      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 32, paddingTop: 20, borderTop: `1px solid ${C.gold}20` }}>
-        <LinkButton href="/prospection/tns" label="TNS" color="gold" />
-        <LinkButton href="/prospection/chefs-entreprise" label="Chefs" color="cyan" />
-        <LinkButton href="/crm" label="CRM" color="green" />
-        <LinkChip href="/scoring" label="Scoring" color="purple" />
-        <LinkChip href="/map" label="Carte" color="indigo" />
-      </div>
     </div>
   )
 }

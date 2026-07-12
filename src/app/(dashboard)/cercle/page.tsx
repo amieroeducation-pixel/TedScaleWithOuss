@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { C } from '@/lib/theme'
-import { LinkButton, LinkChip } from '@/lib/cross-links'
 
 // ─── PRESSURE LEVEL COLORS ───────────────────────────────────────────────────
 const PRESSURE: Record<string, { border: string; dot: string; bg: string; label: string }> = {
@@ -1060,15 +1059,6 @@ export default function CerclePage() {
           </div>
         </div>
       )}
-
-      {/* Navigation transversale — Réseau */}
-      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 32, paddingTop: 20, borderTop: `1px solid ${C.gold}20` }}>
-        <LinkButton href="/clients" label="Clients" color="gold" />
-        <LinkButton href="/crm" label="CRM" color="green" />
-        <LinkButton href="/revenue" label="Revenue" color="cyan" />
-        <LinkChip href="/global" label="Global" color="indigo" />
-        <LinkChip href="/today" label="Aujourd'hui" color="purple" />
-      </div>
     </>
   )
 }

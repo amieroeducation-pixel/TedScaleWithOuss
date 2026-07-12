@@ -1,9 +1,8 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { C } from '@/lib/theme'
-import { LinkButton, LinkChip } from '@/lib/cross-links'
 
 // ─── TYPES ────────────────────────────────────────────────────────────────────
 type ClientRow = {
@@ -82,14 +81,6 @@ function PanelTitle({ title, accent = C.cyan }: { title: string; accent?: string
 
 // ─── PAGE ─────────────────────────────────────────────────────────────────────
 export default function ClientsPage() {
-  return (
-    <Suspense fallback={null}>
-      <ClientsPageContent />
-    </Suspense>
-  )
-}
-
-function ClientsPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const sortParam = searchParams.get('sort') as 'aum' | 'days' | 'name' | null
@@ -361,13 +352,6 @@ function ClientsPageContent() {
           )}
         </Panel>
       )}
-      {/* Navigation transversale */}
-      <div style={{ display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>
-        <LinkButton href="/revenue" label="Revenue détail" color="gold" />
-        <LinkButton href="/cercle" label="Réseau partenaires" color="purple" />
-        <LinkButton href="/sequences" label="Séquences fidélisation" color="green" />
-        <LinkButton href="/today" label="Planifier relances" color="cyan" params={{ tab: 'relances' }} />
-      </div>
 
       {/* Modal Contacter */}
       {contactModal && (

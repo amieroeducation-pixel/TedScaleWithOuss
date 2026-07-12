@@ -2,7 +2,6 @@
 
 import { useState, useMemo } from 'react'
 import { C } from '@/lib/theme'
-import { LinkButton, LinkChip } from '@/lib/cross-links'
 
 type ProductId = 'av' | 'per' | 'ct' | 'capi' | 'tontine'
 
@@ -304,15 +303,6 @@ Ted — Conseiller en Gestion de Patrimoine
           </table>
         </div>
       </Panel>
-
-      {/* Navigation transversale — Simulateur */}
-      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 32, paddingTop: 20, borderTop: `1px solid ${C.gold}20` }}>
-        <LinkButton href="/commerce" label="Commerce" color="gold" />
-        <LinkButton href="/revenue" label="Revenue" color="green" />
-        <LinkButton href="/analytics" label="Analytics" color="cyan" />
-        <LinkChip href="/global" label="Global" color="indigo" />
-        <LinkChip href="/clients" label="Clients" color="purple" />
-      </div>
     </>
   )
 }

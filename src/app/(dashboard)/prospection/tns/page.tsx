@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { C } from '@/lib/theme'
-import { LinkButton, LinkChip } from '@/lib/cross-links'
 import ProspectCard, { type ProspectCardData } from '@/components/prospects/ProspectCard'
 import CreateSessionModal from '@/components/calling/CreateSessionModal'
 
@@ -764,14 +763,6 @@ export default function TnsPage() {
           }}
         />
       )}
-
-      {/* Navigation transversale */}
-      <div style={{ display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>
-        <LinkButton href="/crm" label="CRM — Voir prospects ajoutés" color="gold" />
-        <LinkButton href="/map" label="Carte zones IDF" color="indigo" />
-        <LinkButton href="/today" label="Commencer relances" color="cyan" params={{ tab: 'relances' }} />
-        <LinkButton href="/scoring" label="Scoring patrimonial" color="purple" />
-      </div>
 
       {selectedProspect && (
         <ProspectCard

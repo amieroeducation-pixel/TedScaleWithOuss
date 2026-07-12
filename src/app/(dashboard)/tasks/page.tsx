@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { C } from '@/lib/theme'
-import { LinkButton, LinkChip } from '@/lib/cross-links'
 
 type Filter = 'Toutes' | 'Urgentes' | 'Cette semaine' | 'Terminées'
 type KanbanCol = 'todo' | 'inprogress' | 'waiting' | 'blocked' | 'done'
@@ -607,15 +606,6 @@ export default function TasksPage() {
           onSave={updated => setTasks(prev => prev.map(t => t.id === updated.id ? updated : t))}
         />
       )}
-
-      {/* Navigation transversale — Opérations */}
-      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 32, paddingTop: 20, borderTop: `1px solid ${C.gold}20` }}>
-        <LinkButton href="/today" label="Aujourd'hui" color="gold" />
-        <LinkButton href="/crm" label="CRM" color="green" />
-        <LinkButton href="/sequences" label="Séquences" color="cyan" />
-        <LinkChip href="/automatisations" label="Automatisations" color="indigo" />
-        <LinkChip href="/clients" label="Clients" color="purple" />
-      </div>
     </>
   )
 }

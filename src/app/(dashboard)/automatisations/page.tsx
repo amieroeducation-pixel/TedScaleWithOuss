@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { C } from '@/lib/theme'
-import { LinkButton, LinkChip } from '@/lib/cross-links'
 
 interface Automation {
   id: string
@@ -276,15 +275,6 @@ export default function AutomatisationsPage() {
           })}
         </div>
       </Panel>
-
-      {/* Navigation transversale — Opérations */}
-      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 32, paddingTop: 20, borderTop: `1px solid ${C.gold}20` }}>
-        <LinkButton href="/sequences" label="Séquences" color="gold" />
-        <LinkButton href="/settings" label="Paramètres" color="indigo" />
-        <LinkButton href="/donnees" label="Données" color="cyan" />
-        <LinkChip href="/today" label="Aujourd'hui" color="green" />
-        <LinkChip href="/tasks" label="Tâches" color="purple" />
-      </div>
     </>
   )
 }

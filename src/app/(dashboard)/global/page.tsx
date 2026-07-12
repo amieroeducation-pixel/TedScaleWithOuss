@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { C } from '@/lib/theme'
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import { saveLastSection } from '@/lib/navigation-state'
-import { LinkButton, LinkChip } from '@/lib/cross-links'
 
 type GlobalKpi = {
   tasks: { done_today: number; active: number; high_priority_remaining: number; this_week: number; total: number }
@@ -567,13 +566,6 @@ function SuiviTabContent() {
           </ResponsiveContainer>
         )}
       </div>
-
-      {/* Navigation transversale Suivi */}
-      <div style={{ display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>
-        <LinkButton href="/donnees" label="Données complètes" color="indigo" />
-        <LinkButton href="/analytics" label="Analytics pipeline" color="green" />
-        <LinkButton href="/revenue" label="CA mensuel" color="gold" />
-      </div>
     </div>
   )
 }
@@ -743,11 +735,6 @@ export default function GlobalPage() {
                     <button onClick={() => router.push('/analytics')} style={{ width: '100%', marginTop: 10, padding: 6, background: '#0d1a0d', border: `0.5px solid ${C.green}40`, color: C.green, borderRadius: 4, fontSize: 8, cursor: 'pointer', fontWeight: 600 }}>
                       → Voir détails
                     </button>
-                    <div style={{ display: 'flex', gap: 4, marginTop: 4, flexWrap: 'wrap' }}>
-                      <LinkChip href="/pipeline" label="Pipeline" color="indigo" />
-                      <LinkChip href="/scoring" label="Scoring" color="purple" />
-                      <LinkChip href="/donnees" label="Données" color="gold" />
-                    </div>
                   </>
                 )
               })()}
@@ -781,10 +768,6 @@ export default function GlobalPage() {
                     <button onClick={() => router.push('/cercle')} style={{ width: '100%', marginTop: 10, padding: 6, background: '#1a1400', border: `0.5px solid ${C.gold}40`, color: C.gold, borderRadius: 4, fontSize: 8, cursor: 'pointer', fontWeight: 600 }}>
                       → Voir cercle
                     </button>
-                    <div style={{ display: 'flex', gap: 4, marginTop: 4, flexWrap: 'wrap' }}>
-                      <LinkChip href="/clients" label="Clients" color="green" />
-                      <LinkChip href="/crm" label="CRM" color="gold" />
-                    </div>
                   </>
                 )
               })()}
@@ -825,10 +808,6 @@ export default function GlobalPage() {
                     <button onClick={() => router.push('/tasks')} style={{ width: '100%', marginTop: 10, padding: 6, background: '#0d1a2e', border: `0.5px solid ${C.indigo}40`, color: C.indigo, borderRadius: 4, fontSize: 8, cursor: 'pointer', fontWeight: 600 }}>
                       → Voir tâches
                     </button>
-                    <div style={{ display: 'flex', gap: 4, marginTop: 4, flexWrap: 'wrap' }}>
-                      <LinkChip href="/today" label="Aujourd'hui" color="cyan" />
-                      <LinkChip href="/sequences" label="Séquences" color="green" />
-                    </div>
                   </>
                 )
               })()}
@@ -861,10 +840,6 @@ export default function GlobalPage() {
                     <button onClick={() => router.push('/commerce')} style={{ width: '100%', marginTop: 10, padding: 6, background: '#140d1e', border: '0.5px solid #b07aee40', color: '#b07aee', borderRadius: 4, fontSize: 8, cursor: 'pointer', fontWeight: 600 }}>
                       → Voir formation
                     </button>
-                    <div style={{ display: 'flex', gap: 4, marginTop: 4, flexWrap: 'wrap' }}>
-                      <LinkChip href="/revenue" label="Revenue" color="gold" />
-                      <LinkChip href="/simulator" label="Simulateur" color="indigo" />
-                    </div>
                   </>
                 )
               })()}
@@ -913,13 +888,6 @@ export default function GlobalPage() {
               <br />
               Configure tes objectifs dans l'onglet "Rétro Planning" pour personnaliser.
             </div>
-          </div>
-
-          {/* Navigation transversale */}
-          <div style={{ display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>
-            <LinkButton href="/today" label="Actions du jour" color="cyan" />
-            <LinkButton href="/revenue" label="Revenue détail" color="gold" />
-            <LinkButton href="/donnees" label="Historique KPIs" color="indigo" />
           </div>
         </div>
       )}
