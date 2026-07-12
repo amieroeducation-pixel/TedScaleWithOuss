@@ -3,6 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { C } from '@/lib/theme'
 import { AgendaEventType, AgendaEvent, AGENDA_COLORS, loadDayAgenda, saveDayAgenda, fantasticalUrl } from '@/lib/agenda'
 import { saveLastSection } from '@/lib/navigation-state'
@@ -50,6 +51,7 @@ function getWeekHeader(offset: number): string {
 
 // ---------- PAGE ----------
 export default function WeeklyPage() {
+  const router = useRouter()
   const [weekOffset, setWeekOffset] = useState(0)
   const [weekAgenda, setWeekAgenda] = useState<Record<string, AgendaEvent[]>>({})
   const [showModal, setShowModal] = useState(false)
@@ -124,18 +126,39 @@ export default function WeeklyPage() {
       {/* ── Metrics row ── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 16 }}>
         {(loadingData || !weeklyData ? [
-          { label: 'Appels semaine', value: '—', sub: 'Chargement...', subColor: C.textLo },
-          { label: 'RDV semaine', value: '—', sub: 'Chargement...', subColor: C.textLo },
-          { label: 'Nouveaux prospects', value: '—', sub: 'Chargement...', subColor: C.textLo },
-          { label: 'Contrats mois', value: '—', sub: 'Chargement...', subColor: C.textLo },
+          { label: 'Appels semaine', value: '—', sub: 'Chargement...', subColor: C.textLo, target: null },
+          { label: 'RDV semaine', value: '—', sub: 'Chargement...', subColor: C.textLo, target: null },
+          { label: 'Nouveaux prospects', value: '—', sub: 'Chargement...', subColor: C.textLo, target: null },
+          { label: 'Contrats mois', value: '—', sub: 'Chargement...', subColor: C.textLo, target: null },
         ] : [
-          { label: 'Appels semaine', value: String(weeklyData.kpis.calls), sub: `Objectif 40`, subColor: weeklyData.kpis.calls >= 40 ? C.green : C.gold },
-          { label: 'RDV semaine', value: String(weeklyData.kpis.rdv), sub: `Cette semaine`, subColor: C.green },
-          { label: 'Nouveaux prospects', value: String(weeklyData.kpis.newProspects), sub: 'Cette semaine', subColor: C.green },
-          { label: 'Contrats mois', value: String(weeklyData.kpis.contracts), sub: `Obj. ${weeklyData.kpis.targetAmount ? (weeklyData.kpis.targetAmount / 1000).toFixed(0) + 'k€' : '—'}`, subColor: C.gold },
+          { label: 'Appels semaine', value: String(weeklyData.kpis.calls), sub: `Objectif 40`, subColor: weeklyData.kpis.calls >= 40 ? C.green : C.gold, target: '/today?tab=relances' },
+          { label: 'RDV semaine', value: String(weeklyData.kpis.rdv), sub: `Cette semaine`, subColor: C.green, target: '/pipeline' },
+          { label: 'Nouveaux prospects', value: String(weeklyData.kpis.newProspects), sub: 'Cette semaine', subColor: C.green, target: '/crm' },
+          { label: 'Contrats mois', value: String(weeklyData.kpis.contracts), sub: `Obj. ${weeklyData.kpis.targetAmount ? (weeklyData.kpis.targetAmount / 1000).toFixed(0) + 'k€' : '—'}`, subColor: C.gold, target: '/revenue' },
         ]).map(m => (
-          <div key={m.label} style={{ background: C.surface1, border: `1px solid ${C.line}`, borderRadius: 10, padding: '14px 16px' }}>
-            <div style={{ fontSize: 10, color: C.textLo, marginBottom: 6, textTransform: 'uppercase' as const, letterSpacing: 1 }}>{m.label}</div>
+          <div
+            key={m.label}
+            onClick={m.target ? () => router.push(m.target) : undefined}
+            style={{
+              background: C.surface1, border: `1px solid ${C.line}`, borderRadius: 10, padding: '14px 16px',
+              cursor: m.target ? 'pointer' : 'default',
+              transition: 'all 0.2s ease',
+            }}
+            onMouseEnter={(e) => {
+              if (m.target) {
+                e.currentTarget.style.borderColor = m.subColor
+                e.currentTarget.style.transform = 'translateY(-2px)'
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (m.target) {
+                e.currentTarget.style.borderColor = C.line
+                e.currentTarget.style.transform = 'translateY(0)'
+              }
+            }}>
+            <div style={{ fontSize: 10, color: C.textLo, marginBottom: 6, textTransform: 'uppercase' as const, letterSpacing: 1 }}>
+              {m.label} {m.target && <span style={{ color: m.subColor }}>→</span>}
+            </div>
             <div style={{ fontSize: 22, fontWeight: 700, color: C.textHi, fontFamily: 'Oswald, sans-serif' }}>{m.value}</div>
             <div style={{ fontSize: 10, color: m.subColor, marginTop: 4 }}>{m.sub}</div>
           </div>
@@ -153,14 +176,27 @@ export default function WeeklyPage() {
           {(weeklyData?.actions ?? [
             { text: 'Chargement des tâches...', tag: '—', urgent: false },
           ]).map((item, i) => (
-            <div key={i} style={{
+            <div
+              key={i}
+              onClick={() => router.push('/tasks')}
+              style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               padding: '7px 10px', marginBottom: 6,
               background: item.urgent ? `${C.gold}0a` : C.surface2,
               border: `1px solid ${item.urgent ? C.gold + '44' : C.lineSoft}`,
               borderLeft: `3px solid ${item.urgent ? C.gold : C.indigo}`,
               borderRadius: 6,
-            }}>
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+            }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateX(4px)'
+                e.currentTarget.style.borderColor = item.urgent ? C.gold : C.indigo
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateX(0)'
+                e.currentTarget.style.borderColor = item.urgent ? C.gold + '44' : C.lineSoft
+              }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 7, flex: 1, minWidth: 0 }}>
                 <div style={{ width: 6, height: 6, borderRadius: '50%', background: item.urgent ? C.gold : C.indigo, flexShrink: 0 }} />
                 <span style={{ fontSize: 10, color: C.text, lineHeight: 1.4 }}>{item.text}</span>
@@ -171,7 +207,7 @@ export default function WeeklyPage() {
                 color: item.urgent ? C.gold : C.indigo,
                 border: `0.5px solid ${item.urgent ? C.gold + '60' : C.indigo + '60'}`,
                 fontWeight: 600,
-              }}>{item.tag}</span>
+              }}>{item.tag} →</span>
             </div>
           ))}
         </div>
@@ -201,16 +237,31 @@ export default function WeeklyPage() {
           </div>
           <div style={{ fontSize: 9, color: C.textLo, textAlign: 'center', marginBottom: 14 }}>Objectif global semaine</div>
           {(weeklyData ? [
-            { label: 'Appels', pct: weeklyData.barometer.callPct, val: weeklyData.barometer.callVal, color: C.green },
-            { label: 'Blocs travail', pct: weeklyData.barometer.blockPct, val: weeklyData.barometer.blockVal, color: C.green },
-            { label: 'Relances', pct: weeklyData.barometer.relancePct, val: weeklyData.barometer.relanceVal, color: C.indigo },
+            { label: 'Appels', pct: weeklyData.barometer.callPct, val: weeklyData.barometer.callVal, color: C.green, target: '/today?tab=relances' },
+            { label: 'Blocs travail', pct: weeklyData.barometer.blockPct, val: weeklyData.barometer.blockVal, color: C.green, target: '/today' },
+            { label: 'Relances', pct: weeklyData.barometer.relancePct, val: weeklyData.barometer.relanceVal, color: C.indigo, target: '/crm' },
           ] : [
-            { label: 'Appels', pct: 0, val: '—', color: C.green },
-            { label: 'Blocs travail', pct: 0, val: '—', color: C.green },
-            { label: 'Relances', pct: 0, val: '—', color: C.indigo },
+            { label: 'Appels', pct: 0, val: '—', color: C.green, target: null },
+            { label: 'Blocs travail', pct: 0, val: '—', color: C.green, target: null },
+            { label: 'Relances', pct: 0, val: '—', color: C.indigo, target: null },
           ]).map(bar => (
-            <div key={bar.label} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-              <div style={{ fontSize: 9, color: C.textLo, width: 80, flexShrink: 0 }}>{bar.label}</div>
+            <div
+              key={bar.label}
+              onClick={bar.target ? () => router.push(bar.target) : undefined}
+              style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, cursor: bar.target ? 'pointer' : 'default', transition: 'all 0.2s ease' }}
+              onMouseEnter={(e) => {
+                if (bar.target) {
+                  e.currentTarget.style.transform = 'translateX(4px)'
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (bar.target) {
+                  e.currentTarget.style.transform = 'translateX(0)'
+                }
+              }}>
+              <div style={{ fontSize: 9, color: C.textLo, width: 80, flexShrink: 0 }}>
+                {bar.label} {bar.target && <span style={{ color: bar.color }}>→</span>}
+              </div>
               <div style={{ flex: 1, background: C.surface3, height: 8, borderRadius: 10, overflow: 'hidden' }}>
                 <div style={{ width: `${bar.pct}%`, height: '100%', background: bar.color, borderRadius: 10 }} />
               </div>
@@ -258,16 +309,39 @@ export default function WeeklyPage() {
                 ) : (
                   events.map(ev => {
                     const col = AGENDA_COLORS[ev.type]
+                    const isRdv = ev.type === 'rdv'
                     return (
-                      <div key={ev.id} style={{ background: col.bg, border: `0.5px solid ${col.border}44`, borderLeft: `2px solid ${col.border}`, borderRadius: 4, padding: '4px 6px', marginBottom: 4 }}>
+                      <div
+                        key={ev.id}
+                        onClick={isRdv ? () => router.push('/pipeline') : undefined}
+                        style={{
+                          background: col.bg, border: `0.5px solid ${col.border}44`, borderLeft: `2px solid ${col.border}`, borderRadius: 4, padding: '4px 6px', marginBottom: 4,
+                          cursor: isRdv ? 'pointer' : 'default',
+                          transition: 'all 0.2s ease',
+                        }}
+                        onMouseEnter={(e) => {
+                          if (isRdv) {
+                            e.currentTarget.style.borderColor = col.border
+                            e.currentTarget.style.transform = 'scale(1.02)'
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (isRdv) {
+                            e.currentTarget.style.borderColor = col.border + '44'
+                            e.currentTarget.style.transform = 'scale(1)'
+                          }
+                        }}>
                         <div style={{ fontSize: 8, color: col.text, fontWeight: 600, fontFamily: 'JetBrains Mono,monospace' }}>{ev.time}</div>
-                        <div style={{ fontSize: 9, color: C.textHi, lineHeight: 1.3 }}>{ev.title}</div>
+                        <div style={{ fontSize: 9, color: C.textHi, lineHeight: 1.3 }}>
+                          {ev.title} {isRdv && <span style={{ color: col.border }}>→</span>}
+                        </div>
                         {ev.client && <div style={{ fontSize: 7, color: C.textLo }}>{ev.client}</div>}
                         <div style={{ display: 'flex', gap: 2, marginTop: 3 }}>
                           <a href={fantasticalUrl(ev, d.dateKey)}
+                            onClick={(e) => e.stopPropagation()}
                             style={{ fontSize: 9, textDecoration: 'none', color: C.textVlo, cursor: 'pointer', lineHeight: 1 }}
                             title="Ouvrir dans Fantastical">📲</a>
-                          <button onClick={() => removeEvent(d.dateKey, ev.id)}
+                          <button onClick={(e) => { e.stopPropagation(); removeEvent(d.dateKey, ev.id); }}
                             style={{ background: 'none', border: 'none', color: C.textVlo, cursor: 'pointer', fontSize: 8, padding: 0, lineHeight: 1 }}>✕</button>
                         </div>
                       </div>

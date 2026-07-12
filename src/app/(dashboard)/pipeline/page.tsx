@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import { C } from '@/lib/theme'
 
@@ -69,6 +70,7 @@ function StatBadge({ label, value, color }: { label: string; value: string; colo
 }
 
 export default function PipelinePage() {
+  const router = useRouter()
   const [pipelineData, setPipelineData] = useState<{
     stages: PipelineStage[]
     totalProspects: number
@@ -157,15 +159,33 @@ export default function PipelinePage() {
       {/* KPI row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 20 }}>
         {[
-          { label: 'À contacter', value: String(aContacterCount), sub: 'Top funnel', subColor: C.gold, color: C.indigo },
-          { label: 'Taux RDV 1', value: `${tauxRdv1}%`, sub: 'Appel→RDV1', subColor: C.green, color: C.gold },
-          { label: 'Taux closing', value: `${closingRate}%`, sub: 'Décisions prises', subColor: C.cyan, color: C.cyan },
-          { label: 'Total prospects', value: String(totalProspects), sub: 'Tous statuts', subColor: C.gold, color: C.green },
+          { label: 'À contacter', value: String(aContacterCount), sub: 'Top funnel', subColor: C.gold, color: C.indigo, target: '/crm?stage=a_contacter' },
+          { label: 'Taux RDV 1', value: `${tauxRdv1}%`, sub: 'Appel→RDV1', subColor: C.green, color: C.gold, target: null },
+          { label: 'Taux closing', value: `${closingRate}%`, sub: 'Décisions prises', subColor: C.cyan, color: C.cyan, target: '/analytics' },
+          { label: 'Total prospects', value: String(totalProspects), sub: 'Tous statuts', subColor: C.gold, color: C.green, target: '/crm' },
         ].map(k => (
-          <div key={k.label} style={{
+          <div key={k.label}
+            onClick={k.target ? () => router.push(k.target) : undefined}
+            style={{
             background: C.surface1, border: `1px solid ${C.line}`, borderRadius: 10, padding: '14px 16px',
-          }}>
-            <div style={{ fontSize: 10, color: C.textLo, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 1 }}>{k.label}</div>
+            cursor: k.target ? 'pointer' : 'default',
+            transition: 'all 0.2s ease',
+          }}
+            onMouseEnter={(e) => {
+              if (k.target) {
+                e.currentTarget.style.borderColor = k.color
+                e.currentTarget.style.transform = 'translateY(-2px)'
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (k.target) {
+                e.currentTarget.style.borderColor = C.line
+                e.currentTarget.style.transform = 'translateY(0)'
+              }
+            }}>
+            <div style={{ fontSize: 10, color: C.textLo, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 1 }}>
+              {k.label} {k.target && <span style={{ color: k.color }}>→</span>}
+            </div>
             <div style={{ fontSize: 22, fontWeight: 700, color: k.color, fontFamily: 'Oswald, sans-serif' }}>{k.value}</div>
             <div style={{ marginTop: 4 }}>
               <span style={{
@@ -194,8 +214,18 @@ export default function PipelinePage() {
             <>
               {tunnel.map((step, i) => (
                 <div key={step.stage} style={{ marginBottom: 8 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-                    <div style={{ fontSize: 10, color: C.textMid, width: 120, flexShrink: 0 }}>{step.label}</div>
+                  <div
+                    onClick={() => router.push(`/crm?stage=${step.stage}`)}
+                    style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4, cursor: 'pointer', transition: 'all 0.2s ease' }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateX(4px)'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateX(0)'
+                    }}>
+                    <div style={{ fontSize: 10, color: C.textMid, width: 120, flexShrink: 0 }}>
+                      {step.label} <span style={{ color: step.color }}>→</span>
+                    </div>
                     <div style={{ flex: 1, height: 24, background: C.surface3, borderRadius: 4, overflow: 'hidden', position: 'relative' }}>
                       <div style={{
                         width: `${Math.max(step.pct, step.count > 0 ? 8 : 0)}%`,
@@ -222,9 +252,15 @@ export default function PipelinePage() {
                 background: C.surface2, borderRadius: 8, border: `1px solid ${C.line}`,
                 display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12,
               }}>
-                <StatBadge label="Appel→RDV1" value={`${tauxRdv1}%`} color={C.indigo} />
-                <StatBadge label="Prospects actifs" value={String(totalProspects)} color={C.gold} />
-                <StatBadge label="Taux closing" value={`${closingRate}%`} color={C.green} />
+                <div onClick={() => router.push('/crm?stage=rdv1')} style={{ cursor: 'pointer' }}>
+                  <StatBadge label="Appel→RDV1 →" value={`${tauxRdv1}%`} color={C.indigo} />
+                </div>
+                <div onClick={() => router.push('/crm')} style={{ cursor: 'pointer' }}>
+                  <StatBadge label="Prospects actifs →" value={String(totalProspects)} color={C.gold} />
+                </div>
+                <div onClick={() => router.push('/analytics')} style={{ cursor: 'pointer' }}>
+                  <StatBadge label="Taux closing →" value={`${closingRate}%`} color={C.green} />
+                </div>
               </div>
             </>
           )}
@@ -261,10 +297,24 @@ export default function PipelinePage() {
               </ResponsiveContainer>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
                 {byProduct.map(p => (
-                  <div key={p.type} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div
+                    key={p.type}
+                    onClick={() => router.push('/revenue')}
+                    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', transition: 'all 0.2s ease' }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = C.surface2
+                      e.currentTarget.style.paddingLeft = '8px'
+                      e.currentTarget.style.paddingRight = '8px'
+                      e.currentTarget.style.borderRadius = '4px'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent'
+                      e.currentTarget.style.paddingLeft = '0'
+                      e.currentTarget.style.paddingRight = '0'
+                    }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                       <div style={{ width: 8, height: 8, borderRadius: '50%', background: p.color }} />
-                      <span style={{ fontSize: 10, color: C.text }}>{p.label}</span>
+                      <span style={{ fontSize: 10, color: C.text }}>{p.label} <span style={{ color: p.color }}>→</span></span>
                     </div>
                     <span style={{ fontSize: 10, fontWeight: 600, color: p.color }}>{p.rate_pct}%</span>
                   </div>
