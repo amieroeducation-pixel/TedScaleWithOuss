@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { C } from '@/lib/theme'
 import { AgendaEventType, AgendaEvent, AGENDA_COLORS, loadDayAgenda, saveDayAgenda, todayDateKey, fantasticalUrl } from '@/lib/agenda'
 import { saveLastSection } from '@/lib/navigation-state'
@@ -542,6 +542,7 @@ function VideoPlayer() {
 // ─── Main page ────────────────────────────────────────────────────────────
 export default function TodayPage() {
   const { celebrate } = useCelebrations()
+  const router = useRouter()
   const searchParams = useSearchParams()
   const initialTab = searchParams.get('tab') as TodayTab | null
   const [tab, setTab] = useState<TodayTab>(initialTab === 'relances' ? 'relances' : 'prospection')
@@ -997,7 +998,20 @@ export default function TodayPage() {
                     {(signal?.relances ?? []).slice(0, 10).map(r => (
                       <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 8, background: C.bgMid, border: `0.5px solid ${C.lineSoft}`, borderRadius: 5, padding: '5px 8px' }}>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 11, fontWeight: 600, color: C.textHi, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.full_name}</div>
+                          <div
+                            onClick={() => router.push(`/crm?prospect=${r.id}`)}
+                            style={{
+                              fontSize: 11,
+                              fontWeight: 600,
+                              color: C.textHi,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            {r.full_name} →
+                          </div>
                           {r.profession && <div style={{ fontSize: 9, color: C.textLo }}>{r.profession}</div>}
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
@@ -1050,12 +1064,25 @@ export default function TodayPage() {
                   {(signal?.rdvSemaine ?? []).map(rdv => {
                     const rdvColor = rdv.type === 'rdv1' ? C.indigo : rdv.type === 'rdv2' ? C.green : C.gold
                     return (
-                      <div key={rdv.id} style={{ display: 'flex', alignItems: 'center', gap: 8, background: C.bgMid, border: `0.5px solid ${C.lineSoft}`, borderRadius: 5, padding: '5px 8px' }}>
+                      <div
+                        key={rdv.id}
+                        onClick={() => router.push('/pipeline')}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 8,
+                          background: C.bgMid,
+                          border: `0.5px solid ${C.lineSoft}`,
+                          borderRadius: 5,
+                          padding: '5px 8px',
+                          cursor: 'pointer'
+                        }}
+                      >
                         <div style={{ flexShrink: 0 }}>
                           <div style={{ fontSize: 9, color: C.gold, fontWeight: 600 }}>{rdv.day_label}</div>
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 11, fontWeight: 600, color: C.textHi, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{rdv.prospect_name}</div>
+                          <div style={{ fontSize: 11, fontWeight: 600, color: C.textHi, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{rdv.prospect_name} →</div>
                           {rdv.profession && <div style={{ fontSize: 9, color: C.textLo }}>{rdv.profession}</div>}
                         </div>
                         <span style={{ fontSize: 7, padding: '2px 5px', borderRadius: 3, fontWeight: 700, background: `${rdvColor}15`, color: rdvColor, border: `0.5px solid ${rdvColor}40`, textTransform: 'uppercase', flexShrink: 0 }}>
@@ -1086,12 +1113,22 @@ export default function TodayPage() {
           {/* KPI row */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8, marginBottom: 16 }}>
             {([
-              { label: 'Nouveaux contacts', value: `${contacts}/${targets.contacts}`,  sub: 'Prospects ajoutés aujourd\'hui', subColor: C.gold,    done: contacts >= targets.contacts },
-              { label: 'Appels effectués',  value: `${calls} calls`,                   sub: `Objectif ${targets.calls}/jour`, subColor: C.green,   done: calls >= targets.calls },
-              { label: 'Blocs production',  value: `${blocksCompleted}/6`,             sub: `${Math.round((blocksCompleted / 6) * 100)}% · Production normale`, subColor: C.textMid, done: blocksCompleted >= 6 },
-              { label: 'Temps productif',   value: `${blocksCompleted}×52min`,         sub: '3 blocs × 52min',               subColor: C.gold,    done: false },
-            ] as Array<{ label: string; value: string; sub: string; subColor: string; done: boolean }>).map(({ label, value, sub, subColor, done }) => (
-              <div key={label} style={{ background: C.surface1, border: `0.5px solid ${done ? subColor + '60' : C.line}`, borderRadius: 8, padding: 12 }}>
+              { label: 'Nouveaux contacts', value: `${contacts}/${targets.contacts}`,  sub: 'Prospects ajoutés aujourd\'hui', subColor: C.gold,    done: contacts >= targets.contacts, link: null },
+              { label: 'Appels effectués',  value: `${calls} calls`,                   sub: `Objectif ${targets.calls}/jour → Voir historique`, subColor: C.green,   done: calls >= targets.calls, link: '/donnees' },
+              { label: 'Blocs production',  value: `${blocksCompleted}/6`,             sub: `${Math.round((blocksCompleted / 6) * 100)}% · Production → Voir suivi hebdo`, subColor: C.textMid, done: blocksCompleted >= 6, link: '/global' },
+              { label: 'Temps productif',   value: `${blocksCompleted}×52min`,         sub: '3 blocs × 52min',               subColor: C.gold,    done: false, link: null },
+            ] as Array<{ label: string; value: string; sub: string; subColor: string; done: boolean; link: string | null }>).map(({ label, value, sub, subColor, done, link }) => (
+              <div
+                key={label}
+                onClick={link ? () => router.push(link) : undefined}
+                style={{
+                  background: C.surface1,
+                  border: `0.5px solid ${done ? subColor + '60' : C.line}`,
+                  borderRadius: 8,
+                  padding: 12,
+                  ...(link ? { cursor: 'pointer' } : {})
+                }}
+              >
                 <div style={{ fontSize: 9, color: done ? subColor : C.textMid, marginBottom: 4, fontWeight: done ? 600 : 400 }}>{label}{done ? ' 🔥' : ''}</div>
                 <div style={{ fontSize: 18, fontWeight: 700, color: C.textHi, marginBottom: 4, ...(done ? { filter: `drop-shadow(0 0 6px ${subColor}80)` } : {}) }}>{value}</div>
                 <div style={{ fontSize: 9, color: subColor }}>{sub}</div>
@@ -1256,7 +1293,17 @@ export default function TodayPage() {
                   {relancesByCol(col.key).map(rel => (
                     <div key={rel.id} style={{ background: C.bgMid, border: `0.5px solid ${C.line}`, borderRadius: 6, padding: 8, marginBottom: 6 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
-                        <div style={{ fontSize: 9, color: C.textHi, fontWeight: 600 }}>{rel.name}</div>
+                        <div
+                          onClick={() => router.push(`/crm?prospect=${rel.id}`)}
+                          style={{
+                            fontSize: 9,
+                            color: C.textHi,
+                            fontWeight: 600,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          {rel.name} →
+                        </div>
                         <PressureDots n={rel.priority} color={pressureColor[rel.priority]} />
                       </div>
                       {rel.note && <div style={{ fontSize: 7, color: C.textMid, marginBottom: 4 }}>{rel.note}</div>}
