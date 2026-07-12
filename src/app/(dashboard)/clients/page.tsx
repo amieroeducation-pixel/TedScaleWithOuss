@@ -55,9 +55,9 @@ function formatDays(days: number | null): string {
 }
 
 // ─── COMPONENTS ───────────────────────────────────────────────────────────────
-function Panel({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
+function Panel({ children, style, onClick }: { children: React.ReactNode; style?: React.CSSProperties; onClick?: () => void }) {
   return (
-    <div style={{
+    <div onClick={onClick} style={{
       background: `linear-gradient(180deg,${C.surface1},${C.bgMid})`,
       border: `1px solid ${C.line}`,
       borderRadius: 12, padding: 16,
@@ -164,13 +164,13 @@ export default function ClientsPage() {
 
       {/* KPI Row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, marginBottom: 20 }}>
-        <Panel style={{ textAlign: 'center' }}>
+        <Panel style={{ textAlign: 'center', cursor: 'pointer' }} onClick={() => router.push('/crm?stage=converti')}>
           <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.textLo, textTransform: 'uppercase', marginBottom: 6, letterSpacing: '0.1em' }}>Clients actifs</div>
-          <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 26, fontWeight: 700, color: C.textHi, lineHeight: 1 }}>{clientsResp?.count ?? 0}</div>
+          <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 26, fontWeight: 700, color: C.textHi, lineHeight: 1 }}>{clientsResp?.count ?? 0} →</div>
         </Panel>
-        <Panel style={{ textAlign: 'center' }}>
+        <Panel style={{ textAlign: 'center', cursor: 'pointer' }} onClick={() => router.push('/revenue')}>
           <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.textLo, textTransform: 'uppercase', marginBottom: 6, letterSpacing: '0.1em' }}>AUM total</div>
-          <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 26, fontWeight: 700, color: C.gold, lineHeight: 1 }}>{totalAum.toLocaleString('fr-FR')} €</div>
+          <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 26, fontWeight: 700, color: C.gold, lineHeight: 1 }}>{totalAum.toLocaleString('fr-FR')} € →</div>
         </Panel>
         <Panel style={{ textAlign: 'center' }}>
           <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.textLo, textTransform: 'uppercase', marginBottom: 6, letterSpacing: '0.1em' }}>Alertes santé</div>
@@ -204,15 +204,15 @@ export default function ClientsPage() {
                     Seuil : {a.alert_threshold_days}j
                   </div>
                 </div>
-                <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                <div onClick={() => router.push('/today?tab=relances')} style={{ textAlign: 'right', flexShrink: 0, cursor: 'pointer' }}>
                   <div style={{
                     fontSize: 13, fontWeight: 700,
                     color: a.severity === 'critical' ? C.warn : C.gold,
                   }}>
-                    {a.days_without_contact}j sans contact
+                    {a.days_without_contact}j sans contact →
                   </div>
-                  <div style={{ fontSize: 10, color: C.textLo, marginTop: 2 }}>
-                    AUM : {formatAUM(a.total_aum)}
+                  <div onClick={(e) => { e.stopPropagation(); router.push('/revenue') }} style={{ fontSize: 10, color: C.textLo, marginTop: 2, cursor: 'pointer' }}>
+                    AUM : {formatAUM(a.total_aum)} →
                   </div>
                 </div>
                 <button
@@ -332,7 +332,7 @@ export default function ClientsPage() {
                 </div>
                 <div style={{ fontSize: 11, color: C.textMid }}>{c.profession ?? '—'}</div>
                 <div style={{ fontSize: 11, color: C.textLo }}>{c.city ?? '—'}</div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: C.gold }}>{formatAUM(c.total_aum)}</div>
+                <div onClick={() => router.push('/revenue')} style={{ fontSize: 12, fontWeight: 700, color: C.gold, cursor: 'pointer' }}>{formatAUM(c.total_aum)}{c.total_aum > 0 ? ' →' : ''}</div>
                 <div style={{ fontSize: 11, color }}>
                   {formatDays(c.days_without_contact)}
                 </div>

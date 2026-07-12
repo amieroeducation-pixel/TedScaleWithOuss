@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { C } from '@/lib/theme'
 
 type Period = 'jour' | 'semaine' | 'mois'
@@ -85,10 +86,10 @@ function groupByMonth(data: DailyEntry[]): { label: string; entries: DailyEntry[
   }))
 }
 
-function KPICard({ value, label, color }: { value: string; label: string; color: string }) {
+function KPICard({ value, label, color, onClick }: { value: string; label: string; color: string; onClick?: () => void }) {
   return (
-    <div style={{ background: `linear-gradient(135deg, ${C.surface1}, ${C.bgMid})`, border: `1px solid ${C.line}`, borderRadius: 10, padding: '16px 12px', textAlign: 'center' }}>
-      <div style={{ fontSize: 28, fontWeight: 700, color, fontFamily: 'Oswald,sans-serif' }}>{value}</div>
+    <div onClick={onClick} style={{ background: `linear-gradient(135deg, ${C.surface1}, ${C.bgMid})`, border: `1px solid ${C.line}`, borderRadius: 10, padding: '16px 12px', textAlign: 'center', cursor: onClick ? 'pointer' : 'default', transition: 'transform 0.2s, border-color 0.2s', ...(onClick ? { ':hover': { transform: 'translateY(-2px)', borderColor: color } } : {}) }}>
+      <div style={{ fontSize: 28, fontWeight: 700, color, fontFamily: 'Oswald,sans-serif' }}>{value}{onClick ? ' →' : ''}</div>
       <div style={{ fontSize: 10, color: C.textLo, marginTop: 4, textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'JetBrains Mono,monospace' }}>{label}</div>
     </div>
   )
@@ -228,6 +229,7 @@ function formatMonthLabel(dateStr: string): string {
 }
 
 export default function DonneesPage() {
+  const router = useRouter()
   const [period, setPeriod] = useState<Period>('jour')
   const [selectedMetrics, setSelectedMetrics] = useState<MetricKey[]>(['appels', 'prospects', 'rdv', 'ca'])
   const [data, setData] = useState<DailyEntry[]>([])
@@ -362,14 +364,14 @@ export default function DonneesPage() {
         <>
           {/* KPI Cards */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginBottom: 24 }}>
-            <KPICard value={totalAppels.toString()} label="Appels total" color={C.gold} />
-            <KPICard value={totalProspects.toString()} label="Prospects contactés" color={C.green} />
-            <KPICard value={totalRDV.toString()} label="RDV pris" color="#60a5fa" />
-            <KPICard value={totalCA.toLocaleString('fr-FR') + '€'} label="CA généré" color={C.gold} />
-            <KPICard value={totalContrats.toString()} label="Contrats signés" color="#f59e0b" />
+            <KPICard value={totalAppels.toString()} label="Appels total" color={C.gold} onClick={() => router.push('/today')} />
+            <KPICard value={totalProspects.toString()} label="Prospects contactés" color={C.green} onClick={() => router.push('/crm')} />
+            <KPICard value={totalRDV.toString()} label="RDV pris" color="#60a5fa" onClick={() => router.push('/pipeline')} />
+            <KPICard value={totalCA.toLocaleString('fr-FR') + '€'} label="CA généré" color={C.gold} onClick={() => router.push('/revenue')} />
+            <KPICard value={totalContrats.toString()} label="Contrats signés" color="#f59e0b" onClick={() => router.push('/analytics')} />
             <KPICard value={avgAppelsJour.toString()} label="Moy. appels/jour" color={C.purple} />
             <KPICard value={totalBlocs.toString()} label="Blocs 52min" color={C.purple} />
-            <KPICard value={tauxClosing + '%'} label="Taux closing" color={C.green} />
+            <KPICard value={tauxClosing + '%'} label="Taux closing" color={C.green} onClick={() => router.push('/analytics')} />
           </div>
 
           {/* Filtres période */}
@@ -484,8 +486,9 @@ export default function DonneesPage() {
           {/* Objectifs vs Réalisé */}
           {objectives && (
             <div style={{ marginBottom: 24 }}>
-              <div style={{ fontSize: 12, color: C.gold, fontFamily: 'Oswald,sans-serif', letterSpacing: '0.08em', marginBottom: 16 }}>
-                OBJECTIFS VS RÉALISÉ — {formatMonthLabel(currentMonth).toUpperCase()}
+              <div style={{ fontSize: 12, color: C.gold, fontFamily: 'Oswald,sans-serif', letterSpacing: '0.08em', marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>OBJECTIFS VS RÉALISÉ — {formatMonthLabel(currentMonth).toUpperCase()}</span>
+                <span onClick={() => router.push('/settings?tab=kpi')} style={{ fontSize: 10, color: C.textMid, cursor: 'pointer', letterSpacing: '0.05em' }}>Modifier objectifs →</span>
               </div>
               <ObjectivesPanel objectives={objectives} />
             </div>
