@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { C } from '@/lib/theme'
+import { LinkButton, LinkChip } from '@/lib/cross-links'
 
 type ThemeId = 'decouverte' | 'prospection' | 'objections' | 'closing'
 
@@ -288,6 +289,15 @@ export default function CommercePage() {
           Ton objectif global de la journée prend en compte ce pourcentage.
         </div>
       </Panel>
+
+      {/* Navigation transversale — Commerce */}
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 32, paddingTop: 20, borderTop: `1px solid ${C.gold}20` }}>
+        <LinkButton href="/global" label="Global" color="gold" />
+        <LinkButton href="/simulator" label="Simulateur" color="cyan" />
+        <LinkButton href="/revenue" label="Revenue" color="green" />
+        <LinkChip href="/achievements" label="Achievements" color="indigo" />
+        <LinkChip href="/scoring" label="Scoring" color="purple" />
+      </div>
     </>
   )
 }

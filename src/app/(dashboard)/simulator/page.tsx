@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { C } from '@/lib/theme'
+import { LinkButton, LinkChip } from '@/lib/cross-links'
 
 type ProductId = 'av' | 'per' | 'ct' | 'capi' | 'tontine'
 
@@ -152,7 +153,49 @@ export default function SimulatorPage() {
       </div>
 
       <div style={{ textAlign: 'center' }}>
-        <button style={{ fontFamily: 'Oswald,sans-serif', fontSize: 11, fontWeight: 500, padding: '8px 20px', borderRadius: 20, background: C.gold, color: C.bgDeep, border: 'none', cursor: 'pointer', letterSpacing: '0.08em' }}>
+        <button onClick={() => {
+          const doc = `
+PRÉ-ÉTUDE PATRIMONIALE
+══════════════════════════════════════
+
+Client: ${profession}
+Revenu annuel: ${revenu}
+Tranche fiscale: ${tranche}
+Patrimoine estimé: ${patrimoine}
+Âge: ${age} ans
+
+PRODUIT RECOMMANDÉ: ${product.name}
+${product.description}
+
+SIMULATION
+─────────────────────────────────────
+Montant investi: ${fmt(montant)}
+Durée: ${duree} ans
+Taux de rendement: ${product.rate}%
+
+RÉSULTATS
+─────────────────────────────────────
+Capital final: ${fmt(results.capitalFinal)}
+Intérêts générés: ${fmt(results.interets)}
+Avantage fiscal: ${fmt(results.avantageFiscal)}
+Commission conseiller: ${fmt(results.commission)}
+
+PROJECTIONS
+─────────────────────────────────────
+${results.projections.map(p => `Année ${p.year}: ${fmt(p.capital)} (+${fmt(p.interets)})`).join('\n')}
+
+─────────────────────────────────────
+Document généré le ${new Date().toLocaleDateString('fr-FR')}
+Ted — Conseiller en Gestion de Patrimoine
+          `.trim()
+          const blob = new Blob([doc], { type: 'text/plain;charset=utf-8' })
+          const url = URL.createObjectURL(blob)
+          const a = document.createElement('a')
+          a.href = url
+          a.download = `pre-etude-${profession.toLowerCase().replace(/\s+/g, '-')}-${new Date().toISOString().slice(0,10)}.txt`
+          a.click()
+          URL.revokeObjectURL(url)
+        }} style={{ fontFamily: 'Oswald,sans-serif', fontSize: 11, fontWeight: 500, padding: '8px 20px', borderRadius: 20, background: C.gold, color: C.bgDeep, border: 'none', cursor: 'pointer', letterSpacing: '0.08em' }}>
           Générer la pré-étude PDF
         </button>
       </div>
@@ -261,6 +304,15 @@ export default function SimulatorPage() {
           </table>
         </div>
       </Panel>
+
+      {/* Navigation transversale — Simulateur */}
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 32, paddingTop: 20, borderTop: `1px solid ${C.gold}20` }}>
+        <LinkButton href="/commerce" label="Commerce" color="gold" />
+        <LinkButton href="/revenue" label="Revenue" color="green" />
+        <LinkButton href="/analytics" label="Analytics" color="cyan" />
+        <LinkChip href="/global" label="Global" color="indigo" />
+        <LinkChip href="/clients" label="Clients" color="purple" />
+      </div>
     </>
   )
 }
