@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { C } from '@/lib/theme'
 
 interface Dept {
@@ -80,6 +80,7 @@ function PanelTitle({ title, accent = C.indigo }: { title: string; accent?: stri
 }
 
 export default function MapPage() {
+  const router = useRouter()
   const searchParams = useSearchParams()
   const deptParam = searchParams.get('dept')
   const metierParam = searchParams.get('metier')
@@ -181,7 +182,12 @@ export default function MapPage() {
             <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: k.accent, opacity: 0.6 }} />
             <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.textLo, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.12em' }}>{k.label}</div>
             <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 28, fontWeight: 600, color: C.textHi, lineHeight: 1, marginBottom: 3 }}>{k.val}</div>
-            <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: k.accent }}>{k.sub}</div>
+            <div
+              style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: k.accent, cursor: 'pointer' }}
+              onClick={() => router.push('/scoring')}
+            >
+              {k.sub} <span style={{ fontSize: 6 }}>→</span>
+            </div>
           </div>
         ))}
       </div>
@@ -240,7 +246,12 @@ export default function MapPage() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginBottom: 8 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                       <span style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 7.5, color: C.textLo }}>Prospects</span>
-                      <span style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 7.5, color: C.textHi, fontWeight: 600 }}>{dept.prospects}</span>
+                      <span
+                        style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 7.5, color: C.textHi, fontWeight: 600, cursor: 'pointer' }}
+                        onClick={(e) => { e.stopPropagation(); router.push('/crm?source=tns') }}
+                      >
+                        {dept.prospects} <span style={{ color: C.cyan, fontSize: 6 }}>→</span>
+                      </span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                       <span style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 7.5, color: C.textLo }}>Contactés</span>
@@ -290,8 +301,13 @@ export default function MapPage() {
             {mapResults.map(r => (
               <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', background: C.surface2, borderRadius: 7, border: `1px solid ${C.lineSoft}` }}>
                 <div style={{ width: 30, height: 30, borderRadius: 8, background: C.surface3, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Oswald,sans-serif', fontSize: 10, color: C.green, fontWeight: 600, flexShrink: 0 }}>{r.initials}</div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 11, color: C.textHi, fontWeight: 500 }}>{r.nom}</div>
+                <div
+                  style={{ flex: 1, minWidth: 0, cursor: 'pointer' }}
+                  onClick={() => router.push('/crm')}
+                >
+                  <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 11, color: C.textHi, fontWeight: 500 }}>
+                    {r.nom} <span style={{ color: C.cyan, fontSize: 8 }}>→ CRM</span>
+                  </div>
                   <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.textLo }}>
                     {r.adresse ? r.adresse + ' · ' : ''}{r.ville}{r.codePostal ? ` (${r.codePostal})` : ''}
                   </div>

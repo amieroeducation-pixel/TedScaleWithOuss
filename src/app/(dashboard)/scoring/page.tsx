@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { C } from '@/lib/theme'
 
 type ScoreRow = { label: string; val: number }
@@ -60,13 +61,36 @@ function PanelTitle({ title }: { title: string }) {
   )
 }
 
-function StarRow({ label, val, onSet }: { label: string; val: number; onSet: (v: number) => void }) {
+function StarRow({ label, val, onSet, router }: { label: string; val: number; onSet: (v: number) => void; router: any }) {
+  const isProfession = label.toLowerCase().includes('chirurgien') || label.toLowerCase().includes('dentiste') ||
+                       label.toLowerCase().includes('médecin') || label.toLowerCase().includes('pharmacien') ||
+                       label.toLowerCase().includes('kinésithérapeute') || label.toLowerCase().includes('infirmier') ||
+                       label.toLowerCase().includes('radiologue') || label.toLowerCase().includes('sophrologue') ||
+                       label.toLowerCase().includes('ostéopathe')
+  const isZone = label.toLowerCase().includes('paris') || label.toLowerCase().includes('neuilly') ||
+                 label.toLowerCase().includes('vincennes') || label.toLowerCase().includes('versailles') ||
+                 label.toLowerCase().includes('couronne') || label.toLowerCase().includes('zone')
+
   return (
     <div style={{
       display: 'flex', alignItems: 'center', gap: 8,
       padding: '5px 0', borderBottom: `0.5px solid ${C.lineSoft}`,
     }}>
-      <div style={{ fontSize: 9, color: C.textMid, flex: 1, fontFamily: 'Inter,sans-serif' }}>{label}</div>
+      <div
+        style={{
+          fontSize: 9,
+          color: C.textMid,
+          flex: 1,
+          fontFamily: 'Inter,sans-serif',
+          cursor: (isProfession || isZone) ? 'pointer' : 'default'
+        }}
+        onClick={() => {
+          if (isProfession) router.push('/prospection/tns')
+          if (isZone) router.push('/map')
+        }}
+      >
+        {label} {(isProfession || isZone) && <span style={{ color: C.cyan, fontSize: 7 }}>→</span>}
+      </div>
       <div style={{ display: 'flex', gap: 3 }}>
         {[1, 2, 3, 4, 5].map(i => (
           <span
@@ -90,6 +114,7 @@ function StarRow({ label, val, onSet }: { label: string; val: number; onSet: (v:
 type ProspectRow = { id: string; full_name: string; profession: string | null; city: string | null; lead_score: number | null; pipeline_stage: string | null }
 
 export default function ScoringPage() {
+  const router = useRouter()
   const prof = useStarRows(PROFESSIONS)
   const zone = useStarRows(ZONES)
   const [topProspects, setTopProspects] = useState<ProspectRow[]>([])
@@ -169,8 +194,13 @@ export default function ScoringPage() {
                     padding: '6px 0', borderBottom: `0.5px solid ${C.lineSoft}`,
                   }}>
                     <span style={{ fontSize: 9, color: C.textVlo, width: 14, textAlign: 'right', fontFamily: 'JetBrains Mono,monospace' }}>{i + 1}</span>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 10, color: C.textHi, fontWeight: 600 }}>{p.full_name}</div>
+                    <div
+                      style={{ flex: 1, cursor: 'pointer' }}
+                      onClick={() => router.push('/crm')}
+                    >
+                      <div style={{ fontSize: 10, color: C.textHi, fontWeight: 600 }}>
+                        {p.full_name} <span style={{ color: C.cyan, fontSize: 8 }}>→</span>
+                      </div>
                       {(p.profession || p.city) && (
                         <div style={{ fontSize: 8, color: C.textLo }}>{[p.profession, p.city].filter(Boolean).join(' — ')}</div>
                       )}
@@ -207,7 +237,7 @@ export default function ScoringPage() {
           <PanelTitle title="Score par profession" />
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             {prof.rows.map((row, i) => (
-              <StarRow key={row.label} label={row.label} val={row.val} onSet={v => prof.setVal(i, v)} />
+              <StarRow key={row.label} label={row.label} val={row.val} onSet={v => prof.setVal(i, v)} router={router} />
             ))}
           </div>
         </Panel>
@@ -217,7 +247,7 @@ export default function ScoringPage() {
           <PanelTitle title="Score par zone" />
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             {zone.rows.map((row, i) => (
-              <StarRow key={row.label} label={row.label} val={row.val} onSet={v => zone.setVal(i, v)} />
+              <StarRow key={row.label} label={row.label} val={row.val} onSet={v => zone.setVal(i, v)} router={router} />
             ))}
           </div>
         </Panel>
