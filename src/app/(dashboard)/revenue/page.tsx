@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   LineChart,
   Line,
@@ -96,6 +97,7 @@ function BarTooltip({ active, payload, label }: any) {
 
 // --- PAGE ---
 export default function RevenuePage() {
+  const router = useRouter()
   const [stats, setStats] = useState<StatsResponse | null>(null)
   const [products, setProducts] = useState<ProductsResponse | null>(null)
   const [loading, setLoading] = useState(true)
@@ -192,10 +194,24 @@ export default function RevenuePage() {
       {/* KPI Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 20 }}>
         {/* CA mois courant */}
-        <div style={{
-          background: C.surface1, border: `1px solid ${C.line}`, borderRadius: 10, padding: '14px 16px',
-        }}>
-          <div style={{ fontSize: 10, color: C.textLo, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 1 }}>CA {currentMonthName}</div>
+        <div
+          onClick={() => router.push('/global')}
+          style={{
+            background: C.surface1, border: `1px solid ${C.line}`, borderRadius: 10, padding: '14px 16px',
+            cursor: 'pointer', transition: 'all 0.2s ease',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = C.surface2
+            e.currentTarget.style.borderColor = C.gold
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = C.surface1
+            e.currentTarget.style.borderColor = C.line
+          }}
+        >
+          <div style={{ fontSize: 10, color: C.textLo, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 1 }}>
+            CA {currentMonthName} →
+          </div>
           <div style={{ fontSize: 22, fontWeight: 700, color: C.textHi, fontFamily: 'Oswald, sans-serif' }}>
             {stats.caCurrentMonth.toLocaleString('fr-FR')} €
           </div>
@@ -247,15 +263,35 @@ export default function RevenuePage() {
         </div>
 
         {/* Contrats */}
-        <div style={{
-          background: C.surface1, border: `1px solid ${C.line}`, borderRadius: 10, padding: '14px 16px',
-        }}>
-          <div style={{ fontSize: 10, color: C.textLo, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 1 }}>Contrats perçus</div>
+        <div
+          onClick={() => router.push('/analytics')}
+          style={{
+            background: C.surface1, border: `1px solid ${C.line}`, borderRadius: 10, padding: '14px 16px',
+            cursor: 'pointer', transition: 'all 0.2s ease',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = C.surface2
+            e.currentTarget.style.borderColor = C.gold
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = C.surface1
+            e.currentTarget.style.borderColor = C.line
+          }}
+        >
+          <div style={{ fontSize: 10, color: C.textLo, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 1 }}>Contrats perçus →</div>
           <div style={{ fontSize: 22, fontWeight: 700, color: C.textHi, fontFamily: 'Oswald, sans-serif' }}>
             {stats.contractCount}
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
-            <span style={{ fontSize: 11, color: C.textLo }}>{stats.clientCount} clients</span>
+          <div
+            onClick={(e) => {
+              e.stopPropagation()
+              router.push('/clients')
+            }}
+            style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}
+          >
+            <span style={{ fontSize: 11, color: C.textLo, cursor: 'pointer', textDecoration: 'underline' }}>
+              {stats.clientCount} clients →
+            </span>
           </div>
         </div>
       </div>
@@ -278,9 +314,25 @@ export default function RevenuePage() {
           ) : (
             <>
               {products.products.map(c => (
-                <div key={c.type} style={{ marginBottom: 10 }}>
+                <div
+                  key={c.type}
+                  onClick={() => router.push(`/analytics?focus=${c.type}`)}
+                  style={{
+                    marginBottom: 10,
+                    cursor: 'pointer',
+                    padding: '4px 6px',
+                    borderRadius: 6,
+                    transition: 'background 0.2s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = C.surface2
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'transparent'
+                  }}
+                >
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                    <span style={{ fontSize: 10, color: C.text }}>{c.label}</span>
+                    <span style={{ fontSize: 10, color: C.text }}>{c.label} →</span>
                     <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
                       <span style={{ fontSize: 9, color: C.textLo }}>{c.pct}%</span>
                       <span style={{ fontSize: 10, fontWeight: 600, color: C.textHi }}>

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, Suspense } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import { C } from '@/lib/theme'
 
@@ -53,6 +53,7 @@ export default function AnalyticsPage() {
 }
 
 function AnalyticsPageContent() {
+  const router = useRouter()
   const searchParams = useSearchParams()
   const focusProduct = searchParams.get('focus')
   const [pipeline, setPipeline] = useState<PipelineResp | null>(null)
@@ -188,14 +189,27 @@ function AnalyticsPageContent() {
             </div>
 
             {/* Taux de closing global */}
-            <div style={{
-              background: C.surface1,
-              border: `1px solid ${C.line}`,
-              borderRadius: 10,
-              padding: '14px 16px',
-            }}>
+            <div
+              onClick={() => router.push('/pipeline')}
+              style={{
+                background: C.surface1,
+                border: `1px solid ${C.line}`,
+                borderRadius: 10,
+                padding: '14px 16px',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = C.surface2
+                e.currentTarget.style.borderColor = C.gold
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = C.surface1
+                e.currentTarget.style.borderColor = C.line
+              }}
+            >
               <div style={{ fontSize: 10, color: C.textLo, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 1, fontFamily: 'JetBrains Mono,monospace' }}>
-                Taux de closing global
+                Taux de closing global →
               </div>
               <div style={{ fontSize: 26, fontWeight: 700, color: C.gold, fontFamily: 'Oswald,sans-serif' }}>
                 {closing.globalClosingRate}%
@@ -226,10 +240,25 @@ function AnalyticsPageContent() {
                 const stageColor = STAGE_COLORS[stage.stage] ?? C.indigo
                 const widthPct = (stage.total / maxTotal) * 100
                 return (
-                  <div key={stage.stage}>
+                  <div
+                    key={stage.stage}
+                    onClick={() => router.push(`/crm?stage=${stage.stage}`)}
+                    style={{
+                      cursor: 'pointer',
+                      padding: '6px 8px',
+                      borderRadius: 6,
+                      transition: 'background 0.2s ease',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = C.surface2
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'transparent'
+                    }}
+                  >
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, alignItems: 'center' }}>
                       <span style={{ fontSize: 12, color: C.textHi, fontFamily: 'Inter,sans-serif' }}>
-                        {stage.label}
+                        {stage.label} →
                       </span>
                       <span style={{ fontSize: 10, color: C.textLo, fontFamily: 'JetBrains Mono,monospace' }}>
                         {stage.total} prospect{stage.total !== 1 ? 's' : ''}
@@ -310,16 +339,22 @@ function AnalyticsPageContent() {
                     cy="50%"
                     outerRadius={100}
                     innerRadius={50}
+                    onClick={(data) => {
+                      router.push('/revenue')
+                    }}
+                    style={{ cursor: 'pointer' }}
                   >
                     {closing.byProduct.map((p) => (
-                      <Cell key={p.type} fill={p.color} />
+                      <Cell key={p.type} fill={p.color} style={{ cursor: 'pointer' }} />
                     ))}
                   </Pie>
                   <Tooltip content={<ClosingTooltip />} />
                   <Legend
                     formatter={(value) => (
-                      <span style={{ color: C.textMid, fontSize: 11 }}>{value}</span>
+                      <span style={{ color: C.textMid, fontSize: 11 }}>{value} →</span>
                     )}
+                    onClick={() => router.push('/revenue')}
+                    wrapperStyle={{ cursor: 'pointer' }}
                   />
                 </PieChart>
               </ResponsiveContainer>
