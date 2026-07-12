@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { C } from '@/lib/theme'
+import { LinkButton, LinkChip } from '@/lib/cross-links'
 
 type Variant = string
 type Step = {
@@ -250,6 +251,14 @@ export default function SequencesVariantsPage() {
             </>
           )}
         </div>
+      </div>
+
+      {/* Navigation transversale — Variantes */}
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 32, paddingTop: 20, borderTop: `1px solid ${C.gold}20` }}>
+        <LinkButton href="/sequences" label="Séquences" color="gold" />
+        <LinkButton href="/settings" label="Paramètres" color="indigo" />
+        <LinkChip href="/crm" label="CRM" color="green" />
+        <LinkChip href="/automatisations" label="Automatisations" color="cyan" />
       </div>
     </div>
   )
