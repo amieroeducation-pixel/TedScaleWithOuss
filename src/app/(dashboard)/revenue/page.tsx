@@ -14,6 +14,7 @@ import {
   Bar,
 } from 'recharts'
 import { C } from '@/lib/theme'
+import { LinkButton, LinkBadge, LinkChip, buildHref } from '@/lib/cross-links'
 
 // --- TYPES ---
 type MonthlyDataPoint = {
@@ -294,6 +295,14 @@ export default function RevenuePage() {
             </span>
           </div>
         </div>
+      </div>
+
+      {/* Liens transversaux après KPI Revenue */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 20, justifyContent: 'center' }}>
+        <LinkChip href="/analytics" label="Analytics" color="indigo" />
+        <LinkChip href="/clients" label="Clients actifs" color="green" />
+        <LinkChip href="/global" label="Vue globale" color="cyan" />
+        <LinkChip href="/donnees" label="Historique" color="purple" />
       </div>
 
       {/* Row 2: Commissions + CA 6 mois (HTML-faithful bars) + Line chart */}

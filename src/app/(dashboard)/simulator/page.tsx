@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { C } from '@/lib/theme'
+import { LinkButton, LinkBadge, LinkChip, buildHref } from '@/lib/cross-links'
 
 type ProductId = 'av' | 'per' | 'ct' | 'capi' | 'tontine'
 
@@ -118,6 +119,13 @@ export default function SimulatorPage() {
         <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.textLo, marginTop: 2, paddingLeft: 13 }}>
           Calcul de projection · Hors frais de gestion annuels
         </div>
+      </div>
+
+      {/* Liens transversaux après header */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 12, justifyContent: 'center' }}>
+        <LinkChip href="/crm" label="CRM" color="gold" />
+        <LinkChip href="/commerce" label="Outils commerce" color="indigo" />
+        <LinkChip href="/scoring" label="Scoring" color="cyan" />
       </div>
 
       {/* Prospect data */}

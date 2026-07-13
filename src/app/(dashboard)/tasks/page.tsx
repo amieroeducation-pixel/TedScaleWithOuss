@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { C } from '@/lib/theme'
+import { LinkButton, LinkBadge, LinkChip, buildHref } from '@/lib/cross-links'
 
 type Filter = 'Toutes' | 'Urgentes' | 'Cette semaine' | 'Terminées'
 type KanbanCol = 'todo' | 'inprogress' | 'waiting' | 'blocked' | 'done'
@@ -374,6 +375,13 @@ export default function TasksPage() {
         >
           ➕ NOUVELLE TÂCHE
         </button>
+      </div>
+
+      {/* Liens transversaux après header */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 12, justifyContent: 'center' }}>
+        <LinkChip href="/automatisations" label="Automatisations" color="cyan" />
+        <LinkChip href="/global" label="Vue globale" color="indigo" />
+        <LinkChip href={buildHref('/today', { tab: 'prospection' })} label="Today" color="gold" />
       </div>
 
       {/* Metric row */}

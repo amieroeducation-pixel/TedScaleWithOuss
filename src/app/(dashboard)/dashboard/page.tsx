@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import { C } from '@/lib/theme'
 import { AgendaEventType, AgendaEvent, AGENDA_COLORS, loadDayAgenda, saveDayAgenda, fantasticalUrl } from '@/lib/agenda'
 import { saveLastSection } from '@/lib/navigation-state'
+import { LinkButton, LinkBadge, LinkChip, buildHref } from '@/lib/cross-links'
 
 // ---------- TYPES ----------
 type WeeklyData = {
@@ -163,6 +164,13 @@ export default function WeeklyPage() {
             <div style={{ fontSize: 10, color: m.subColor, marginTop: 4 }}>{m.sub}</div>
           </div>
         ))}
+      </div>
+
+      {/* Liens transversaux après KPI cards */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16, justifyContent: 'center' }}>
+        <LinkChip href={buildHref('/today', { tab: 'prospection' })} label="Today" color="cyan" />
+        <LinkChip href="/global" label="Vue globale" color="indigo" />
+        <LinkChip href="/revenue" label="Revenue" color="gold" />
       </div>
 
       {/* ── Two-column: Actions + Barometre ── */}

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { C } from '@/lib/theme'
+import { LinkButton, LinkBadge, LinkChip, buildHref } from '@/lib/cross-links'
 
 // ─── PRESSURE LEVEL COLORS ───────────────────────────────────────────────────
 const PRESSURE: Record<string, { border: string; dot: string; bg: string; label: string }> = {
@@ -432,6 +433,13 @@ export default function CerclePage() {
         <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 10, color: C.textLo, paddingLeft: 13 }}>
           {partners.length} partenaires clés · Vision d'ensemble · Relances & actions
         </div>
+      </div>
+
+      {/* Liens transversaux après header */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 20, justifyContent: 'center' }}>
+        <LinkChip href="/clients" label="Clients actifs" color="green" />
+        <LinkChip href="/crm" label="CRM" color="gold" />
+        <LinkChip href={buildHref('/today', { tab: 'relances' })} label="Relances" color="purple" />
       </div>
 
       {/* Tabs */}

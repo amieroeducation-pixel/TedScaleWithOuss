@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { C } from '@/lib/theme'
 import ProspectCard, { type ProspectCardData } from '@/components/prospects/ProspectCard'
 import CreateSessionModal from '@/components/calling/CreateSessionModal'
+import { LinkButton, LinkBadge, LinkChip, buildHref } from '@/lib/cross-links'
 
 // --- TYPES ---
 type ProspectStatus = 'Non contacté' | 'En cours' | 'Converti' | 'Perdu'
@@ -449,6 +450,14 @@ export default function TnsPage() {
       <div style={{ marginBottom: 14 }}>
         <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 18, fontWeight: 600, color: C.textHi, letterSpacing: '0.06em', marginBottom: 2 }}>PROSPECTION TNS</div>
         <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.textLo }}>Recherche et gestion de prospects Travailleurs Non Salariés</div>
+      </div>
+
+      {/* Liens transversaux après header */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 14, justifyContent: 'center' }}>
+        <LinkChip href={buildHref('/crm', { source: 'tns' })} label="CRM TNS" color="gold" />
+        <LinkChip href="/map" label="Carte zones" color="green" />
+        <LinkChip href="/scoring" label="Scoring" color="indigo" />
+        <LinkChip href={buildHref('/today', { tab: 'prospection' })} label="Today" color="cyan" />
       </div>
 
       {/* Stats row */}

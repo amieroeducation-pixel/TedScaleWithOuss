@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { C } from '@/lib/theme'
+import { LinkButton, LinkBadge, LinkChip, buildHref } from '@/lib/cross-links'
 
 interface Dept {
   code: string
@@ -79,7 +80,7 @@ function PanelTitle({ title, accent = C.indigo }: { title: string; accent?: stri
   )
 }
 
-export default function MapPage() {
+function MapPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const deptParam = searchParams.get('dept')
@@ -168,6 +169,13 @@ export default function MapPage() {
             {METIERS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
           </select>
         </div>
+      </div>
+
+      {/* Liens transversaux après header */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 12, justifyContent: 'center' }}>
+        <LinkChip href="/scoring" label="Scoring" color="gold" />
+        <LinkChip href={buildHref('/crm', { source: 'tns' })} label="CRM TNS" color="indigo" />
+        <LinkChip href="/prospection/tns" label="Prospection API" color="cyan" />
       </div>
 
       {/* Zone Stats */}
@@ -368,5 +376,13 @@ export default function MapPage() {
         </div>
       </Panel>
     </>
+  )
+}
+
+export default function MapPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: '24px 0', textAlign: 'center', color: '#8991a0', fontSize: 12 }}>Chargement...</div>}>
+      <MapPageContent />
+    </Suspense>
   )
 }

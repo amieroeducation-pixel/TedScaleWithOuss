@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { C } from '@/lib/theme'
+import { LinkButton, LinkBadge, LinkChip, buildHref } from '@/lib/cross-links'
 
 // ─── TYPES ────────────────────────────────────────────────────────────────────
 type ClientRow = {
@@ -80,7 +81,7 @@ function PanelTitle({ title, accent = C.cyan }: { title: string; accent?: string
 }
 
 // ─── PAGE ─────────────────────────────────────────────────────────────────────
-export default function ClientsPage() {
+function ClientsPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const sortParam = searchParams.get('sort') as 'aum' | 'days' | 'name' | null
@@ -184,6 +185,14 @@ export default function ClientsPage() {
             )}
           </div>
         </Panel>
+      </div>
+
+      {/* Liens transversaux après KPI Clients */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 20, justifyContent: 'center' }}>
+        <LinkChip href="/revenue" label="CA & Commissions" color="gold" />
+        <LinkChip href="/analytics" label="Analytics" color="indigo" />
+        <LinkChip href={buildHref('/today', { tab: 'relances' })} label="Relances" color="purple" />
+        <LinkChip href={buildHref('/crm', { stage: 'converti' })} label="CRM Convertis" color="green" />
       </div>
 
       {/* Section alertes Client Health */}
@@ -411,5 +420,13 @@ export default function ClientsPage() {
         </div>
       )}
     </>
+  )
+}
+
+export default function ClientsPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: '24px 0', textAlign: 'center', color: '#8991a0', fontSize: 12 }}>Chargement...</div>}>
+      <ClientsPageContent />
+    </Suspense>
   )
 }

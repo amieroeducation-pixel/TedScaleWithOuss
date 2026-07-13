@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 import { C } from '@/lib/theme'
 import { useUserSettings, UserSettings } from '@/hooks/useUserSettings'
+import { LinkButton, LinkBadge, LinkChip, buildHref } from '@/lib/cross-links'
 
 type Tab = 'general' | 'kpi' | 'notifications' | 'integrations' | 'sections' | 'mobile' | 'sequences' | 'variantes' | 'triggers' | 'scripts'
 
@@ -1959,6 +1960,13 @@ export default function SettingsPage() {
         >
           💾 Enregistrer
         </button>
+      </div>
+
+      {/* Liens transversaux après header */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16, justifyContent: 'center' }}>
+        <LinkChip href="/sequences" label="Séquences" color="purple" />
+        <LinkChip href="/automatisations" label="Automatisations" color="cyan" />
+        <LinkChip href="/scoring" label="Scoring" color="gold" />
       </div>
 
       {/* Tabs */}

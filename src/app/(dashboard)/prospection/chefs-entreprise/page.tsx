@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { C } from '@/lib/theme'
 import ProspectCard, { type ProspectCardData } from '@/components/prospects/ProspectCard'
+import { LinkButton, LinkBadge, LinkChip, buildHref } from '@/lib/cross-links'
 
 type MainTab = 'portefeuille' | 'acquisition'
 type AcqTab = 'pipeline' | 'tableau' | 'prospection'
@@ -273,6 +274,13 @@ export default function ChefsEntreprisePage() {
             </button>
           )
         })}
+      </div>
+
+      {/* Liens transversaux après tabs */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 14, justifyContent: 'center' }}>
+        <LinkChip href={buildHref('/crm', { source: 'chefs_entreprise' })} label="CRM Chefs" color="gold" />
+        <LinkChip href={buildHref('/today', { tab: 'prospection' })} label="Today" color="cyan" />
+        <LinkChip href="/scoring" label="Scoring" color="indigo" />
       </div>
 
       {/* PORTEFEUILLE TAB */}

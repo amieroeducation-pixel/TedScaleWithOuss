@@ -2,13 +2,14 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { C } from '@/lib/theme'
 import { AgendaEventType, AgendaEvent, AGENDA_COLORS, loadDayAgenda, saveDayAgenda, todayDateKey, fantasticalUrl } from '@/lib/agenda'
 import { saveLastSection } from '@/lib/navigation-state'
 import CallingSessionPanel from '@/components/calling/CallingSessionPanel'
 import { useCelebrations } from '@/hooks/useCelebrations'
+import { LinkButton, LinkBadge, LinkChip, LinkInline, buildHref } from '@/lib/cross-links'
 
 // ─── Objectifs du jour ────────────────────────────────────────────────────────
 interface TodayTargets { contacts: number; calls: number; rdv1: number; rdv2: number }
@@ -540,7 +541,7 @@ function VideoPlayer() {
 }
 
 // ─── Main page ────────────────────────────────────────────────────────────
-export default function TodayPage() {
+function TodayPageContent() {
   const { celebrate } = useCelebrations()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -1136,6 +1137,13 @@ export default function TodayPage() {
             ))}
           </div>
 
+          {/* Liens transversaux après KPI cards */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 16, justifyContent: 'center' }}>
+            <LinkChip href="/donnees" label="Historique" color="indigo" />
+            <LinkChip href={buildHref('/crm', { stage: 'rdv1' })} label="Kanban" color="gold" />
+            <LinkChip href="/global" label="Suivi hebdo" color="green" />
+          </div>
+
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
 
             {/* LEFT COLUMN */}
@@ -1267,6 +1275,13 @@ export default function TodayPage() {
               onClick={() => setShowRelanceModal(true)}
               style={{ marginLeft: 12, padding: '6px 14px', background: '#0d1f0f', border: `1px solid ${C.green}`, color: C.green, borderRadius: 6, fontSize: 9, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}
             >➕ Nouvelle relance</button>
+          </div>
+
+          {/* Liens transversaux après KPI relances */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 10, justifyContent: 'center' }}>
+            <LinkChip href={buildHref('/crm', { source: 'relances' })} label="Kanban CRM" color="gold" />
+            <LinkChip href="/sequences" label="Séquences" color="purple" />
+            <LinkChip href="/clients" label="Alertes santé" color="green" />
           </div>
 
           {/* Pressure legend */}
@@ -1538,5 +1553,13 @@ export default function TodayPage() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function TodayPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: '24px 0', textAlign: 'center', color: '#8991a0', fontSize: 12 }}>Chargement...</div>}>
+      <TodayPageContent />
+    </Suspense>
   )
 }

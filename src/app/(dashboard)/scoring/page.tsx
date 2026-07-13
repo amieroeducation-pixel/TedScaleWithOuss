@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { C } from '@/lib/theme'
+import { LinkButton, LinkBadge, LinkChip, buildHref } from '@/lib/cross-links'
 
 type ScoreRow = { label: string; val: number }
 
@@ -177,6 +178,13 @@ export default function ScoringPage() {
       {/* Intro description */}
       <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.textLo, marginBottom: 14, lineHeight: 1.6 }}>
         Score = moyenne(profession + zone). Modifiable à la volée, le Kanban se met à jour automatiquement.
+      </div>
+
+      {/* Liens transversaux après header */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 14, justifyContent: 'center' }}>
+        <LinkChip href={buildHref('/crm', { sort: 'score_desc' })} label="Kanban CRM" color="gold" />
+        <LinkChip href="/map" label="Carte zones" color="green" />
+        <LinkChip href="/prospection/tns" label="Prospection TNS" color="indigo" />
       </div>
 
       {/* Top prospects scorés */}

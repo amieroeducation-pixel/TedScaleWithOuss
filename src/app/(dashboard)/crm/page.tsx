@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import {
@@ -24,6 +24,7 @@ import { openWhatsApp, openLinkedIn } from '@/lib/sequences/client-actions'
 import ProspectEditForm from '@/components/prospects/ProspectEditForm'
 import { saveLastSection } from '@/lib/navigation-state'
 import { detectCivilite } from '@/lib/civilite'
+import { LinkButton, LinkBadge, LinkChip, buildHref } from '@/lib/cross-links'
 
 // --- TYPES ---
 type Stage = 'À contacter' | 'RDV1' | 'RDV2' | 'RDV3' | 'Converti' | 'Perdu'
@@ -884,7 +885,7 @@ function KanbanColumn({ stage, prospects, onCardClick }: {
 }
 
 // --- PAGE ---
-export default function CrmPage() {
+function CrmPageContent() {
   const [prospects, setProspects] = useState<Prospect[]>([])
   const [activeId, setActiveId] = useState<string | null>(null)
   const [selectedProspect, setSelectedProspect] = useState<Prospect | null>(null)
@@ -1164,6 +1165,14 @@ export default function CrmPage() {
             <div style={{ fontSize: 9, color: C.textLo, marginTop: 4, textTransform: 'uppercase', letterSpacing: 1 }}>{k.label}</div>
           </div>
         ))}
+      </div>
+
+      {/* Liens transversaux après KPI CRM */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 14, justifyContent: 'center' }}>
+        <LinkChip href={buildHref('/today', { tab: 'prospection' })} label="Priorités du jour" color="cyan" />
+        <LinkChip href={buildHref('/today', { tab: 'relances' })} label="Relances actives" color="purple" />
+        <LinkChip href="/scoring" label="Scoring" color="gold" />
+        <LinkChip href="/map" label="Carte zones" color="green" />
       </div>
 
       {/* Loading / Error states */}
@@ -1773,5 +1782,13 @@ export default function CrmPage() {
         </div>
       )}
     </>
+  )
+}
+
+export default function CrmPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: '24px 0', textAlign: 'center', color: '#8991a0', fontSize: 12 }}>Chargement...</div>}>
+      <CrmPageContent />
+    </Suspense>
   )
 }

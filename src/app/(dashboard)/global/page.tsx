@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { C } from '@/lib/theme'
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import { saveLastSection } from '@/lib/navigation-state'
+import { LinkButton, LinkBadge, LinkChip } from '@/lib/cross-links'
 
 type GlobalKpi = {
   tasks: { done_today: number; active: number; high_priority_remaining: number; this_week: number; total: number }
@@ -696,6 +697,13 @@ export default function GlobalPage() {
               </div>
             )
           })()}
+
+          {/* Liens transversaux après KPI cards */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 16, justifyContent: 'center' }}>
+            <LinkChip href="/revenue" label="CA & Revenue" color="gold" />
+            <LinkChip href="/donnees" label="Historique" color="indigo" />
+            <LinkChip href="/analytics" label="Analytics" color="cyan" />
+          </div>
 
           {/* 4 Pillars */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 12, marginBottom: 20 }}>

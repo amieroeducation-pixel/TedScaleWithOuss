@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { C } from '@/lib/theme'
 import type { Achievement } from '@/types/achievements'
+import { LinkButton, LinkBadge, LinkChip, buildHref } from '@/lib/cross-links'
 
 const TYPE_CONFIG: Record<string, { icon: string; color: string; bg: string }> = {
   ca_monthly: {
@@ -64,6 +65,13 @@ export default function AchievementsPage() {
             ? `${achievements.length} objectif${achievements.length > 1 ? 's' : ''} atteint${achievements.length > 1 ? 's' : ''}`
             : 'Vos badges et célébrations apparaîtront ici'}
         </p>
+      </div>
+
+      {/* Liens transversaux après header */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 32, justifyContent: 'center' }}>
+        <LinkChip href="/revenue" label="CA & Revenue" color="gold" />
+        <LinkChip href="/clients" label="Clients" color="green" />
+        <LinkChip href="/settings" label="Paramètres" color="indigo" />
       </div>
 
       {/* État chargement */}

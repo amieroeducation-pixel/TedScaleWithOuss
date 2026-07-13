@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import { C } from '@/lib/theme'
+import { LinkButton, LinkBadge, LinkChip, buildHref } from '@/lib/cross-links'
 
 // --- Types ---
 type StageRow = { stage: string; label: string; total: number; conversion_rate_pct: number }
@@ -218,6 +219,14 @@ function AnalyticsPageContent() {
                 convertis / (convertis + perdus)
               </div>
             </div>
+          </div>
+
+          {/* Liens transversaux après KPI Analytics */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 20, justifyContent: 'center' }}>
+            <LinkChip href="/revenue" label="CA & Commissions" color="gold" />
+            <LinkChip href="/clients" label="Clients actifs" color="green" />
+            <LinkChip href={buildHref('/crm', { stage: 'converti' })} label="Convertis CRM" color="cyan" />
+            <LinkChip href="/pipeline" label="Pipeline" color="indigo" />
           </div>
 
           {/* Section 2 : Conversion par etape pipeline (DATA-08) */}

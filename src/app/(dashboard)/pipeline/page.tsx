@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import { C } from '@/lib/theme'
+import { LinkButton, LinkBadge, LinkChip, buildHref } from '@/lib/cross-links'
 
 type PipelineStage = {
   stage: string
@@ -154,6 +155,13 @@ export default function PipelinePage() {
         <div style={{ fontSize: 11, color: C.textLo, marginTop: 4 }}>
           Funnel de conversion, taux de closing et performance par étape
         </div>
+      </div>
+
+      {/* Liens transversaux après header */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 20, justifyContent: 'center' }}>
+        <LinkChip href="/analytics" label="Analytics" color="indigo" />
+        <LinkChip href={buildHref('/crm', { stage: 'rdv1' })} label="RDV actifs" color="gold" />
+        <LinkChip href="/revenue" label="Revenue" color="cyan" />
       </div>
 
       {/* KPI row */}

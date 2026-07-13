@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { C } from '@/lib/theme'
+import { LinkButton, LinkBadge, LinkChip, LinkInline, buildHref } from '@/lib/cross-links'
 
 type StepType = 'mail' | 'wa' | 'sms' | 'li'
 
@@ -239,7 +240,11 @@ function SeqCard({ seq }: { seq: Sequence }) {
             borderLeft: `3px solid ${C.indigo}`, borderRadius: 8,
           }}>
             <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.indigo, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Cas d&apos;usage</div>
-            <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.textMid, lineHeight: 1.6 }}>{seq.usecase}</div>
+            <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.textMid, lineHeight: 1.6 }}>
+              {seq.usecase}
+              {seq.id === 'premier-contact' && <span style={{ marginLeft: 8 }}><LinkInline href={buildHref('/crm', { stage: 'a_contacter' })} label="Voir prospects" color="gold" /></span>}
+              {seq.id === 'rdv-suivi' && <span style={{ marginLeft: 8 }}><LinkInline href={buildHref('/crm', { stage: 'rdv1' })} label="RDV actifs" color="cyan" /></span>}
+            </div>
           </div>
 
           {/* Step detail rows */}
@@ -338,6 +343,14 @@ export default function SequencesPage() {
         >
           + CRÉER SÉQUENCE
         </button>
+      </div>
+
+      {/* Liens transversaux après header */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16, justifyContent: 'center' }}>
+        <LinkChip href="/automatisations" label="Automatisations" color="cyan" />
+        <LinkChip href="/settings" label="Paramètres" color="indigo" />
+        <LinkChip href={buildHref('/today', { tab: 'relances' })} label="Relances actives" color="purple" />
+        <LinkChip href="/crm" label="CRM" color="gold" />
       </div>
 
       {/* Channel legend */}

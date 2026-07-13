@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { C } from '@/lib/theme'
+import { LinkButton, LinkBadge, LinkChip, buildHref } from '@/lib/cross-links'
 
 type Period = 'jour' | 'semaine' | 'mois'
 type MetricKey = 'appels' | 'prospects' | 'rdv' | 'blocs' | 'relances' | 'contrats' | 'ca'
@@ -320,6 +321,13 @@ export default function DonneesPage() {
             Export Excel
           </button>
         </div>
+      </div>
+
+      {/* Liens transversaux après header */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 20, justifyContent: 'center' }}>
+        <LinkChip href="/global" label="Vue globale" color="cyan" />
+        <LinkChip href="/revenue" label="CA & Revenue" color="gold" />
+        <LinkChip href={buildHref('/today', { tab: 'prospection' })} label="Prospection jour" color="indigo" />
       </div>
 
       {/* Month Navigation */}

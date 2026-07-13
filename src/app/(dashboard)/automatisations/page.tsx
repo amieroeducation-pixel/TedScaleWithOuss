@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { C } from '@/lib/theme'
+import { LinkButton, LinkBadge, LinkChip, LinkInline, buildHref } from '@/lib/cross-links'
 
 interface Automation {
   id: string
@@ -158,6 +159,13 @@ export default function AutomatisationsPage() {
         </div>
       </div>
 
+      {/* Liens transversaux après header */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16, justifyContent: 'center' }}>
+        <LinkChip href="/sequences" label="Séquences" color="purple" />
+        <LinkChip href="/settings" label="Paramètres" color="indigo" />
+        <LinkChip href="/tasks" label="Tâches" color="cyan" />
+      </div>
+
       {/* KPIs */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10, marginBottom: 16 }}>
         {[
@@ -198,7 +206,13 @@ export default function AutomatisationsPage() {
               {/* Name + desc */}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 11, fontWeight: 600, color: C.textHi }}>{auto.name}</div>
-                <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.textLo, marginTop: 3 }}>{auto.desc}</div>
+                <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.textLo, marginTop: 3 }}>
+                  {auto.desc}
+                  {auto.id === 'client-health' && <span style={{ marginLeft: 6 }}><LinkInline href="/clients" label="Clients" color="green" /></span>}
+                  {auto.id === 'weekly-report' && <span style={{ marginLeft: 6 }}><LinkInline href="/dashboard" label="Dashboard" color="gold" /></span>}
+                  {auto.id === 'rdv-reminder' && <span style={{ marginLeft: 6 }}><LinkInline href="/pipeline" label="Pipeline" color="cyan" /></span>}
+                  {auto.id === 'revenue-alert' && <span style={{ marginLeft: 6 }}><LinkInline href="/revenue" label="Revenue" color="gold" /></span>}
+                </div>
               </div>
               {/* Status badge */}
               <span style={{
