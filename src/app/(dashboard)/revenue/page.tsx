@@ -14,6 +14,7 @@ import {
   Bar,
 } from 'recharts'
 import { C } from '@/lib/theme'
+import { LinkButton, LinkChip } from '@/lib/cross-links'
 
 // --- TYPES ---
 type MonthlyDataPoint = {
@@ -188,6 +189,12 @@ export default function RevenuePage() {
         </div>
         <div style={{ fontSize: 11, color: C.textLo, marginTop: 4 }}>
           Commissions, CA mensuel et performance par produit
+        </div>
+        <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
+          <LinkChip href="/analytics" label="Taux conversion" color="green" />
+          <LinkChip href="/clients" label="Clients" color="gold" />
+          <LinkChip href="/pipeline" label="Pipeline" color="indigo" />
+          <LinkChip href="/donnees" label="Données" color="cyan" />
         </div>
       </div>
 

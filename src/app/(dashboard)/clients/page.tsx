@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { C } from '@/lib/theme'
+import { LinkChip } from '@/lib/cross-links'
 
 // ─── TYPES ────────────────────────────────────────────────────────────────────
 type ClientRow = {
@@ -167,6 +168,12 @@ function ClientsPageContent() {
         </div>
         <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 10, color: C.textLo, paddingLeft: 13 }}>
           Suivi portefeuille — alertes contacts, AUM, santé client
+        </div>
+        <div style={{ display: 'flex', gap: 6, marginTop: 8, paddingLeft: 13, flexWrap: 'wrap' }}>
+          <LinkChip href="/revenue" label="Revenue" color="gold" />
+          <LinkChip href="/cercle" label="Réseau" color="purple" />
+          <LinkChip href="/today" label="Relances" color="cyan" params={{ tab: 'relances' }} />
+          <LinkChip href="/sequences" label="Séquences" color="green" />
         </div>
       </div>
 

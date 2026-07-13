@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import { C } from '@/lib/theme'
+import { LinkChip } from '@/lib/cross-links'
 
 // --- Types ---
 type StageRow = { stage: string; label: string; total: number; conversion_rate_pct: number }
@@ -108,6 +109,12 @@ function AnalyticsPageContent() {
         </div>
         <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.textLo, paddingLeft: 11 }}>
           Conversion pipeline &amp; taux de closing
+        </div>
+        <div style={{ display: 'flex', gap: 6, marginTop: 8, paddingLeft: 11, flexWrap: 'wrap' }}>
+          <LinkChip href="/revenue" label="Revenue" color="gold" />
+          <LinkChip href="/pipeline" label="Pipeline" color="indigo" />
+          <LinkChip href="/crm" label="CRM" color="gold" />
+          <LinkChip href="/donnees" label="Historique" color="cyan" />
         </div>
       </div>
 
