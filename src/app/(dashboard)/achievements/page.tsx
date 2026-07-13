@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { C } from '@/lib/theme'
 import type { Achievement } from '@/types/achievements'
 
@@ -31,6 +32,7 @@ function isRecent(iso: string): boolean {
 }
 
 export default function AchievementsPage() {
+  const router = useRouter()
   const [achievements, setAchievements] = useState<Achievement[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -59,9 +61,12 @@ export default function AchievementsPage() {
         }}>
           Mes Succès
         </h1>
-        <p style={{ fontSize: 13, color: C.textMid }}>
+        <p
+          style={{ fontSize: 13, color: C.textMid, cursor: achievements.length > 0 ? 'pointer' : 'default' }}
+          onClick={() => achievements.length > 0 && router.push('/global')}
+        >
           {achievements.length > 0
-            ? `${achievements.length} objectif${achievements.length > 1 ? 's' : ''} atteint${achievements.length > 1 ? 's' : ''}`
+            ? `${achievements.length} objectif${achievements.length > 1 ? 's' : ''} atteint${achievements.length > 1 ? 's' : ''} →`
             : 'Vos badges et célébrations apparaîtront ici'}
         </p>
       </div>
@@ -101,6 +106,13 @@ export default function AchievementsPage() {
             return (
               <div
                 key={a.id}
+                onClick={() => {
+                  if (a.achievement_type === 'ca_monthly') {
+                    router.push('/revenue')
+                  } else if (a.achievement_type === 'clients_milestone') {
+                    router.push('/clients')
+                  }
+                }}
                 style={{
                   display: 'flex',
                   alignItems: 'flex-start',
@@ -112,6 +124,7 @@ export default function AchievementsPage() {
                   position: 'relative',
                   boxShadow: recent ? `0 0 12px ${cfg.color}22` : 'none',
                   transition: 'border-color 0.2s',
+                  cursor: 'pointer',
                 }}
               >
                 {/* Icône */}
@@ -140,7 +153,7 @@ export default function AchievementsPage() {
                       fontFamily: "'Oswald', sans-serif",
                       letterSpacing: '0.02em',
                     }}>
-                      {a.label}
+                      {a.label} →
                     </span>
                     {recent && (
                       <span style={{

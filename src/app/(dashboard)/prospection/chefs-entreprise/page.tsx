@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { C } from '@/lib/theme'
 import ProspectCard, { type ProspectCardData } from '@/components/prospects/ProspectCard'
 
@@ -97,11 +98,11 @@ function ActionBtn({ type }: { type: string }) {
   )
 }
 
-function PipelineCard({ nom, siret, info, score, scoreColor, scoreBg, urgence, borderColor }: {
-  nom: string; siret: string; info: string; score: number; scoreColor: string; scoreBg: string; urgence?: boolean; borderColor: string
+function PipelineCard({ nom, siret, info, score, scoreColor, scoreBg, urgence, borderColor, signal, onClick }: {
+  nom: string; siret: string; info: string; score: number; scoreColor: string; scoreBg: string; urgence?: boolean; borderColor: string; signal: string; onClick?: () => void
 }) {
   return (
-    <div style={{ background: C.surface1, borderRadius: 7, padding: 9, marginBottom: 6, borderLeft: `3px solid ${borderColor}`, cursor: 'pointer', position: 'relative' }}>
+    <div onClick={onClick} style={{ background: C.surface1, borderRadius: 7, padding: 9, marginBottom: 6, borderLeft: `3px solid ${borderColor}`, cursor: 'pointer', position: 'relative' }}>
       {urgence && (
         <div style={{ position: 'absolute', top: 5, right: 5, background: C.cyan, color: '#fff', padding: '1px 5px', borderRadius: 6, fontSize: 7, fontWeight: 700 }}>⚡ 48H</div>
       )}
@@ -116,6 +117,7 @@ function PipelineCard({ nom, siret, info, score, scoreColor, scoreBg, urgence, b
 }
 
 export default function ChefsEntreprisePage() {
+  const router = useRouter()
   const [mainTab, setMainTab] = useState<MainTab>('portefeuille')
   const [acqTab, setAcqTab] = useState<AcqTab>('pipeline')
   const [showForm, setShowForm] = useState(false)
@@ -281,12 +283,12 @@ export default function ChefsEntreprisePage() {
           {/* KPIs */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10 }}>
             {[
-              { label: 'Contacts', val: stats.contacts, sub: 'Base clients', accent: C.indigo },
-              { label: 'En cours', val: stats.enCours, sub: 'Prospection', accent: C.gold },
-              { label: 'Convertis', val: stats.convertis, sub: 'Clients actifs', accent: C.green },
-              { label: 'AUM Total', val: stats.aum, sub: 'Non disponible', accent: C.cyan },
+              { label: 'Contacts', val: stats.contacts, sub: 'Base clients →', accent: C.indigo, link: '/crm?source=chefs_entreprise' },
+              { label: 'En cours', val: stats.enCours, sub: 'Prospection →', accent: C.gold, link: '/pipeline?source=chefs_entreprise' },
+              { label: 'Convertis', val: stats.convertis, sub: 'Clients actifs →', accent: C.green, link: '/clients' },
+              { label: 'AUM Total', val: stats.aum, sub: 'Revenues →', accent: C.cyan, link: '/revenue' },
             ].map(k => (
-              <div key={k.label} style={{ background: `linear-gradient(180deg,${C.surface2},${C.surface1})`, border: `1px solid ${C.line}`, borderRadius: 10, padding: '12px 14px', position: 'relative', overflow: 'hidden' }}>
+              <div key={k.label} onClick={() => router.push(k.link)} style={{ background: `linear-gradient(180deg,${C.surface2},${C.surface1})`, border: `1px solid ${C.line}`, borderRadius: 10, padding: '12px 14px', position: 'relative', overflow: 'hidden', cursor: 'pointer' }}>
                 <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: k.accent, opacity: 0.55 }} />
                 <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 7.5, color: C.textLo, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.12em' }}>{k.label}</div>
                 <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 26, fontWeight: 600, color: C.textHi, lineHeight: 1, marginBottom: 2 }}>{k.val}</div>
@@ -380,7 +382,10 @@ export default function ChefsEntreprisePage() {
                         {initials}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 13, color: C.textHi, fontWeight: 500, marginBottom: 2 }}>{chef.full_name}</div>
+                        <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 13, color: C.textHi, fontWeight: 500, marginBottom: 2, display: 'flex', alignItems: 'center', gap: 6 }}>
+                          {chef.full_name}
+                          <span onClick={(e) => { e.stopPropagation(); router.push(`/crm?source=chefs_entreprise`) }} style={{ fontSize: 8, color: C.indigo, textDecoration: 'underline', cursor: 'pointer' }}>→ CRM</span>
+                        </div>
                         <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.textLo }}>
                           {[chef.company, chef.city].filter(Boolean).join(' · ')}
                           {chef.phone && <> · <a href={`tel:${chef.phone}`} onClick={e => e.stopPropagation()} style={{ color: C.gold, textDecoration: 'none' }}>{chef.phone}</a></>}
@@ -461,6 +466,8 @@ export default function ChefsEntreprisePage() {
                         scoreBg={lead.scoreColor + '15'}
                         urgence={lead.urgence}
                         borderColor={col.color}
+                        signal={lead.signal}
+                        onClick={() => router.push(`/crm?source=chefs_entreprise&signal=${lead.signal}`)}
                       />
                     ))
                   )}
@@ -494,7 +501,7 @@ export default function ChefsEntreprisePage() {
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 11, color: C.textHi, fontWeight: 600, marginBottom: 1 }}>{lead.nom}</div>
                         <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.textLo }}>
-                          {lead.forme} · {lead.ville}{lead.codePostal ? ` (${lead.codePostal})` : ''}{lead.dateCreation ? ` · Créé ${new Date(lead.dateCreation).toLocaleDateString('fr-FR')}` : ''}
+                          {lead.forme} · <span onClick={(e) => { e.stopPropagation(); router.push(`/map?ville=${encodeURIComponent(lead.ville)}`) }} style={{ color: C.indigo, textDecoration: 'underline', cursor: 'pointer' }}>{lead.ville}</span>{lead.codePostal ? ` (${lead.codePostal})` : ''}{lead.dateCreation ? ` · Créé ${new Date(lead.dateCreation).toLocaleDateString('fr-FR')}` : ''}
                         </div>
                       </div>
                       <span style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, padding: '2px 7px', borderRadius: 6, background: lead.scoreColor + '20', color: lead.scoreColor, border: `1px solid ${lead.scoreColor}40`, whiteSpace: 'nowrap' as const }}>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { C } from '@/lib/theme'
 import { type SessionContact } from './SessionContactList'
 
@@ -31,6 +31,11 @@ export default function SessionContactCard({ contact, script, objections, onUpda
   const [scriptOpen, setScriptOpen] = useState(true)
   const [objectionsOpen, setObjectionsOpen] = useState(true)
   const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    setNote(contact.note ?? '')
+    setRappelDate(contact.rappel_date?.split('T')[0] ?? '')
+  }, [contact.id, contact.note, contact.rappel_date])
 
   async function setStatut(statut_appel: SessionContact['statut_appel']) {
     setSaving(true)
@@ -76,12 +81,22 @@ export default function SessionContactCard({ contact, script, objections, onUpda
         )}
         <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.textLo }}>{contact.metier} · {contact.ville}</div>
 
-        <a
-          href={`tel:${contact.telephone}`}
-          style={{ display: 'inline-block', marginTop: 8, fontFamily: 'JetBrains Mono,monospace', fontSize: 13, fontWeight: 700, color: C.green, textDecoration: 'none', padding: '5px 12px', background: '#0a1f0a', borderRadius: 6, border: `1px solid ${C.green}40` }}
-        >
-          📞 {contact.telephone}
-        </a>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8, flexWrap: 'wrap' }}>
+          <a
+            href={`tel:${contact.telephone}`}
+            style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 13, fontWeight: 700, color: C.green, textDecoration: 'none', padding: '5px 12px', background: '#0a1f0a', borderRadius: 6, border: `1px solid ${C.green}40` }}
+          >
+            📞 {contact.telephone}
+          </a>
+          <a
+            href={`https://www.google.com/search?q=${encodeURIComponent(contact.nom + ' ' + (contact.metier || '') + ' ' + (contact.ville || ''))}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.indigo, textDecoration: 'none', padding: '4px 8px', background: `${C.indigo}15`, borderRadius: 5, border: `1px solid ${C.indigo}30` }}
+          >
+            🔍 Vérifier Google
+          </a>
+        </div>
       </div>
 
       {/* Statuts */}

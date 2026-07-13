@@ -395,7 +395,12 @@ function SuiviTabContent() {
       {!loading && kpiData && !kpiData.has_objectives && (
         <div style={{ background: '#1a1400', border: `1px solid ${C.gold}40`, borderRadius: 8, padding: 16, marginBottom: 16 }}>
           <div style={{ fontSize: 10, color: C.gold, fontWeight: 600, marginBottom: 6 }}>⚠️ Objectifs non configurés</div>
-          <div style={{ fontSize: 9, color: C.textMid }}>Configure tes objectifs annuels dans l'onglet "Rétro Planning" pour voir la comparaison.</div>
+          <div style={{ fontSize: 9, color: C.textMid }}>
+            Configure tes objectifs annuels dans l'onglet "Rétro Planning" pour voir la comparaison.{' '}
+            <span onClick={() => router.push('/settings?tab=kpi')} style={{ color: C.gold, cursor: 'pointer', fontWeight: 600, textDecoration: 'underline' }}>
+              Modifier les KPI →
+            </span>
+          </div>
         </div>
       )}
 
@@ -716,9 +721,9 @@ export default function GlobalPage() {
                       <div style={{ background: C.green, height: '100%', width: `${pct}%`, transition: 'width 0.3s' }} />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div onClick={() => router.push('/prospection/tns')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
                         <div style={{ fontSize: 9, color: C.textMid }}>Appels + Contacts auj.</div>
-                        <div style={{ fontSize: 10, color: C.textHi, fontWeight: 600 }}>{contactsVal}<span style={{ color: C.textLo }}>/{TARGET_CONTACTS}</span></div>
+                        <div style={{ fontSize: 10, color: C.textHi, fontWeight: 600 }}>{contactsVal}<span style={{ color: C.textLo }}>/{TARGET_CONTACTS}</span> →</div>
                       </div>
                       {kpi && (
                         <div onClick={() => router.push('/pipeline?stage=rdv1')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
@@ -760,6 +765,10 @@ export default function GlobalPage() {
                       <div onClick={() => router.push('/cercle')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
                         <div style={{ fontSize: 9, color: C.textMid }}>Partenaires actifs</div>
                         <div style={{ fontSize: 10, color: C.gold, fontWeight: 600 }}>{interproCount}<span style={{ color: C.textLo }}>/{TARGET_INTERPRO}</span> →</div>
+                      </div>
+                      <div onClick={() => router.push('/cercle')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
+                        <div style={{ fontSize: 9, color: C.textMid }}>Réseau interpro</div>
+                        <div style={{ fontSize: 9, color: C.gold, fontWeight: 500 }}>Voir le cercle →</div>
                       </div>
                       <div onClick={() => router.push('/clients')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
                         <div style={{ fontSize: 9, color: C.textMid }}>Dernier contact</div>
@@ -832,6 +841,10 @@ export default function GlobalPage() {
                       <div onClick={() => router.push('/pipeline')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
                         <div style={{ fontSize: 9, color: C.textMid }}>Contrats ce mois</div>
                         <div style={{ fontSize: 10, color: '#b07aee', fontWeight: 600 }}>{commerce?.contracts ?? 0} →</div>
+                      </div>
+                      <div onClick={() => router.push('/simulator')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
+                        <div style={{ fontSize: 9, color: C.textMid }}>Produits</div>
+                        <div style={{ fontSize: 9, color: '#b07aee', fontWeight: 500 }}>Simuler →</div>
                       </div>
                       <div onClick={() => router.push('/revenue')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
                         <div style={{ fontSize: 9, color: C.textMid }}>CA vs Objectif</div>

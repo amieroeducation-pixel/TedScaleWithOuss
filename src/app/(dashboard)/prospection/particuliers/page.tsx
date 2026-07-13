@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { C } from '@/lib/theme'
 
 type Status = 'Non contacté' | 'En cours' | 'Converti' | 'Perdu'
@@ -35,6 +36,7 @@ const MOCK_PARTICULIERS: Particulier[] = [
 const CSV_COLUMNS = ['nom', 'prenom', 'email', 'telephone', 'ville', 'age', 'patrimoine']
 
 export default function ParticuliersPage() {
+  const router = useRouter()
   const [particuliers, setParticuliers] = useState<Particulier[]>([])
   const [preview, setPreview] = useState<string[][] | null>(null)
   const [mapping, setMapping] = useState<Record<string, string>>({})
@@ -193,15 +195,15 @@ export default function ParticuliersPage() {
       {/* KPI row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10, marginBottom: 16 }}>
         {[
-          { label: 'Importés', val: String(particuliers.length), sub: 'Base à fournir', subColor: C.gold },
-          { label: 'Base attendue', val: particuliers.length > 0 ? String(particuliers.length) : '—', sub: 'CSV / Excel', subColor: C.gold },
-          { label: 'En cours', val: String(enCours), sub: 'Actifs', subColor: C.indigo },
-          { label: 'Convertis', val: `${convertis} (${tauxConv}%)`, sub: 'Taux conversion', subColor: C.green },
+          { label: 'Importés', val: String(particuliers.length), sub: 'Base à fournir →', subColor: C.gold, link: '/crm?source=particuliers' },
+          { label: 'Base attendue', val: particuliers.length > 0 ? String(particuliers.length) : '—', sub: 'CSV / Excel', subColor: C.gold, link: null },
+          { label: 'En cours', val: String(enCours), sub: 'Actifs →', subColor: C.indigo, link: '/pipeline' },
+          { label: 'Convertis', val: `${convertis} (${tauxConv}%)`, sub: 'Clients →', subColor: C.green, link: '/clients' },
         ].map(k => (
-          <div key={k.label} style={{
+          <div key={k.label} onClick={() => k.link && router.push(k.link)} style={{
             background: `linear-gradient(180deg,${C.surface1},${C.bgMid})`,
             border: `1px solid ${C.line}`, borderRadius: 10, padding: '12px 14px',
-            position: 'relative', overflow: 'hidden',
+            position: 'relative', overflow: 'hidden', cursor: k.link ? 'pointer' : 'default',
           }}>
             <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: C.indigo, opacity: 0.4 }} />
             <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.textLo, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.1em' }}>{k.label}</div>
@@ -393,12 +395,12 @@ export default function ParticuliersPage() {
             borderBottom: `1px solid ${C.lineSoft}`,
             background: i % 2 === 0 ? 'transparent' : `${C.surface2}66`,
           }}>
-            <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 10, color: C.textHi, fontWeight: 600 }}>{p.nom}</div>
+            <div onClick={() => router.push('/crm?source=particuliers')} style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 10, color: C.textHi, fontWeight: 600, cursor: 'pointer', textDecoration: 'underline' }}>{p.nom}</div>
             <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 10, color: C.textMid }}>{p.prenom}</div>
             <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.textLo, wordBreak: 'break-all' }}>{p.email}</div>
             <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.textMid }}>{p.ville}</div>
             <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.textLo }}>{p.age} ans</div>
-            <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.green }}>{p.patrimoine}</div>
+            <div onClick={() => router.push('/scoring')} style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.green, cursor: 'pointer', textDecoration: 'underline' }}>{p.patrimoine}</div>
             <select
               value={p.status}
               onChange={e => changeStatus(p.id, e.target.value as Status)}

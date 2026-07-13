@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { C } from '@/lib/theme'
 
 type ThemeId = 'decouverte' | 'prospection' | 'objections' | 'closing'
@@ -74,6 +75,7 @@ function PanelTitle({ title, accent = C.indigo }: { title: string; accent?: stri
 type ProductRow = { type: string; label: string; montant: number; pct: number; color: string }
 
 export default function CommercePage() {
+  const router = useRouter()
   const [selectedTheme, setSelectedTheme] = useState<ThemeId>('decouverte')
   const [watchedVideos, setWatchedVideos] = useState<Set<string>>(new Set())
   const [products, setProducts] = useState<ProductRow[]>([])
@@ -190,7 +192,12 @@ export default function CommercePage() {
             return (
               <div
                 key={v.id}
-                onClick={() => toggleVideo(v.id)}
+                onClick={() => {
+                  toggleVideo(v.id)
+                  if (v.title.toLowerCase().includes('tns')) {
+                    router.push('/prospection/tns')
+                  }
+                }}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
                   background: watched ? `${C.green}12` : C.surface2,
@@ -207,7 +214,9 @@ export default function CommercePage() {
                   {watched && <span style={{ fontSize: 9, color: C.bgDeep, fontWeight: 700 }}>✓</span>}
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 10, color: watched ? C.green : C.textHi, textDecoration: watched ? 'line-through' : 'none' }}>{v.title}</div>
+                  <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 10, color: watched ? C.green : C.textHi, textDecoration: watched ? 'line-through' : 'none' }}>
+                    {v.title}{v.title.toLowerCase().includes('tns') && ' →'}
+                  </div>
                 </div>
                 <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.textLo, flexShrink: 0 }}>{v.duration}</div>
               </div>
@@ -229,14 +238,32 @@ export default function CommercePage() {
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-              <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 11, fontWeight: 600, color: t.color }}>{t.icon} {t.label}</div>
-              <div style={{ background: t.bg, color: t.color, padding: '2px 8px', borderRadius: 8, fontFamily: 'JetBrains Mono,monospace', fontSize: 8, fontWeight: 600 }}>{t.count}/{t.total}</div>
+              <div
+                style={{ fontFamily: 'Oswald,sans-serif', fontSize: 11, fontWeight: 600, color: t.color, cursor: 'pointer' }}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  if (t.id === 'prospection') router.push('/prospection/tns')
+                  else if (t.id === 'closing') router.push('/pipeline')
+                }}
+              >
+                {t.icon} {t.label} {(t.id === 'prospection' || t.id === 'closing') && '→'}
+              </div>
+              <div
+                style={{ background: t.bg, color: t.color, padding: '2px 8px', borderRadius: 8, fontFamily: 'JetBrains Mono,monospace', fontSize: 8, fontWeight: 600, cursor: 'pointer' }}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  selectTheme(t.id)
+                }}
+              >
+                {t.count}/{t.total} →
+              </div>
             </div>
             <div style={{ background: C.surface3, height: 6, borderRadius: 3, marginBottom: 10, overflow: 'hidden' }}>
               <div style={{ background: t.color, height: '100%', width: `${t.pct}%`, transition: 'width 0.3s' }} />
             </div>
             <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.textLo, marginBottom: 8 }}>{t.desc}</div>
             <button
+              onClick={() => router.push(`/assistant?topic=commerce&theme=${t.id}`)}
               style={{
                 width: '100%', padding: '6px 0', background: t.bg, border: `0.5px solid ${t.color}`,
                 color: t.color, borderRadius: 4, fontFamily: 'JetBrains Mono,monospace', fontSize: 9,
@@ -259,9 +286,13 @@ export default function CommercePage() {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {products.map(p => (
-              <div key={p.type} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div
+                key={p.type}
+                onClick={() => router.push('/revenue')}
+                style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}
+              >
                 <div style={{ width: 8, height: 8, borderRadius: '50%', background: p.color, flexShrink: 0 }} />
-                <div style={{ fontSize: 10, color: C.text, flex: 1 }}>{p.label}</div>
+                <div style={{ fontSize: 10, color: C.text, flex: 1 }}>{p.label} →</div>
                 <div style={{ flex: 2, height: 6, background: C.surface3, borderRadius: 3, overflow: 'hidden' }}>
                   <div style={{ width: `${p.pct}%`, height: '100%', background: p.color, borderRadius: 3 }} />
                 </div>

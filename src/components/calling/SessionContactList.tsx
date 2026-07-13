@@ -39,8 +39,9 @@ type Props = {
 
 export default function SessionContactList({ contacts, activeId, onSelect }: Props) {
   const groupes = {
-    a_appeler: contacts.filter(c => c.statut_appel === 'a_appeler'),
-    autres:    contacts.filter(c => c.statut_appel !== 'a_appeler'),
+    a_appeler:  contacts.filter(c => c.statut_appel === 'a_appeler'),
+    a_rappeler: contacts.filter(c => c.rappel_date && c.statut_appel !== 'a_appeler'),
+    autres:     contacts.filter(c => c.statut_appel !== 'a_appeler' && !c.rappel_date),
   }
 
   const renderContact = (c: SessionContact) => {
@@ -80,6 +81,14 @@ export default function SessionContactList({ contacts, activeId, onSelect }: Pro
             À appeler ({groupes.a_appeler.length})
           </div>
           {groupes.a_appeler.map(renderContact)}
+        </>
+      )}
+      {groupes.a_rappeler.length > 0 && (
+        <>
+          <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 7, color: C.gold, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 5, marginTop: 10, paddingLeft: 2 }}>
+            📅 À rappeler ({groupes.a_rappeler.length})
+          </div>
+          {groupes.a_rappeler.map(renderContact)}
         </>
       )}
       {groupes.autres.length > 0 && (

@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
 import { C } from '@/lib/theme'
 import { useUserSettings, UserSettings } from '@/hooks/useUserSettings'
@@ -569,6 +570,7 @@ function TabGeneral({ settings, save, saving }: { settings: UserSettings | null;
 
 // ─── ONGLET KPI ───────────────────────────────────────────────────────────────
 function TabKPI({ settings, save, saving }: { settings: UserSettings | null; save: (p: Partial<UserSettings>) => Promise<unknown>; saving: boolean }) {
+  const router = useRouter()
   const [caMonthly, setCaMonthly] = useState(settings?.ca_monthly_target ?? 15000)
   const [caAnnual, setCaAnnual] = useState(settings?.ca_annual_target ?? 180000)
   const [healthDays, setHealthDays] = useState(settings?.client_health_threshold_days ?? 90)
@@ -608,7 +610,12 @@ function TabKPI({ settings, save, saving }: { settings: UserSettings | null; sav
   return (
     <>
       <SectionPanel title="📅 Rendez-vous (R1 & R2)">
-        <div style={{ fontSize: 9, color: C.textLo, marginBottom: 12, fontFamily: 'JetBrains Mono,monospace' }}>Configure tes objectifs annuels, le dashboard calculera la planification mensuelle et hebdomadaire</div>
+        <div style={{ fontSize: 9, color: C.textLo, marginBottom: 12, fontFamily: 'JetBrains Mono,monospace' }}>
+          Configure tes objectifs annuels, le dashboard calculera la planification mensuelle et hebdomadaire{' '}
+          <span onClick={() => router.push('/global')} style={{ color: C.cyan, cursor: 'pointer' }}>
+            → Voir KPIs en action
+          </span>
+        </div>
 
         <SetRow>
           <SetLabel label="🎯 Objectif annuel R1" desc="Total de RDV R1 pour 2026" />
@@ -1191,6 +1198,7 @@ function TabIntegrations() {
 
 // ─── ONGLET SECTIONS ─────────────────────────────────────────────────────────
 function TabSections({ settings, save, saving }: { settings: UserSettings | null; save: (p: Partial<UserSettings>) => Promise<unknown>; saving: boolean }) {
+  const router = useRouter()
   const [checked, setChecked] = useState<Record<string, boolean>>(
     settings?.visible_sections ?? Object.fromEntries(SECTIONS_LIST.map(s => [s.id, true]))
   )
@@ -1210,20 +1218,37 @@ function TabSections({ settings, save, saving }: { settings: UserSettings | null
         Active ou désactive les sections du dashboard. Les sections masquées n'apparaîtront plus dans le menu latéral.
       </div>
       <div style={{ display: 'grid', gap: 8 }}>
-        {SECTIONS_LIST.map(s => (
-          <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 10, background: C.surface1, border: `1px solid ${C.lineSoft}`, borderRadius: 6 }}>
-            <div>
-              <div style={{ fontSize: 10, fontWeight: 600, color: C.textHi, fontFamily: 'Inter,sans-serif' }}>{s.label}</div>
-              <div style={{ fontSize: 8, color: C.textLo, fontFamily: 'JetBrains Mono,monospace' }}>{s.desc}</div>
+        {SECTIONS_LIST.map(s => {
+          // Mapper section id vers page
+          const pageMap: Record<string, string> = {
+            today: '/today', global: '/global', tns: '/prospection/tns', chefs: '/prospection/chefs-entreprise',
+            particuliers: '/prospection/particuliers', interpro: '/cercle', agenda: '/today', sequences: '/sequences',
+            commerce: '/commerce', chrono: '/today', champions: '/achievements', revenue: '/revenue',
+            pipeline: '/pipeline', tasks: '/tasks', crm: '/crm', clients: '/clients', map: '/map',
+            simulator: '/simulator', auto: '/automatisations', analytics: '/analytics', assistant: '/assistant',
+          }
+          const targetPage = pageMap[s.id]
+          return (
+            <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 10, background: C.surface1, border: `1px solid ${C.lineSoft}`, borderRadius: 6 }}>
+              <div
+                onClick={targetPage ? () => router.push(targetPage) : undefined}
+                style={{ flex: 1, cursor: targetPage ? 'pointer' : 'default' }}
+              >
+                <div style={{ fontSize: 10, fontWeight: 600, color: C.textHi, fontFamily: 'Inter,sans-serif' }}>
+                  {s.label}
+                  {targetPage && ' →'}
+                </div>
+                <div style={{ fontSize: 8, color: C.textLo, fontFamily: 'JetBrains Mono,monospace' }}>{s.desc}</div>
+              </div>
+              <input
+                type="checkbox"
+                checked={checked[s.id] ?? true}
+                onChange={e => setChecked(prev => ({ ...prev, [s.id]: e.target.checked }))}
+                style={{ width: 20, height: 20, cursor: 'pointer' }}
+              />
             </div>
-            <input
-              type="checkbox"
-              checked={checked[s.id] ?? true}
-              onChange={e => setChecked(prev => ({ ...prev, [s.id]: e.target.checked }))}
-              style={{ width: 20, height: 20, cursor: 'pointer' }}
-            />
-          </div>
-        ))}
+          )
+        })}
       </div>
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
         <SetBtn onClick={handleSave} color={C.green} bg="#0d1a0d">
@@ -1265,6 +1290,7 @@ const PIPELINE_STAGES_LABELS: Record<string, string> = {
 }
 
 function TabSequences() {
+  const router = useRouter()
   const [templates, setTemplates] = useState<TemplateWithSteps[]>([])
   const [loading, setLoading] = useState(true)
   const [expandedId, setExpandedId] = useState<string | null>(null)
@@ -1413,6 +1439,12 @@ function TabSequences() {
 
   return (
     <SectionPanel title="SEQUENCES PAR STADE PIPELINE">
+      <div style={{ fontSize: 9, color: C.textLo, marginBottom: 12, fontFamily: 'JetBrains Mono,monospace' }}>
+        Configure tes séquences multicanales et déclenche-les depuis{' '}
+        <span onClick={() => router.push('/sequences')} style={{ color: C.cyan, cursor: 'pointer' }}>
+          → la page Séquences
+        </span>
+      </div>
       <div style={{ marginBottom: 12, display: 'flex', gap: 8, flexWrap: 'wrap' as const }}>
         <SetBtn color={C.green} bg="#0d1a0d" onClick={() => setCreating(true)}>+ Nouveau template</SetBtn>
         <SetBtn color={C.gold} bg="#1a1400" onClick={async () => {
@@ -1530,6 +1562,7 @@ function TabSequences() {
 
 // ─── ONGLET TRIGGERS ─────────────────────────────────────────────────────────
 function TabTriggers() {
+  const router = useRouter()
   const [templates, setTemplates] = useState<Array<{
     id: string
     name: string
@@ -1580,7 +1613,10 @@ function TabTriggers() {
       <SectionPanel title="⚡ TRIGGERS AUTOMATIQUES PAR SÉQUENCE">
         <div style={{ fontSize: 9, color: C.textLo, marginBottom: 12, lineHeight: 1.6, fontFamily: 'JetBrains Mono,monospace' }}>
           Chaque trigger déclenche automatiquement la séquence associée quand un prospect entre dans le stade correspondant.
-          Un seul trigger auto par stade pipeline est autorisé.
+          Un seul trigger auto par stade pipeline est autorisé.{' '}
+          <span onClick={() => router.push('/automatisations')} style={{ color: C.cyan, cursor: 'pointer' }}>
+            → Voir les logs d'exécution
+          </span>
         </div>
 
         {templates.length === 0 && (
@@ -1929,8 +1965,26 @@ function TabScripts() {
 
 // ─── PAGE ─────────────────────────────────────────────────────────────────────
 export default function SettingsPage() {
-  const [activeTab, setActiveTab] = useState<Tab>('general')
+  return (
+    <Suspense fallback={null}>
+      <SettingsPageContent />
+    </Suspense>
+  )
+}
+
+function SettingsPageContent() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const [activeTab, setActiveTab] = useState<Tab>((searchParams.get('tab') as Tab) ?? 'general')
   const { settings, saving, save } = useUserSettings()
+
+  // Synchro du tab depuis l'URL
+  useEffect(() => {
+    const tab = searchParams.get('tab') as Tab
+    if (tab && TABS.find(t => t.id === tab)) {
+      setActiveTab(tab)
+    }
+  }, [searchParams])
 
   return (
     <>

@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { C } from '@/lib/theme'
 import { AgendaEventType, AgendaEvent, AGENDA_COLORS, loadDayAgenda, saveDayAgenda, todayDateKey, fantasticalUrl } from '@/lib/agenda'
@@ -541,6 +541,14 @@ function VideoPlayer() {
 
 // ─── Main page ────────────────────────────────────────────────────────────
 export default function TodayPage() {
+  return (
+    <Suspense fallback={null}>
+      <TodayPageContent />
+    </Suspense>
+  )
+}
+
+function TodayPageContent() {
   const { celebrate } = useCelebrations()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -973,8 +981,15 @@ export default function TodayPage() {
         {/* Section 1 — Relances 7 jours (DATA-06) */}
         <div style={{ background: C.surface1, border: `0.5px solid ${C.line}`, borderRadius: 10, padding: '14px 16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-            <div style={{ fontFamily: 'Oswald, sans-serif', fontSize: 11, fontWeight: 600, color: C.gold, textTransform: 'uppercase', letterSpacing: 1 }}>
-              Relances prioritaires
+            <div
+              onClick={() => router.push('/global')}
+              style={{
+                fontFamily: 'Oswald, sans-serif', fontSize: 11, fontWeight: 600,
+                color: C.gold, textTransform: 'uppercase', letterSpacing: 1,
+                cursor: 'pointer'
+              }}
+            >
+              Relances prioritaires →
             </div>
             {!signalLoading && !signalError && (
               <div style={{ fontSize: 9, color: C.textMid }}>
@@ -1024,8 +1039,16 @@ export default function TodayPage() {
                             {r.days_until === 0 ? 'AUJOURD\'HUI' : `J+${r.days_until}`}
                           </span>
                           {r.lead_score !== null && (
-                            <span style={{ fontSize: 9, fontWeight: 700, color: r.lead_score >= 70 ? C.green : r.lead_score >= 40 ? C.gold : C.textLo }}>
-                              {r.lead_score}
+                            <span
+                              onClick={(e) => { e.stopPropagation(); router.push('/scoring') }}
+                              style={{
+                                fontSize: 9, fontWeight: 700,
+                                color: r.lead_score >= 70 ? C.green : r.lead_score >= 40 ? C.gold : C.textLo,
+                                cursor: 'pointer',
+                                textDecoration: 'underline'
+                              }}
+                            >
+                              {r.lead_score} →
                             </span>
                           )}
                         </div>
@@ -1037,6 +1060,16 @@ export default function TodayPage() {
                   )}
                 </>
               )}
+              <div
+                onClick={() => router.push('/sequences')}
+                style={{
+                  marginTop: 10, fontSize: 8, color: C.indigo, cursor: 'pointer',
+                  fontWeight: 600, textAlign: 'center', padding: 6,
+                  background: '#0d1a2e', border: `0.5px solid ${C.indigo}40`, borderRadius: 4
+                }}
+              >
+                → Voir les séquences actives
+              </div>
             </>
           )}
         </div>

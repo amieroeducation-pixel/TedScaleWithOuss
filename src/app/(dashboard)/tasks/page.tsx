@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { C } from '@/lib/theme'
 
 type Filter = 'Toutes' | 'Urgentes' | 'Cette semaine' | 'Terminées'
@@ -71,6 +72,7 @@ function PriorityDots({ n }: { n: Priority }) {
 }
 
 function TaskCard({ task, onCheck, onOpen }: { task: Task; onCheck?: (checked: boolean) => void; onOpen?: () => void }) {
+  const router = useRouter()
   const [checked, setChecked] = useState(task.col === 'done')
   const bs = BADGE_STYLES[task.badge]
   const isUrgent = task.urgency === 'urgent'
@@ -81,6 +83,25 @@ function TaskCard({ task, onCheck, onOpen }: { task: Task; onCheck?: (checked: b
     setChecked(next)
     onCheck?.(next)
   }
+
+  // Détection de liens contextuels
+  function handleBadgeClick(e: React.MouseEvent) {
+    e.stopPropagation()
+    if (task.badge === 'premium') router.push('/clients')
+    else if (task.badge === 'prospect') router.push('/crm')
+    else if (task.badge === 'client') router.push('/clients')
+  }
+
+  function getTargetFromText(): string | null {
+    const lower = (task.title + ' ' + task.sub).toLowerCase()
+    if (lower.includes('tns')) return '/prospection/tns'
+    if (lower.includes('séquence')) return '/sequences'
+    if (lower.includes('rdv')) return '/today'
+    if (lower.includes('closing')) return '/pipeline'
+    return null
+  }
+
+  const textTarget = getTargetFromText()
 
   return (
     <div
@@ -106,12 +127,20 @@ function TaskCard({ task, onCheck, onOpen }: { task: Task; onCheck?: (checked: b
           {checked && <span style={{ fontSize: 8, color: C.bgDeep, fontWeight: 700 }}>✓</span>}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{
-            fontFamily: 'JetBrains Mono,monospace', fontSize: 10,
-            color: checked ? C.textLo : C.textHi,
-            textDecoration: checked ? 'line-through' : 'none',
-            lineHeight: 1.3,
-          }}>{task.title}</div>
+          <div
+            onClick={textTarget ? ((e) => { e.stopPropagation(); router.push(textTarget) }) : undefined}
+            style={{
+              fontFamily: 'JetBrains Mono,monospace',
+              fontSize: 10,
+              color: checked ? C.textLo : C.textHi,
+              textDecoration: checked ? 'line-through' : 'none',
+              lineHeight: 1.3,
+              cursor: textTarget ? 'pointer' : 'inherit',
+            }}
+          >
+            {task.title}
+            {textTarget && ' →'}
+          </div>
           <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.textLo, marginTop: 3 }}>{task.sub}</div>
         </div>
       </div>
@@ -125,8 +154,20 @@ function TaskCard({ task, onCheck, onOpen }: { task: Task; onCheck?: (checked: b
           )}
           <span style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.textLo }}>{task.time}</span>
           {task.badge && (
-            <span style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 7, color: bs.color, background: bs.bg, border: `1px solid ${bs.color}40`, padding: '1px 6px', borderRadius: 4 }}>
-              {bs.label}
+            <span
+              onClick={handleBadgeClick}
+              style={{
+                fontFamily: 'JetBrains Mono,monospace',
+                fontSize: 7,
+                color: bs.color,
+                background: bs.bg,
+                border: `1px solid ${bs.color}40`,
+                padding: '1px 6px',
+                borderRadius: 4,
+                cursor: task.badge ? 'pointer' : 'default',
+              }}
+            >
+              {bs.label} →
             </span>
           )}
         </div>
@@ -268,6 +309,7 @@ function mapDbTask(t: any): Task {
 }
 
 export default function TasksPage() {
+  const router = useRouter()
   const [filter, setFilter] = useState<Filter>('Toutes')
   const [tasks, setTasks] = useState<Task[]>([])
   const [dbConnected, setDbConnected] = useState(false)

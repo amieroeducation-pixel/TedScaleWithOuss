@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { C } from '@/lib/theme'
 
@@ -81,6 +81,14 @@ function PanelTitle({ title, accent = C.cyan }: { title: string; accent?: string
 
 // ─── PAGE ─────────────────────────────────────────────────────────────────────
 export default function ClientsPage() {
+  return (
+    <Suspense fallback={null}>
+      <ClientsPageContent />
+    </Suspense>
+  )
+}
+
+function ClientsPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const sortParam = searchParams.get('sort') as 'aum' | 'days' | 'name' | null
@@ -172,10 +180,10 @@ export default function ClientsPage() {
           <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.textLo, textTransform: 'uppercase', marginBottom: 6, letterSpacing: '0.1em' }}>AUM total</div>
           <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 26, fontWeight: 700, color: C.gold, lineHeight: 1 }}>{totalAum.toLocaleString('fr-FR')} € →</div>
         </Panel>
-        <Panel style={{ textAlign: 'center' }}>
+        <Panel style={{ textAlign: 'center', cursor: 'pointer' }} onClick={() => router.push('/today?tab=relances')}>
           <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.textLo, textTransform: 'uppercase', marginBottom: 6, letterSpacing: '0.1em' }}>Alertes santé</div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-            <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 26, fontWeight: 700, color: healthResp?.count ? C.warn : C.green, lineHeight: 1 }}>{healthResp?.count ?? 0}</div>
+            <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 26, fontWeight: 700, color: healthResp?.count ? C.warn : C.green, lineHeight: 1 }}>{healthResp?.count ?? 0} →</div>
             {criticalCount > 0 && (
               <span style={{
                 fontSize: 9, padding: '2px 7px', borderRadius: 8,

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { C } from '@/lib/theme'
 
 type StepType = 'mail' | 'wa' | 'sms' | 'li'
@@ -173,7 +174,13 @@ function StepBubble({ step }: { step: SeqStep }) {
 }
 
 function SeqCard({ seq }: { seq: Sequence }) {
+  const router = useRouter()
   const [expanded, setExpanded] = useState(false)
+
+  // Détection de liens dans le usecase
+  const usecaseHasRdv1 = seq.usecase.toLowerCase().includes('rdv 1')
+  const usecaseHasProspect = seq.usecase.toLowerCase().includes('prospect')
+
   return (
     <div style={{
       background: `linear-gradient(180deg,${C.surface1},${C.bgMid})`,
@@ -239,7 +246,19 @@ function SeqCard({ seq }: { seq: Sequence }) {
             borderLeft: `3px solid ${C.indigo}`, borderRadius: 8,
           }}>
             <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.indigo, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Cas d&apos;usage</div>
-            <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.textMid, lineHeight: 1.6 }}>{seq.usecase}</div>
+            <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.textMid, lineHeight: 1.6 }}>
+              {seq.usecase}
+              {usecaseHasRdv1 && (
+                <span onClick={() => router.push('/crm')} style={{ color: C.cyan, cursor: 'pointer', marginLeft: 4 }}>
+                  → Voir CRM
+                </span>
+              )}
+              {usecaseHasProspect && !usecaseHasRdv1 && (
+                <span onClick={() => router.push('/crm')} style={{ color: C.cyan, cursor: 'pointer', marginLeft: 4 }}>
+                  → Voir CRM
+                </span>
+              )}
+            </div>
           </div>
 
           {/* Step detail rows */}
@@ -277,6 +296,7 @@ function SeqCard({ seq }: { seq: Sequence }) {
 }
 
 export default function SequencesPage() {
+  const router = useRouter()
   const [dbTemplates, setDbTemplates] = useState<{ id: string; name: string; pipeline_stage: string | null; auto_trigger: boolean }[]>([])
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [createName, setCreateName] = useState('')
@@ -324,6 +344,12 @@ export default function SequencesPage() {
             <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 22, fontWeight: 600, color: C.textHi, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
               Séquences <span style={{ color: C.indigo }}>Multi-Canal</span>
             </div>
+            <span
+              onClick={() => router.push('/settings?tab=sequences')}
+              style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.gold, cursor: 'pointer', marginLeft: 8 }}
+            >
+              → Paramètres
+            </span>
           </div>
           <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.textLo, marginTop: 2, paddingLeft: 13 }}>
             {dbTemplates.length > 0
@@ -379,7 +405,12 @@ export default function SequencesPage() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <span style={{ fontSize: 16 }}>📋</span>
                   <div>
-                    <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 12, fontWeight: 500, color: C.green }}>{t.name}</div>
+                    <div
+                      onClick={() => router.push('/settings?tab=sequences')}
+                      style={{ fontFamily: 'Oswald,sans-serif', fontSize: 12, fontWeight: 500, color: C.green, cursor: 'pointer' }}
+                    >
+                      {t.name} →
+                    </div>
                     {t.pipeline_stage && (
                       <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.textLo, marginTop: 2 }}>
                         Étape : {t.pipeline_stage}
@@ -412,7 +443,11 @@ export default function SequencesPage() {
       {/* Gold separator */}
       <div style={{ height: 1, background: `linear-gradient(90deg,${C.gold},transparent)`, marginBottom: 6 }} />
       <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.textLo, marginBottom: 12 }}>
-        Séquences liées aux étapes du pipeline commercial (premier contact, relance, confirmation RDV)
+        Séquences liées aux étapes du{' '}
+        <span onClick={() => router.push('/pipeline')} style={{ color: C.gold, cursor: 'pointer' }}>
+          pipeline commercial →
+        </span>
+        {' '}(premier contact, relance, confirmation RDV)
       </div>
       {SEQ_PROSPECTION.map(seq => <SeqCard key={seq.id} seq={seq} />)}
 
@@ -449,7 +484,14 @@ export default function SequencesPage() {
             <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: C.ribbon, borderRadius: '14px 14px 0 0' }} />
             <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 14, fontWeight: 600, color: C.indigo, marginBottom: 8, marginTop: 4 }}>+ Créer une séquence</div>
             <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.textLo, marginBottom: 18, lineHeight: 1.6 }}>
-              Crée un nom de séquence ici. Ensuite, dans <strong style={{ color: C.gold }}>Paramètres → Séquences</strong>, ouvre-la et ajoute les étapes (email J+0, WhatsApp J+2, etc.).
+              Crée un nom de séquence ici. Ensuite, dans{' '}
+              <strong
+                onClick={(e) => { e.stopPropagation(); router.push('/settings?tab=sequences') }}
+                style={{ color: C.gold, cursor: 'pointer' }}
+              >
+                Paramètres → Séquences →
+              </strong>
+              , ouvre-la et ajoute les étapes (email J+0, WhatsApp J+2, etc.).
             </div>
             <div style={{ marginBottom: 18 }}>
               <label style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.textLo, display: 'block', marginBottom: 5 }}>Nom de la séquence *</label>

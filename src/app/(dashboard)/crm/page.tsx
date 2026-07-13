@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import {
@@ -278,7 +278,13 @@ function CardContent({ prospect, isDragging }: { prospect: Prospect; isDragging?
         >{prospect.leadScore}</div>
       </div>
       <div style={{ fontSize: 9, color: C.textLo, marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-        {prospect.profession} — {prospect.ville}
+        {prospect.profession} —{' '}
+        <span
+          onClick={(e) => { e.stopPropagation(); router.push(`/map?ville=${encodeURIComponent(prospect.ville)}`) }}
+          style={{ color: C.cyan, cursor: 'pointer', textDecoration: 'underline' }}
+        >
+          {prospect.ville} →
+        </span>
       </div>
       <div style={{ fontSize: 9, color: C.gold, marginBottom: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>⚡ {prospect.nextAction}</div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -290,15 +296,34 @@ function CardContent({ prospect, isDragging }: { prospect: Prospect; isDragging?
               whiteSpace: 'nowrap',
             }}>{t}</span>
           ))}
+          {prospect.source === 'Google Places' && prospect.tags.includes('TNS') ? (
+            <span
+              onClick={(e) => { e.stopPropagation(); router.push('/prospection/tns') }}
+              style={{
+                fontSize: 7, padding: '0px 4px', borderRadius: 3,
+                background: C.surface3, color: C.indigo, border: `1px solid ${C.indigo}33`,
+                whiteSpace: 'nowrap', cursor: 'pointer', fontWeight: 600,
+              }}
+            >TNS →</span>
+          ) : prospect.source === 'Import CSV' && prospect.tags.includes('Chef entreprise') ? (
+            <span
+              onClick={(e) => { e.stopPropagation(); router.push('/prospection/chefs-entreprise') }}
+              style={{
+                fontSize: 7, padding: '0px 4px', borderRadius: 3,
+                background: C.surface3, color: C.indigo, border: `1px solid ${C.indigo}33`,
+                whiteSpace: 'nowrap', cursor: 'pointer', fontWeight: 600,
+              }}
+            >Chef →</span>
+          ) : null}
           <span
-            onClick={(e) => { e.stopPropagation(); router.push('/today?tab=relances') }}
+            onClick={(e) => { e.stopPropagation(); router.push('/sequences') }}
             style={{
               fontSize: 8, color: C.textLo, cursor: 'pointer',
               fontWeight: 600, marginLeft: 2,
             }}
             onMouseEnter={(e) => { e.currentTarget.style.color = C.gold }}
             onMouseLeave={(e) => { e.currentTarget.style.color = C.textLo }}
-          >→ Relancer</span>
+          >→ Séquence</span>
         </div>
         <div style={{ width: 6, height: 6, borderRadius: '50%', background: pressureColor, flexShrink: 0 }} />
       </div>
@@ -885,6 +910,14 @@ function KanbanColumn({ stage, prospects, onCardClick }: {
 
 // --- PAGE ---
 export default function CrmPage() {
+  return (
+    <Suspense fallback={null}>
+      <CrmPageContent />
+    </Suspense>
+  )
+}
+
+function CrmPageContent() {
   const [prospects, setProspects] = useState<Prospect[]>([])
   const [activeId, setActiveId] = useState<string | null>(null)
   const [selectedProspect, setSelectedProspect] = useState<Prospect | null>(null)
@@ -909,6 +942,8 @@ export default function CrmPage() {
   const searchParams = useSearchParams()
   const highlightProspectId = searchParams.get('prospect')
   const filterStageParam = searchParams.get('stage')
+  const filterSourceParam = searchParams.get('source')
+  const searchQuery = searchParams.get('search')
 
   useEffect(() => {
     if (filterStageParam) {
@@ -923,6 +958,13 @@ export default function CrmPage() {
       }, 500)
     }
   }, [filterStageParam, prospects])
+
+  useEffect(() => {
+    if (filterSourceParam) {
+      if (filterSourceParam === 'tns') setFilter('TNS')
+      else if (filterSourceParam === 'chefs_entreprise') setFilter('Chefs')
+    }
+  }, [filterSourceParam])
 
   // Fetch call scripts
   useEffect(() => {
@@ -1030,9 +1072,17 @@ export default function CrmPage() {
   const activeProspect = activeId ? prospects.find(p => p.id === activeId) : null
 
   const filteredProspects = prospects.filter(p => {
-    if (filter === 'TNS') return p.tags.includes('TNS')
-    if (filter === 'Chefs') return p.tags.includes('Chef entreprise')
-    if (filter === '★★★★★') return p.leadScore >= 85
+    if (filter === 'TNS' && !p.tags.includes('TNS')) return false
+    if (filter === 'Chefs' && !p.tags.includes('Chef entreprise')) return false
+    if (filter === '★★★★★' && p.leadScore < 85) return false
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase()
+      const matches = p.nom.toLowerCase().includes(q) ||
+                      p.profession.toLowerCase().includes(q) ||
+                      p.ville.toLowerCase().includes(q) ||
+                      p.email.toLowerCase().includes(q)
+      if (!matches) return false
+    }
     return true
   }).sort((a, b) => {
     if (sortBy === 'score_desc') return b.leadScore - a.leadScore

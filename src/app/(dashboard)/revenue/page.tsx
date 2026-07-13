@@ -283,13 +283,10 @@ export default function RevenuePage() {
             {stats.contractCount}
           </div>
           <div
-            onClick={(e) => {
-              e.stopPropagation()
-              router.push('/clients')
-            }}
-            style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}
+            onClick={() => router.push('/clients')}
+            style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4, cursor: 'pointer' }}
           >
-            <span style={{ fontSize: 11, color: C.textLo, cursor: 'pointer', textDecoration: 'underline' }}>
+            <span style={{ fontSize: 11, color: C.textLo, textDecoration: 'underline' }}>
               {stats.clientCount} clients →
             </span>
           </div>
@@ -316,23 +313,20 @@ export default function RevenuePage() {
               {products.products.map(c => (
                 <div
                   key={c.type}
-                  onClick={() => router.push(`/analytics?focus=${c.type}`)}
                   style={{
                     marginBottom: 10,
-                    cursor: 'pointer',
                     padding: '4px 6px',
                     borderRadius: 6,
                     transition: 'background 0.2s ease',
                   }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = C.surface2
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'transparent'
-                  }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                    <span style={{ fontSize: 10, color: C.text }}>{c.label} →</span>
+                    <span
+                      onClick={() => router.push(`/pipeline?product=${c.type}`)}
+                      style={{ fontSize: 10, color: C.text, cursor: 'pointer', textDecoration: 'underline' }}
+                    >
+                      {c.label} →
+                    </span>
                     <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
                       <span style={{ fontSize: 9, color: C.textLo }}>{c.pct}%</span>
                       <span style={{ fontSize: 10, fontWeight: 600, color: C.textHi }}>
@@ -370,24 +364,36 @@ export default function RevenuePage() {
           <div style={{ fontSize: 11, fontWeight: 700, color: C.textHi, marginBottom: 14, textTransform: 'uppercase', letterSpacing: 1 }}>
             Evolution CA — 6 mois
           </div>
-          {last6.map(m => (
-            <div key={m.monthNum} style={{ marginBottom: 8 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
-                <span style={{ fontSize: 10, color: C.textMid }}>{MONTH_LABELS_LONG[m.monthNum - 1]}</span>
-              </div>
-              <div style={{ height: 20, background: C.surface3, borderRadius: 3, overflow: 'hidden' }}>
-                <div style={{
-                  width: `${Math.round((m.ca / max6) * 100)}%`, height: '100%',
-                  background: m.current ? `${C.gold}45` : `${C.gold}18`,
-                  borderRadius: 3, display: 'flex', alignItems: 'center', paddingLeft: 8,
-                }}>
-                  <span style={{ fontSize: 9, color: C.gold, fontWeight: m.current ? 600 : 400 }}>
-                    {m.ca > 0 ? m.ca.toLocaleString('fr-FR') + ' €' : '0 €'}
+          {last6.map(m => {
+            const isLowCA = m.ca < (max6 * 0.4)
+            return (
+              <div key={m.monthNum} style={{ marginBottom: 8 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
+                  <span
+                    onClick={() => isLowCA ? router.push('/analytics') : null}
+                    style={{
+                      fontSize: 10, color: C.textMid,
+                      cursor: isLowCA ? 'pointer' : 'default',
+                      textDecoration: isLowCA ? 'underline' : 'none'
+                    }}
+                  >
+                    {MONTH_LABELS_LONG[m.monthNum - 1]}{isLowCA ? ' →' : ''}
                   </span>
                 </div>
+                <div style={{ height: 20, background: C.surface3, borderRadius: 3, overflow: 'hidden' }}>
+                  <div style={{
+                    width: `${Math.round((m.ca / max6) * 100)}%`, height: '100%',
+                    background: m.current ? `${C.gold}45` : `${C.gold}18`,
+                    borderRadius: 3, display: 'flex', alignItems: 'center', paddingLeft: 8,
+                  }}>
+                    <span style={{ fontSize: 9, color: C.gold, fontWeight: m.current ? 600 : 400 }}>
+                      {m.ca > 0 ? m.ca.toLocaleString('fr-FR') + ' €' : '0 €'}
+                    </span>
+                  </div>
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
 
         {/* Line chart — 12 mois */}

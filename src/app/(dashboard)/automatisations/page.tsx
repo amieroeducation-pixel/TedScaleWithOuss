@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { C } from '@/lib/theme'
 
 interface Automation {
@@ -91,6 +92,7 @@ function Toggle({ value, onChange }: { value: boolean; onChange: () => void }) {
 }
 
 export default function AutomatisationsPage() {
+  const router = useRouter()
   const [automations, setAutomations] = useState<Automation[]>(CRON_JOBS)
   const [logs, setLogs] = useState<CronLog[]>([])
   const [loading, setLoading] = useState(true)
@@ -161,13 +163,28 @@ export default function AutomatisationsPage() {
       {/* KPIs */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10, marginBottom: 16 }}>
         {[
-          { label: 'Automatisations', val: String(automations.length), sub: `${activeCount} actives`, subColor: C.indigo },
-          { label: 'Emails envoyés', val: String(totalEmailsSent), sub: 'Via Brevo', subColor: C.gold },
-          { label: 'SMS / WA', val: String(totalSmsSent), sub: 'Rappels RDV', subColor: C.indigo },
+          { label: 'Automatisations', val: String(automations.length), sub: `${activeCount} actives`, subColor: C.indigo, link: '/settings?tab=triggers' },
+          { label: 'Emails envoyés', val: String(totalEmailsSent), sub: 'Via Brevo', subColor: C.gold, link: null },
+          { label: 'SMS / WA', val: String(totalSmsSent), sub: 'Rappels RDV', subColor: C.indigo, link: '/today' },
         ].map(k => (
-          <div key={k.label} style={{ background: `linear-gradient(180deg,${C.surface1},${C.bgMid})`, border: `1px solid ${C.line}`, borderRadius: 10, padding: '12px 14px', position: 'relative', overflow: 'hidden' }}>
+          <div
+            key={k.label}
+            onClick={k.link ? () => router.push(k.link) : undefined}
+            style={{
+              background: `linear-gradient(180deg,${C.surface1},${C.bgMid})`,
+              border: `1px solid ${C.line}`,
+              borderRadius: 10,
+              padding: '12px 14px',
+              position: 'relative',
+              overflow: 'hidden',
+              cursor: k.link ? 'pointer' : 'default',
+            }}
+          >
             <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: C.cyan, opacity: 0.4 }} />
-            <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.textLo, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.1em' }}>{k.label}</div>
+            <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.textLo, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+              {k.label}
+              {k.link && ' →'}
+            </div>
             <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 26, fontWeight: 700, color: C.textHi, lineHeight: 1, marginBottom: 4 }}>{k.val}</div>
             <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: k.subColor }}>{k.sub}</div>
           </div>
@@ -178,28 +195,43 @@ export default function AutomatisationsPage() {
       <Panel style={{ marginBottom: 16 }} accent={C.cyan}>
         <PanelTitle title="Automatisations" accent={C.cyan} />
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {automations.map(auto => (
-            <div key={auto.id} style={{
-              display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px',
-              background: C.surface2,
-              border: `1px solid ${auto.active ? C.line : C.lineSoft}`,
-              borderRadius: 10, opacity: auto.active ? 1 : 0.7,
-              transition: 'opacity 0.2s',
-            }}>
-              {/* Icon */}
-              <div style={{
-                width: 34, height: 34, borderRadius: 8, background: auto.iconBg,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 16, flexShrink: 0,
-                border: `1px solid ${auto.active ? C.gold + '44' : C.lineSoft}`,
+          {automations.map(auto => {
+            // Mapper vers la page cible
+            const targetPage = auto.id === 'weekly-report' ? '/global' : auto.id === 'client-health' ? '/clients' : auto.id === 'rdv-reminder' ? '/today' : auto.id === 'revenue-alert' ? '/revenue' : null
+            return (
+              <div key={auto.id} style={{
+                display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px',
+                background: C.surface2,
+                border: `1px solid ${auto.active ? C.line : C.lineSoft}`,
+                borderRadius: 10, opacity: auto.active ? 1 : 0.7,
+                transition: 'opacity 0.2s',
               }}>
-                {auto.icon}
-              </div>
-              {/* Name + desc */}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 11, fontWeight: 600, color: C.textHi }}>{auto.name}</div>
-                <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.textLo, marginTop: 3 }}>{auto.desc}</div>
-              </div>
+                {/* Icon */}
+                <div style={{
+                  width: 34, height: 34, borderRadius: 8, background: auto.iconBg,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 16, flexShrink: 0,
+                  border: `1px solid ${auto.active ? C.gold + '44' : C.lineSoft}`,
+                }}>
+                  {auto.icon}
+                </div>
+                {/* Name + desc */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div
+                    onClick={targetPage ? () => router.push(targetPage) : undefined}
+                    style={{
+                      fontFamily: 'JetBrains Mono,monospace',
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: C.textHi,
+                      cursor: targetPage ? 'pointer' : 'default',
+                    }}
+                  >
+                    {auto.name}
+                    {targetPage && ' →'}
+                  </div>
+                  <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.textLo, marginTop: 3 }}>{auto.desc}</div>
+                </div>
               {/* Status badge */}
               <span style={{
                 fontFamily: 'JetBrains Mono,monospace', fontSize: 9, fontWeight: 700,
@@ -210,10 +242,11 @@ export default function AutomatisationsPage() {
               }}>
                 {auto.active ? 'Actif' : 'Pause'}
               </span>
-              {/* Toggle — gold=active, grey=off */}
-              <Toggle value={auto.active} onChange={() => toggleAuto(auto.id)} />
-            </div>
-          ))}
+                {/* Toggle — gold=active, grey=off */}
+                <Toggle value={auto.active} onChange={() => toggleAuto(auto.id)} />
+              </div>
+            )
+          })}
         </div>
       </Panel>
 
@@ -241,6 +274,7 @@ export default function AutomatisationsPage() {
               'rdv-reminder': 'Rappel RDV J-1',
               'revenue-alert': 'Alerte CA',
             }
+            const targetPage = log.job_name === 'weekly-report' ? '/global' : log.job_name === 'client-health' ? '/clients' : log.job_name === 'rdv-reminder' ? '/today' : log.job_name === 'revenue-alert' ? '/revenue' : null
             const actionSummary = buildActionSummary(log)
             const ts = new Date(log.executed_at).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
             const isSuccess = log.status === 'success'
@@ -253,8 +287,21 @@ export default function AutomatisationsPage() {
                 background: i % 2 === 0 ? C.surface2 : 'transparent',
                 borderLeft: `2px solid ${isSuccess ? C.green : isSkipped ? C.textLo : C.cyan}`,
               }}>
-                <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 10, fontWeight: 500, color: C.textHi, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <div
+                  onClick={targetPage ? () => router.push(targetPage) : undefined}
+                  style={{
+                    fontFamily: 'JetBrains Mono,monospace',
+                    fontSize: 10,
+                    fontWeight: 500,
+                    color: C.textHi,
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    cursor: targetPage ? 'pointer' : 'default',
+                  }}
+                >
                   {jobLabels[log.job_name] ?? log.job_name}
+                  {targetPage && ' →'}
                 </div>
                 <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 10, color: C.textLo }}>{ts}</div>
                 <div>

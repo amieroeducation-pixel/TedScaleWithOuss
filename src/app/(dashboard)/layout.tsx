@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { Toaster } from 'sonner'
 import Script from 'next/script'
 import { AchievementsProvider } from '@/components/achievements/AchievementsProvider'
@@ -69,6 +69,7 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   const pathname = usePathname()
+  const router = useRouter()
   const [search, setSearch] = useState('')
   const [recentCount, setRecentCount] = useState<number>(0)
 
@@ -414,6 +415,11 @@ export default function DashboardLayout({
                 placeholder="Rechercher prospect, client, tâche, séquence…"
                 value={search}
                 onChange={e => setSearch(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && search.trim()) {
+                    router.push(`/crm?search=${encodeURIComponent(search.trim())}`)
+                  }
+                }}
                 style={{
                   width: '100%',
                   background: 'rgba(26,33,80,0.7)',

@@ -114,6 +114,29 @@ export default function CallingSessionPanel() {
   }
 
   const [renewing, setRenewing] = useState(false)
+  const [showAddForm, setShowAddForm] = useState(false)
+  const [addNom, setAddNom] = useState('')
+  const [addTel, setAddTel] = useState('')
+  const [addEntreprise, setAddEntreprise] = useState('')
+  const [adding, setAdding] = useState(false)
+
+  async function handleAddContact() {
+    if (!session || !addNom.trim() || !addTel.trim()) return
+    setAdding(true)
+    try {
+      const res = await fetch(`/api/calling-sessions/${session.id}/contacts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nom: addNom.trim(), telephone: addTel.trim(), entreprise: addEntreprise.trim() || undefined }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setSession(prev => prev ? { ...prev, contacts: [...prev.contacts, data.data] } : prev)
+        setAddNom(''); setAddTel(''); setAddEntreprise(''); setShowAddForm(false)
+      }
+    } catch { /* silently */ }
+    setAdding(false)
+  }
 
   async function handleRenouveler() {
     if (!session) return
@@ -200,6 +223,12 @@ export default function CallingSessionPanel() {
               <div style={{ width: `${(appeles / Math.max(contacts.length, 1)) * 100}%`, height: '100%', background: C.green, borderRadius: 10 }} />
             </div>
             <button
+              onClick={() => setShowAddForm(f => !f)}
+              style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, padding: '4px 10px', borderRadius: 5, background: '#0a1a1a', border: `1px solid ${C.green}40`, color: C.green, cursor: 'pointer' }}
+            >
+              + Ajouter
+            </button>
+            <button
               onClick={handleRenouveler}
               disabled={renewing}
               style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, padding: '4px 10px', borderRadius: 5, background: '#0a1a1a', border: `1px solid ${C.indigo}40`, color: C.indigo, cursor: renewing ? 'not-allowed' : 'pointer', opacity: renewing ? 0.6 : 1 }}
@@ -214,6 +243,43 @@ export default function CallingSessionPanel() {
             </button>
           </div>
         </div>
+
+        {/* Formulaire ajout contact */}
+        {showAddForm && (
+          <div style={{ padding: '8px 16px', background: C.surface2, borderBottom: `1px solid ${C.line}`, display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+            <input
+              value={addNom}
+              onChange={e => setAddNom(e.target.value)}
+              placeholder="Nom *"
+              style={{ flex: '1 1 100px', padding: '5px 8px', background: C.surface1, border: `1px solid ${C.lineSoft}`, borderRadius: 5, color: C.textHi, fontSize: 9, fontFamily: 'JetBrains Mono,monospace' }}
+            />
+            <input
+              value={addTel}
+              onChange={e => setAddTel(e.target.value)}
+              placeholder="Téléphone *"
+              style={{ flex: '1 1 100px', padding: '5px 8px', background: C.surface1, border: `1px solid ${C.lineSoft}`, borderRadius: 5, color: C.textHi, fontSize: 9, fontFamily: 'JetBrains Mono,monospace' }}
+            />
+            <input
+              value={addEntreprise}
+              onChange={e => setAddEntreprise(e.target.value)}
+              placeholder="Entreprise"
+              style={{ flex: '1 1 80px', padding: '5px 8px', background: C.surface1, border: `1px solid ${C.lineSoft}`, borderRadius: 5, color: C.textHi, fontSize: 9, fontFamily: 'JetBrains Mono,monospace' }}
+            />
+            <button
+              onClick={handleAddContact}
+              disabled={adding || !addNom.trim() || !addTel.trim()}
+              style={{ padding: '5px 12px', borderRadius: 5, background: '#0a1f0a', border: `1px solid ${C.green}40`, color: C.green, fontSize: 9, fontFamily: 'JetBrains Mono,monospace', cursor: adding ? 'not-allowed' : 'pointer', fontWeight: 600 }}
+            >
+              {adding ? '...' : '✓ Ajouter'}
+            </button>
+            <button
+              onClick={() => setShowAddForm(false)}
+              style={{ padding: '5px 8px', borderRadius: 5, background: C.surface1, border: `1px solid ${C.lineSoft}`, color: C.textLo, fontSize: 9, cursor: 'pointer' }}
+            >
+              ✕
+            </button>
+          </div>
+        )}
 
         {/* CRM split */}
         <div style={{ display: 'grid', gridTemplateColumns: '40% 60%', minHeight: 480 }}>
@@ -230,6 +296,7 @@ export default function CallingSessionPanel() {
           <div style={{ padding: 12, overflowY: 'auto', maxHeight: 480 }}>
             {activeContact ? (
               <SessionContactCard
+                key={activeContact.id}
                 contact={activeContact}
                 script={script}
                 objections={objections}

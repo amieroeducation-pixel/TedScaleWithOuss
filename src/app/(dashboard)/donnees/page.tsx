@@ -315,6 +315,16 @@ export default function DonneesPage() {
             Comparer
           </button>
           <button
+            onClick={() => {
+              const csv = `Mois,Appels,Prospects,RDV,CA,Contrats,Moy/jour,Blocs,Taux closing\n${selectedMonth},${kpis.calls},${kpis.prospects},${kpis.rdv},${kpis.ca},${kpis.contrats},${kpis.avgPerDay},${kpis.blocs},${kpis.closingRate}%`
+              const blob = new Blob([csv], { type: 'text/csv' })
+              const url = URL.createObjectURL(blob)
+              const a = document.createElement('a')
+              a.href = url
+              a.download = `donnees-${selectedMonth}.csv`
+              a.click()
+              URL.revokeObjectURL(url)
+            }}
             style={{ fontSize: 10, padding: '7px 14px', borderRadius: 6, cursor: 'pointer', border: `1px solid ${C.green}`, background: '#0d1f0f', color: C.green, fontFamily: 'Oswald,sans-serif', letterSpacing: '0.05em' }}
           >
             Export Excel

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { C } from '@/lib/theme'
 import ProspectCard, { type ProspectCardData } from '@/components/prospects/ProspectCard'
 import CreateSessionModal from '@/components/calling/CreateSessionModal'
@@ -150,10 +151,10 @@ function StatusBadge({ status }: { status: ProspectStatus }) {
   )
 }
 
-function ScoreDot({ score }: { score: number }) {
+function ScoreDot({ score, onClick }: { score: number; onClick?: () => void }) {
   const color = score >= 0.8 ? C.green : score >= 0.65 ? C.gold : C.cyan
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+    <div onClick={onClick} style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: onClick ? 'pointer' : 'default' }}>
       <div style={{ width: 7, height: 7, borderRadius: '50%', background: color, boxShadow: `0 0 5px ${color}80` }} />
       <span style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color }}>{Math.round(score * 100)}%</span>
     </div>
@@ -192,6 +193,7 @@ type SearchResult = {
 }
 
 export default function TnsPage() {
+  const router = useRouter()
   const [metiersSelected, setMetiersSelected] = useState<string[]>([])
   const [ville, setVille] = useState('')
   const [includeTel, setIncludeTel] = useState(true)
@@ -454,12 +456,12 @@ export default function TnsPage() {
       {/* Stats row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10 }}>
         {[
-          { label: 'TNS extraits', val: stats.total, sub: 'Base totale', accent: C.indigo },
-          { label: 'Non contactés', val: stats.nonContactes, sub: 'À traiter', accent: C.green },
-          { label: 'En cours', val: stats.enCours, sub: 'Prospection', accent: C.gold },
-          { label: 'Convertis', val: stats.convertis, sub: 'Clients', accent: C.cyan },
+          { label: 'TNS extraits', val: stats.total, sub: 'Base totale →', accent: C.indigo, link: '/crm?source=tns' },
+          { label: 'Non contactés', val: stats.nonContactes, sub: 'À traiter →', accent: C.green, link: '/crm?source=tns&stage=a_contacter' },
+          { label: 'En cours', val: stats.enCours, sub: 'Prospection →', accent: C.gold, link: '/crm?source=tns&stage=rdv1' },
+          { label: 'Convertis', val: stats.convertis, sub: 'Clients →', accent: C.cyan, link: '/crm?source=tns&stage=converti' },
         ].map(k => (
-          <div key={k.label} style={{ background: `linear-gradient(180deg,${C.surface2},${C.surface1})`, border: `1px solid ${C.line}`, borderRadius: 10, padding: '12px 14px', position: 'relative', overflow: 'hidden' }}>
+          <div key={k.label} onClick={() => router.push(k.link)} style={{ background: `linear-gradient(180deg,${C.surface2},${C.surface1})`, border: `1px solid ${C.line}`, borderRadius: 10, padding: '12px 14px', position: 'relative', overflow: 'hidden', cursor: 'pointer' }}>
             <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: k.accent, opacity: 0.55 }} />
             <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 7.5, color: C.textLo, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.12em' }}>{k.label}</div>
             <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 26, fontWeight: 600, color: C.textHi, lineHeight: 1, marginBottom: 2 }}>{k.val}</div>
@@ -618,7 +620,9 @@ export default function TnsPage() {
                 <div style={{ width: 30, height: 30, borderRadius: 8, background: C.surface3, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Oswald,sans-serif', fontSize: 10, color: C.indigo, fontWeight: 600, flexShrink: 0 }}>{r.initials}</div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 11, color: C.textHi, fontWeight: 500 }}>{r.nom}</div>
-                  <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.textLo }}>{r.metier} · {r.ville}{r.codePostal ? ` (${r.codePostal})` : ''}</div>
+                  <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.textLo }}>
+                    {r.metier} · <span onClick={(e) => { e.stopPropagation(); router.push(`/map?ville=${encodeURIComponent(r.ville)}`) }} style={{ color: C.indigo, textDecoration: 'underline', cursor: 'pointer' }}>{r.ville}</span>{r.codePostal ? ` (${r.codePostal})` : ''}
+                  </div>
                   {r.adresse && <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 7.5, color: C.textLo }}>{r.adresse}</div>}
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'flex-end', flexShrink: 0 }}>
@@ -640,7 +644,7 @@ export default function TnsPage() {
                   )}
                   {r.email && <span style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 7, color: C.textLo }}>{r.email}</span>}
                 </div>
-                <ScoreDot score={r.score} />
+                <ScoreDot score={r.score} onClick={() => router.push('/scoring')} />
                 {existingPhones.has(normPhone(r.telephone))
                   ? <span style={{ fontSize: 8, padding: '2px 7px', borderRadius: 5, background: '#1a0a1a', color: '#c084fc', border: `1px solid #c084fc40`, fontFamily: 'JetBrains Mono,monospace', fontWeight: 600, whiteSpace: 'nowrap' as const }}>Déjà en base</span>
                   : isPhoneContacted(r.telephone)
@@ -707,18 +711,26 @@ export default function TnsPage() {
 
                 {/* Info */}
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 12, color: C.textHi, fontWeight: 500, marginBottom: 1 }}>{p.nom}</div>
+                  <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 12, color: C.textHi, fontWeight: 500, marginBottom: 1, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    {p.nom}
+                    <span onClick={(e) => { e.stopPropagation(); router.push(`/crm?prospect=${p.id}`) }} style={{ fontSize: 8, color: C.indigo, textDecoration: 'underline', cursor: 'pointer' }}>→ CRM</span>
+                  </div>
                   <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.textLo }}>
                     {p.metier} · {p.ville} · <a href={`tel:${p.telephone}`} style={{ color: C.gold, textDecoration: 'none' }}>{p.telephone}</a>
                   </div>
                 </div>
 
                 {/* Score */}
-                <ScoreDot score={p.score} />
+                <ScoreDot score={p.score} onClick={() => router.push('/scoring')} />
 
                 {/* Actions */}
                 <div style={{ display: 'flex', gap: 3, alignItems: 'center' }}>
-                  {p.actions.map((a, i) => <ActionBtn key={i} type={a} />)}
+                  {p.actions.map((a, i) => {
+                    if (a === 'seq') {
+                      return <span key={i} onClick={(e) => { e.stopPropagation(); router.push('/sequences') }} style={{ ...ACTION_STYLE[a], fontFamily: 'JetBrains Mono,monospace', fontSize: 8, fontWeight: 700, padding: '3px 7px', borderRadius: 5, background: ACTION_STYLE[a].bg, color: ACTION_STYLE[a].color, border: `1px solid ${ACTION_STYLE[a].border}`, cursor: 'pointer' }}>{ACTION_LABELS[a]}</span>
+                    }
+                    return <ActionBtn key={i} type={a} />
+                  })}
                 </div>
 
                 {/* Status */}

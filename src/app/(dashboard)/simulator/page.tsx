@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 import { C } from '@/lib/theme'
 
 type ProductId = 'av' | 'per' | 'ct' | 'capi' | 'tontine'
@@ -71,6 +72,7 @@ function SliderInput({ label, min, max, step, value, onChange, accent, isMoney }
 }
 
 export default function SimulatorPage() {
+  const router = useRouter()
   const [selectedProduct, setSelectedProduct] = useState<ProductId>('per')
   const [montant, setMontant] = useState(50000)
   const [duree, setDuree] = useState(20)
@@ -141,12 +143,18 @@ export default function SimulatorPage() {
 
       {/* Quick results from prospect data */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-        <div style={{ background: `${C.gold}12`, border: `1px solid ${C.gold}40`, borderRadius: 10, padding: '14px 18px', textAlign: 'center' }}>
-          <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 28, fontWeight: 700, color: C.gold }}>3 210 €</div>
+        <div
+          onClick={() => router.push('/revenue')}
+          style={{ background: `${C.gold}12`, border: `1px solid ${C.gold}40`, borderRadius: 10, padding: '14px 18px', textAlign: 'center', cursor: 'pointer' }}
+        >
+          <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 28, fontWeight: 700, color: C.gold }}>3 210 € →</div>
           <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.textMid, marginTop: 4 }}>Économie fiscale annuelle via PER Madelin</div>
         </div>
-        <div style={{ background: `${C.green}12`, border: `1px solid ${C.green}40`, borderRadius: 10, padding: '14px 18px', textAlign: 'center' }}>
-          <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 28, fontWeight: 700, color: C.green }}>+ 268 000 €</div>
+        <div
+          onClick={() => router.push('/clients')}
+          style={{ background: `${C.green}12`, border: `1px solid ${C.green}40`, borderRadius: 10, padding: '14px 18px', textAlign: 'center', cursor: 'pointer' }}
+        >
+          <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 28, fontWeight: 700, color: C.green }}>+ 268 000 € →</div>
           <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.textMid, marginTop: 4 }}>Capital constitué à horizon retraite (23 ans)</div>
         </div>
       </div>
@@ -208,7 +216,11 @@ Ted — Conseiller en Gestion de Patrimoine
             return (
               <button
                 key={p.id}
-                onClick={() => setSelectedProduct(p.id)}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setSelectedProduct(p.id)
+                }}
+                onDoubleClick={() => router.push(`/analytics?focus=${p.id}`)}
                 style={{
                   padding: '12px 8px', borderRadius: 9, cursor: 'pointer',
                   background: active ? `${p.accent}15` : C.surface2,
@@ -217,7 +229,7 @@ Ted — Conseiller en Gestion de Patrimoine
                   textAlign: 'left',
                 }}
               >
-                <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 10, fontWeight: 500, color: active ? p.accent : C.textMid, letterSpacing: '0.04em', marginBottom: 4 }}>{p.name}</div>
+                <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 10, fontWeight: 500, color: active ? p.accent : C.textMid, letterSpacing: '0.04em', marginBottom: 4 }}>{p.name} {active && '→'}</div>
                 <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 10, color: active ? C.textHi : C.textLo, fontWeight: 600 }}>{p.rate}% / an</div>
                 <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 7, color: C.textVlo, marginTop: 4, lineHeight: 1.4 }}>{p.description}</div>
               </button>
@@ -251,14 +263,18 @@ Ted — Conseiller en Gestion de Patrimoine
           <PanelTitle title="Résultats de Projection" accent={product.accent} />
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {[
-              { label: 'Capital final estimé', val: fmt(results.capitalFinal), accent: product.accent, big: true },
-              { label: 'Intérêts générés', val: fmt(results.interets), accent: C.green, big: false },
-              { label: 'Avantage fiscal estimé', val: fmt(results.avantageFiscal), accent: C.gold, big: false },
-              { label: 'Commission CGP estimée', val: fmt(results.commission), accent: C.indigo, big: false },
+              { label: 'Capital final estimé', val: fmt(results.capitalFinal), accent: product.accent, big: true, route: '/revenue' },
+              { label: 'Intérêts générés', val: fmt(results.interets), accent: C.green, big: false, route: '/revenue' },
+              { label: 'Avantage fiscal estimé', val: fmt(results.avantageFiscal), accent: C.gold, big: false, route: '/revenue' },
+              { label: 'Commission CGP estimée', val: fmt(results.commission), accent: C.indigo, big: false, route: '/revenue' },
             ].map(r => (
-              <div key={r.label} style={{ background: `${r.accent}10`, border: `1px solid ${r.accent}30`, borderRadius: 8, padding: '10px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div
+                key={r.label}
+                onClick={() => router.push(r.route)}
+                style={{ background: `${r.accent}10`, border: `1px solid ${r.accent}30`, borderRadius: 8, padding: '10px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
+              >
                 <span style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.textMid }}>{r.label}</span>
-                <span style={{ fontFamily: 'Oswald,sans-serif', fontSize: r.big ? 22 : 16, fontWeight: 500, color: r.accent }}>{r.val}</span>
+                <span style={{ fontFamily: 'Oswald,sans-serif', fontSize: r.big ? 22 : 16, fontWeight: 500, color: r.accent }}>{r.val} →</span>
               </div>
             ))}
           </div>
@@ -286,9 +302,13 @@ Ted — Conseiller en Gestion de Patrimoine
                 const pct = Math.round((p.interets / montant) * 100)
                 const barW = Math.round((p.capital / maxProj) * 100)
                 return (
-                  <tr key={p.year} style={{ borderBottom: `1px solid ${C.lineSoft}30` }}>
+                  <tr
+                    key={p.year}
+                    onClick={() => router.push('/pipeline')}
+                    style={{ borderBottom: `1px solid ${C.lineSoft}30`, cursor: 'pointer' }}
+                  >
                     <td style={{ fontFamily: 'Oswald,sans-serif', fontSize: 14, color: product.accent, padding: '8px 10px', fontWeight: 500 }}>An {p.year}</td>
-                    <td style={{ fontFamily: 'Oswald,sans-serif', fontSize: 14, color: C.textHi, padding: '8px 10px' }}>{fmt(p.capital)}</td>
+                    <td style={{ fontFamily: 'Oswald,sans-serif', fontSize: 14, color: C.textHi, padding: '8px 10px' }}>{fmt(p.capital)} →</td>
                     <td style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 10, color: C.green, padding: '8px 10px' }}>+{fmt(p.interets)}</td>
                     <td style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 10, color: C.gold, padding: '8px 10px' }}>+{pct}%</td>
                     <td style={{ padding: '8px 10px', minWidth: 100 }}>

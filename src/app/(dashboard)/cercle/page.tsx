@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { C } from '@/lib/theme'
 
 // ─── PRESSURE LEVEL COLORS ───────────────────────────────────────────────────
@@ -248,6 +249,7 @@ function PanelTitle({ title, accent = C.cyan }: { title: string; accent?: string
 
 // ─── PAGE ─────────────────────────────────────────────────────────────────────
 export default function CerclePage() {
+  const router = useRouter()
   const [tab, setTab] = useState<'visual' | 'list' | 'settings'>('visual')
   const [filterPressure, setFilterPressure] = useState<string | null>(null)
   const [partners, setPartners] = useState<Partner[]>(INITIAL_PARTNERS)
@@ -490,7 +492,7 @@ export default function CerclePage() {
                 return (
                   <div
                     key={p.id}
-                    onClick={() => setTab('list')}
+                    onClick={() => router.push('/crm?source=recommandation')}
                     style={{
                       position: 'absolute',
                       width: 90, height: 90,
@@ -510,14 +512,18 @@ export default function CerclePage() {
                       <img src={p.img} alt={p.shortName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
 
                       {/* Badge */}
-                      <div style={{
-                        position: 'absolute', top: -4, right: -4,
-                        width: 20, height: 20, borderRadius: '50%',
-                        background: pr.border, color: '#0a0e22',
-                        fontSize: 9, fontWeight: 700,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        border: `2px solid ${C.bgDeep}`,
-                      }}>
+                      <div
+                        onClick={(e) => { e.stopPropagation(); router.push('/pipeline') }}
+                        style={{
+                          position: 'absolute', top: -4, right: -4,
+                          width: 20, height: 20, borderRadius: '50%',
+                          background: pr.border, color: '#0a0e22',
+                          fontSize: 9, fontWeight: 700,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          border: `2px solid ${C.bgDeep}`,
+                          cursor: 'pointer',
+                        }}
+                      >
                         {p.badge}
                       </div>
                     </div>
@@ -622,17 +628,33 @@ export default function CerclePage() {
                         border: `2px solid ${pr.border}`, objectFit: 'cover',
                       }} />
                     </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: C.textHi }}>{p.fullName}</div>
+                    <div
+                      style={{ flex: 1, minWidth: 0, cursor: 'pointer' }}
+                      onClick={() => router.push('/crm?source=recommandation')}
+                    >
+                      <div style={{ fontSize: 13, fontWeight: 600, color: C.textHi }}>{p.fullName} →</div>
                       <div style={{ fontSize: 10, color: C.textLo, marginTop: 2 }}>{p.role} · {p.location}</div>
                     </div>
                     <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                      <div style={sinceStyle(p)}>
+                      <div
+                        style={{ ...sinceStyle(p), cursor: (p.pressure === 'max' || p.pressure === 'high') ? 'pointer' : 'auto' }}
+                        onClick={(e) => {
+                          if (p.pressure === 'max' || p.pressure === 'high') {
+                            e.stopPropagation()
+                            router.push('/today')
+                          }
+                        }}
+                      >
                         Il y a {p.daysSince}j
                         {p.pressure === 'max' && ' 🔴'}
                         {p.pressure === 'high' && ' ⚠️'}
                       </div>
-                      <div style={{ fontSize: 10, color: C.textLo, marginTop: 2 }}>{p.clients} clients</div>
+                      <div
+                        style={{ fontSize: 10, color: C.textLo, marginTop: 2, cursor: 'pointer' }}
+                        onClick={(e) => { e.stopPropagation(); router.push('/clients') }}
+                      >
+                        {p.clients} clients →
+                      </div>
                     </div>
                   </div>
                 )
@@ -660,7 +682,12 @@ export default function CerclePage() {
                 <div style={{ fontSize: 10, color: C.textMid, marginBottom: 6, lineHeight: 1.6 }}>
                   {p.notes.map((n, i) => <div key={i}>• {n}</div>)}
                 </div>
-                <div style={{ fontSize: 10, color: C.cyan, fontWeight: 700 }}>➜ {p.action}</div>
+                <div
+                  style={{ fontSize: 10, color: C.cyan, fontWeight: 700, cursor: 'pointer' }}
+                  onClick={() => router.push('/today')}
+                >
+                  ➜ {p.action}
+                </div>
               </div>
             ))}
 
@@ -680,7 +707,12 @@ export default function CerclePage() {
                 <div style={{ fontSize: 10, color: C.textMid, marginBottom: 6, lineHeight: 1.6 }}>
                   {p.notes.map((n, i) => <div key={i}>• {n}</div>)}
                 </div>
-                <div style={{ fontSize: 10, color: C.warn, fontWeight: 700 }}>➜ {p.action}</div>
+                <div
+                  style={{ fontSize: 10, color: C.warn, fontWeight: 700, cursor: 'pointer' }}
+                  onClick={() => router.push('/today')}
+                >
+                  ➜ {p.action}
+                </div>
               </div>
             ))}
 
@@ -703,7 +735,12 @@ export default function CerclePage() {
                   </div>
                 )}
                 {p.action && (
-                  <div style={{ fontSize: 10, color: C.gold, fontWeight: 700 }}>➜ {p.action}</div>
+                  <div
+                    style={{ fontSize: 10, color: C.gold, fontWeight: 700, cursor: 'pointer' }}
+                    onClick={() => router.push('/today')}
+                  >
+                    ➜ {p.action}
+                  </div>
                 )}
               </div>
             ))}
