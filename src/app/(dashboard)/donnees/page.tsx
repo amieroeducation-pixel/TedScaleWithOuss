@@ -316,7 +316,7 @@ export default function DonneesPage() {
           </button>
           <button
             onClick={() => {
-              const csv = `Mois,Appels,Prospects,RDV,CA,Contrats,Moy/jour,Blocs,Taux closing\n${currentMonth},${kpis.calls},${kpis.prospects},${kpis.rdv},${kpis.ca},${kpis.contrats},${kpis.avgPerDay},${kpis.blocs},${kpis.closingRate}%`
+              const csv = `Mois,Appels,Prospects,RDV,CA,Contrats,Moy/jour,Blocs,Taux closing\n${currentMonth},${totalAppels},${totalProspects},${totalRDV},${totalCA},${totalContrats},${avgAppelsJour},${totalBlocs},${tauxClosing}%`
               const blob = new Blob([csv], { type: 'text/csv' })
               const url = URL.createObjectURL(blob)
               const a = document.createElement('a')
