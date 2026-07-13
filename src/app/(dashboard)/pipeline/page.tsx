@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import { C } from '@/lib/theme'
+import { LinkChip } from '@/lib/cross-links'
 
 type PipelineStage = {
   stage: string
