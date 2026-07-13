@@ -24,6 +24,7 @@ import { openWhatsApp, openLinkedIn } from '@/lib/sequences/client-actions'
 import ProspectEditForm from '@/components/prospects/ProspectEditForm'
 import { saveLastSection } from '@/lib/navigation-state'
 import { detectCivilite } from '@/lib/civilite'
+import { LinkButton, LinkChip, LinkInline } from '@/lib/cross-links'
 
 // --- TYPES ---
 type Stage = 'À contacter' | 'RDV1' | 'RDV2' | 'RDV3' | 'Converti' | 'Perdu'
@@ -1153,6 +1154,13 @@ function CrmPageContent() {
         </div>
         <div style={{ fontSize: 11, color: C.textLo, marginTop: 4 }}>
           Pipeline commercial — glissez les fiches entre les étapes
+        </div>
+        <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
+          <LinkChip href="/today" label="Relances" color="cyan" params={{ tab: 'relances' }} />
+          <LinkChip href="/scoring" label="Scoring" color="purple" />
+          <LinkChip href="/pipeline" label="Pipeline" color="indigo" />
+          <LinkChip href="/prospection/tns" label="TNS" color="green" />
+          <LinkChip href="/sequences" label="Séquences" color="gold" />
         </div>
       </div>
 

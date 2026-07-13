@@ -9,6 +9,7 @@ import { AgendaEventType, AgendaEvent, AGENDA_COLORS, loadDayAgenda, saveDayAgen
 import { saveLastSection } from '@/lib/navigation-state'
 import CallingSessionPanel from '@/components/calling/CallingSessionPanel'
 import { useCelebrations } from '@/hooks/useCelebrations'
+import { LinkButton, LinkBadge, LinkChip, LinkInline, buildHref } from '@/lib/cross-links'
 
 // ─── Objectifs du jour ────────────────────────────────────────────────────────
 interface TodayTargets { contacts: number; calls: number; rdv1: number; rdv2: number }
@@ -1169,6 +1170,14 @@ function TodayPageContent() {
             ))}
           </div>
 
+          {/* Liens transversaux KPI */}
+          <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
+            <LinkChip href="/crm" label="CRM Kanban" color="gold" />
+            <LinkChip href="/pipeline" label="Pipeline" color="indigo" params={{ stage: 'rdv1' }} />
+            <LinkChip href="/scoring" label="Scoring" color="purple" />
+            <LinkChip href="/sequences" label="Séquences" color="green" />
+          </div>
+
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
 
             {/* LEFT COLUMN */}
@@ -1300,6 +1309,14 @@ function TodayPageContent() {
               onClick={() => setShowRelanceModal(true)}
               style={{ marginLeft: 12, padding: '6px 14px', background: '#0d1f0f', border: `1px solid ${C.green}`, color: C.green, borderRadius: 6, fontSize: 9, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}
             >➕ Nouvelle relance</button>
+          </div>
+
+          {/* Liens transversaux relances */}
+          <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
+            <LinkChip href="/crm" label="CRM Kanban" color="gold" />
+            <LinkChip href="/pipeline" label="Pipeline" color="indigo" />
+            <LinkChip href="/sequences" label="Séquences" color="green" />
+            <LinkChip href="/scoring" label="Scoring" color="purple" />
           </div>
 
           {/* Pressure legend */}
@@ -1570,6 +1587,18 @@ function TodayPageContent() {
           </div>
         </div>
       )}
+
+      {/* Footer liens transversaux */}
+      <div style={{ marginTop: 24, paddingTop: 16, borderTop: `1px solid ${C.line}` }}>
+        <div style={{ fontSize: 9, color: C.textLo, marginBottom: 10, fontWeight: 600 }}>NAVIGATION RAPIDE</div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <LinkButton href="/crm" label="CRM Kanban" color="gold" />
+          <LinkButton href="/pipeline" label="Pipeline" color="indigo" />
+          <LinkButton href="/revenue" label="Revenue" color="gold" />
+          <LinkButton href="/analytics" label="Analytics" color="green" />
+          <LinkButton href="/global" label="Vue globale" color="indigo" />
+        </div>
+      </div>
     </div>
   )
 }
