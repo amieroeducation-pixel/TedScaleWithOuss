@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { C } from '@/lib/theme'
+import { LinkChip } from '@/lib/cross-links'
 
 interface Dept {
   code: string
@@ -166,6 +167,12 @@ function MapPageContent() {
         <div>
           <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 22, fontWeight: 600, color: C.textHi, letterSpacing: '0.06em' }}>CARTE TNS · ÎLE-DE-FRANCE</div>
           <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.textLo, marginTop: 2 }}>Sélectionne un métier · Clique LANCER sur un département · Téléphones via Pappers</div>
+          <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
+            <LinkChip href="/prospection/tns" label="TNS" color="green" />
+            <LinkChip href="/scoring" label="Scoring" color="purple" />
+            <LinkChip href="/crm" label="CRM" color="gold" />
+            <LinkChip href="/analytics" label="Analytics" color="indigo" />
+          </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <select

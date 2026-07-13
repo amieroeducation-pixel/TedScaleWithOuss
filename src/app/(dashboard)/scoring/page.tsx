@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { C } from '@/lib/theme'
+import { LinkChip } from '@/lib/cross-links'
 
 type ScoreRow = { label: string; val: number }
 
@@ -171,6 +172,12 @@ export default function ScoringPage() {
         </div>
         <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.textLo, paddingLeft: 11 }}>
           Scoring patrimonial — configuration
+        </div>
+        <div style={{ display: 'flex', gap: 6, marginTop: 8, paddingLeft: 11, flexWrap: 'wrap' }}>
+          <LinkChip href="/crm" label="CRM" color="gold" />
+          <LinkChip href="/map" label="Carte zones" color="indigo" />
+          <LinkChip href="/prospection/tns" label="TNS" color="green" />
+          <LinkChip href="/settings" label="Config" color="purple" params={{ tab: 'kpi' }} />
         </div>
       </div>
 
