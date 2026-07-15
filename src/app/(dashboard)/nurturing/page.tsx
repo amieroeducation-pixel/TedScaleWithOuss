@@ -115,6 +115,7 @@ export default function NurturingPage() {
   const [showSettingsEdit, setShowSettingsEdit] = useState(false)
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null)
   const [recalculating, setRecalculating] = useState(false)
+  const [toast, setToast] = useState<string | null>(null)
 
   useEffect(() => { saveLastSection('/nurturing') }, [])
 
@@ -211,14 +212,18 @@ export default function NurturingPage() {
   async function handleSaveSettings(s: Settings) {
     await fetch('/api/nurturing/settings', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(s) })
     setShowSettingsEdit(false); fetchAll()
+    setToast('Seuils sauvegardés ✓'); setTimeout(() => setToast(null), 3000)
   }
   async function handleDeleteDocument(id: string) { await fetch(`/api/nurturing/documents?id=${id}`, { method: 'DELETE' }); fetchAll() }
   async function handleDeleteMessage(id: string) { await fetch(`/api/nurturing/messages?id=${id}`, { method: 'DELETE' }); fetchAll() }
   async function handleRecalculate() {
     setRecalculating(true)
     try {
-      await fetch('/api/nurturing/recalculate', { method: 'POST' })
+      const res = await fetch('/api/nurturing/recalculate', { method: 'POST' })
+      const data = await res.json()
       await fetchAll()
+      setToast(`Scores recalculés : ${data.data?.updated || 0} contacts mis à jour ✓`)
+      setTimeout(() => setToast(null), 4000)
     } finally { setRecalculating(false) }
   }
 
@@ -236,35 +241,43 @@ export default function NurturingPage() {
             Maturation & relances · {contacts.length} contacts actifs
           </p>
         </div>
-        <button onClick={handleRecalculate} disabled={recalculating} style={{ padding: '6px 14px', borderRadius: 8, border: `1px solid ${C.gold}40`, background: recalculating ? C.surface2 : `${C.gold}12`, color: recalculating ? C.textLo : C.gold, fontSize: 11, fontWeight: 600, cursor: recalculating ? 'default' : 'pointer', fontFamily: 'JetBrains Mono, monospace' }}>
-          {recalculating ? '⏳ Recalcul...' : '🔄 Recalculer scores'}
-        </button>
-        {/* Cross-links to related sections */}
-        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-          <LinkBadge href="/crm" label="CRM" value={catCounts.rdv_fait} color="gold" />
-          <LinkBadge href="/cercle" label="Cercle" value={catCounts.interpro} color="purple" />
-          <LinkBadge href="/sequences" label="Séquences" value={withSequence.length} color="green" />
-          <LinkBadge href="/today" label="Today" value={dueToday.length} color="cyan" />
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
+          {/* Cross-links to related sections */}
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            <LinkBadge href="/crm" label="CRM" value={catCounts.rdv_fait} color="gold" />
+            <LinkBadge href="/cercle" label="Cercle" value={catCounts.interpro} color="purple" />
+            <LinkBadge href="/sequences" label="Séquences" value={withSequence.length} color="green" />
+            <LinkBadge href="/today" label="Today" value={dueToday.length} color="cyan" />
+          </div>
+          <button onClick={handleRecalculate} disabled={recalculating} style={{ padding: '6px 14px', borderRadius: 8, border: `1px solid ${C.gold}40`, background: recalculating ? C.surface2 : `${C.gold}12`, color: recalculating ? C.textLo : C.gold, fontSize: 11, fontWeight: 600, cursor: recalculating ? 'default' : 'pointer', fontFamily: 'JetBrains Mono, monospace' }}>
+            {recalculating ? '⏳ Recalcul...' : '🔄 Recalculer scores'}
+          </button>
         </div>
       </div>
 
       {/* ═══ TAB BAR ═══ */}
       <div style={{ display: 'flex', gap: 4, marginBottom: 20, borderBottom: `1px solid ${C.line}`, paddingBottom: 12 }}>
         {([
-          { id: 'overview' as Tab, label: '📊 Vue globale' },
-          { id: 'contacts' as Tab, label: '👥 Contacts' },
-          { id: 'documents' as Tab, label: '📄 Bibliothèque' },
-          { id: 'messages' as Tab, label: '💬 Messages' },
-          { id: 'settings' as Tab, label: '⚙️ Configuration' },
-        ]).map(t => (
+          { id: 'overview' as Tab, label: '📊 Vue globale', count: null },
+          { id: 'contacts' as Tab, label: '👥 Contacts', count: contacts.length },
+          { id: 'documents' as Tab, label: '📄 Bibliothèque', count: documents.length },
+          { id: 'messages' as Tab, label: '💬 Messages', count: messages.length },
+          { id: 'settings' as Tab, label: '⚙️ Configuration', count: null },
+        ] as { id: Tab; label: string; count: number | null }[]).map(t => (
           <button key={t.id} onClick={() => setTab(t.id)} style={{
             padding: '8px 16px', borderRadius: '8px 8px 0 0', border: 'none', cursor: 'pointer',
             background: tab === t.id ? C.surface2 : 'transparent',
             color: tab === t.id ? C.textHi : C.textMid, fontSize: 12, fontWeight: tab === t.id ? 700 : 400,
             fontFamily: 'JetBrains Mono, monospace',
             borderBottom: tab === t.id ? `2px solid ${C.gold}` : '2px solid transparent',
+            display: 'flex', alignItems: 'center', gap: 6,
           }}>
             {t.label}
+            {t.count !== null && t.count > 0 && (
+              <span style={{ fontSize: 9, padding: '1px 5px', borderRadius: 8, background: tab === t.id ? `${C.gold}25` : C.surface3, color: tab === t.id ? C.gold : C.textLo, fontWeight: 700 }}>
+                {t.count}
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -323,6 +336,11 @@ export default function NurturingPage() {
                 {themes.map(t => <option key={t.id} value={t.id}>{t.icon} {t.name}</option>)}
               </select>
             )}
+            {(categoryFilter !== 'all' || tempFilter !== 'all' || pressureFilter !== 'all' || themeFilter !== 'all' || search || showDueOnly) && (
+              <button onClick={() => { setCategoryFilter('all'); setTempFilter('all'); setPressureFilter('all'); setThemeFilter('all'); setSearch(''); setShowDueOnly(false) }} style={{ ...chipBtnStyle, background: '#ff647015', color: '#ff6470', border: '1px solid #ff647030' }}>
+                ✕ Réinitialiser
+              </button>
+            )}
             <div style={{ marginLeft: 'auto', display: 'flex', gap: 4, alignItems: 'center' }}>
               <span style={{ fontSize: 11, color: C.textLo }}>Tri :</span>
               {(['date', 'temperature', 'pressure', 'relances'] as const).map(s => (
@@ -363,6 +381,13 @@ export default function NurturingPage() {
       {showMsgForm && <MessageFormModal onSubmit={handleAddMessage} onClose={() => setShowMsgForm(false)} />}
       {showThemeForm && <ThemeFormModal onSubmit={handleAddTheme} onClose={() => setShowThemeForm(false)} />}
       {selectedContact && <ContactDetailModal contact={selectedContact} themes={themes} documents={documents} messages={messages} onClose={() => setSelectedContact(null)} onRefresh={fetchAll} router={router} />}
+
+      {/* Toast notification */}
+      {toast && (
+        <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 2000, background: C.surface2, border: `1px solid ${C.gold}40`, borderRadius: 10, padding: '12px 20px', color: C.gold, fontSize: 12, fontWeight: 600, fontFamily: 'JetBrains Mono, monospace', boxShadow: `0 4px 20px rgba(0,0,0,0.4)`, animation: 'fadeIn 0.2s ease-out' }}>
+          {toast}
+        </div>
+      )}
     </div>
   )
 }
@@ -386,7 +411,7 @@ function OverviewTab({ contacts, dueToday, hotContacts, overPressured, noAction,
         <KpiCard value={dueToday.length} label="À traiter" icon="⚡" color={C.gold} highlight={dueToday.length > 0} />
         <KpiCard value={hotContacts.length} label="Chauds" icon="🔥" color="#ff4444" />
         <KpiCard value={overPressured.length} label="Sur-sollicités" icon="🛑" color="#ff6470" highlight={overPressured.length > 0} />
-        <KpiCard value={noAction.length} label="Sans action prévue" icon="😴" color={C.textLo} />
+        <KpiCard value={noAction.length} label="Sans action prévue" icon="😴" color={C.textLo} onClick={() => onNavigate('contacts')} />
       </div>
 
       {/* Temperature distribution */}
@@ -464,13 +489,18 @@ function OverviewTab({ contacts, dueToday, hotContacts, overPressured, noAction,
   )
 }
 
-function KpiCard({ value, label, icon, color, highlight }: { value: number; label: string; icon: string; color: string; highlight?: boolean }) {
+function KpiCard({ value, label, icon, color, highlight, onClick }: { value: number; label: string; icon: string; color: string; highlight?: boolean; onClick?: () => void }) {
   return (
-    <div style={{
+    <div onClick={onClick} style={{
       background: highlight ? `${color}12` : C.surface1,
       border: `1px solid ${highlight ? `${color}40` : C.line}`,
       borderRadius: 10, padding: '14px 16px', textAlign: 'center',
-    }}>
+      cursor: onClick ? 'pointer' : 'default',
+      transition: 'transform 0.1s',
+    }}
+      onMouseEnter={e => { if (onClick) e.currentTarget.style.transform = 'scale(1.02)' }}
+      onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)' }}
+    >
       <div style={{ fontSize: 20 }}>{icon}</div>
       <div style={{ fontSize: 22, fontWeight: 700, color: highlight ? color : C.textHi, marginTop: 4 }}>{value}</div>
       <div style={{ fontSize: 10, color: C.textMid, marginTop: 2 }}>{label}</div>
@@ -543,8 +573,8 @@ function ContactCard({ contact, onClick, router }: { contact: Contact; onClick: 
 
       {/* Info */}
       <div style={{ flex: 1, minWidth: 0, position: 'relative', zIndex: 1 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 13, fontWeight: 600, color: '#fff', textShadow: '0 1px 2px rgba(0,0,0,0.4)' }}>{contact.full_name}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 14, fontWeight: 600, color: '#fff', textShadow: '0 1px 2px rgba(0,0,0,0.4)' }}>{contact.full_name}</span>
           {category && (
             <span onClick={e => { e.stopPropagation(); router.push(category.linkedSection) }} style={{
               fontSize: 10, color: category.color, background: `${category.color}15`, padding: '2px 7px', borderRadius: 4, cursor: 'pointer',
@@ -559,11 +589,11 @@ function ContactCard({ contact, onClick, router }: { contact: Contact; onClick: 
             </span>
           )}
         </div>
-        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)', marginTop: 3, display: 'flex', gap: 10 }}>
-          {contact.profession && <span>{contact.profession}</span>}
-          <span>{PIPELINE_LABELS[contact.pipeline_stage] || contact.pipeline_stage}</span>
-          <span>📊 {contact.total_touchpoints}tp · {contact.responded_touchpoints} rép.</span>
-          {contact.nb_relances_sans_reponse > 0 && <span style={{ color: C.warn }}>⚠{contact.nb_relances_sans_reponse} s/r</span>}
+        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', marginTop: 5, display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+          {contact.profession && <span style={{ fontWeight: 500 }}>{contact.profession}</span>}
+          <span style={{ opacity: 0.7 }}>{PIPELINE_LABELS[contact.pipeline_stage] || contact.pipeline_stage}</span>
+          <span style={{ display: 'flex', gap: 4, alignItems: 'center' }}>📊 {contact.total_touchpoints}tp · {contact.responded_touchpoints} rép.</span>
+          {contact.nb_relances_sans_reponse > 0 && <span style={{ color: C.warn, fontWeight: 600 }}>⚠ {contact.nb_relances_sans_reponse} sans réponse</span>}
         </div>
       </div>
 
@@ -617,7 +647,7 @@ function DocumentsTab({ documents, themes, onAdd, onDelete }: { documents: Nurtu
       </div>
 
       {filtered.length === 0 ? (
-        <EmptyState icon="📄" text="Aucun document — ajoutez votre première brochure ou simulation" />
+        <EmptyState icon="📄" text="Aucun document — ajoutez votre première brochure ou simulation" actionLabel="+ Ajouter un document" onAction={onAdd} />
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 10 }}>
           {filtered.map(doc => (
@@ -667,7 +697,7 @@ function MessagesTab({ messages, onAdd, onDelete }: { messages: NurturingMessage
       </div>
 
       {filtered.length === 0 ? (
-        <EmptyState icon="💬" text="Aucun message pré-enregistré — créez votre premier template" />
+        <EmptyState icon="💬" text="Aucun message pré-enregistré — créez votre premier template" actionLabel="+ Créer un message" onAction={onAdd} />
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {filtered.map(msg => (
@@ -1023,11 +1053,14 @@ function FormField({ label, value, onChange }: { label: string; value: string; o
   )
 }
 
-function EmptyState({ icon, text }: { icon: string; text: string }) {
+function EmptyState({ icon, text, actionLabel, onAction }: { icon: string; text: string; actionLabel?: string; onAction?: () => void }) {
   return (
     <div style={{ textAlign: 'center', padding: 50, color: C.textLo }}>
       <div style={{ fontSize: 36, marginBottom: 10 }}>{icon}</div>
-      <p style={{ fontSize: 13 }}>{text}</p>
+      <p style={{ fontSize: 13, marginBottom: actionLabel ? 14 : 0 }}>{text}</p>
+      {actionLabel && onAction && (
+        <button onClick={onAction} style={{ ...goldBtnStyle, width: 'auto', padding: '8px 20px' }}>{actionLabel}</button>
+      )}
     </div>
   )
 }
