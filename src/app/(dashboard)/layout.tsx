@@ -24,6 +24,7 @@ const NAV_SECTIONS = [
     label: 'Clients',
     items: [
       { id: 'crm', href: '/crm', label: 'CRM Kanban' },
+      { id: 'nurturing', href: '/nurturing', label: '🌱 Nurturing' },
       { id: 'clients', href: '/clients', label: 'Premium' },
       { id: 'cercle', href: '/cercle', label: 'Cercle' },
     ],
