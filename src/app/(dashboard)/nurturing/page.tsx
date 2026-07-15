@@ -13,26 +13,26 @@ const TEMP_CONFIG: Record<TemperatureLevel, { color: string; colorAlt: string; l
   hot: {
     color: '#ff4444', colorAlt: '#ff8800',
     label: 'Brûlant', icon: '🔥',
-    gradient: 'linear-gradient(135deg, #1a0505 0%, #2d0a0a 40%, #3d1111 100%)',
-    bgSvg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 80" opacity="0.15"><path d="M50 70 C55 50, 60 30, 55 15 C50 5, 45 5, 45 15 C40 30, 50 45, 50 70Z" fill="%23ff4444"/><path d="M45 70 C48 55, 52 40, 48 28 C45 20, 42 22, 43 30 C40 42, 44 55, 45 70Z" fill="%23ff8800"/><path d="M340 75 C345 55, 350 35, 345 20 C340 10, 335 10, 335 20 C330 35, 340 50, 340 75Z" fill="%23ff4444" opacity="0.6"/><path d="M350 75 C353 60, 356 45, 352 33 C349 25, 346 27, 347 35 C344 47, 348 60, 350 75Z" fill="%23ff6600" opacity="0.5"/><circle cx="200" cy="60" r="3" fill="%23ff4444" opacity="0.3"/><circle cx="180" cy="50" r="2" fill="%23ff8800" opacity="0.25"/></svg>`,
+    gradient: 'linear-gradient(135deg, #2d0808 0%, #4a1010 30%, #3d0808 60%, #1a0505 100%)',
+    bgSvg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 120" opacity="0.22"><defs><linearGradient id="fg1" x1="0" y1="1" x2="0" y2="0"><stop offset="0%" stop-color="%23ff4444"/><stop offset="100%" stop-color="%23ff8800"/></linearGradient></defs><path d="M80 120 C85 90, 95 60, 90 35 C85 15, 75 10, 72 25 C65 50, 80 75, 80 120Z" fill="url(%23fg1)"/><path d="M95 120 C98 95, 105 70, 100 50 C95 35, 88 38, 90 50 C85 68, 92 90, 95 120Z" fill="%23ff6600" opacity="0.7"/><path d="M60 120 C63 100, 68 80, 65 60 C62 48, 57 50, 58 60 C55 75, 58 95, 60 120Z" fill="%23ff4444" opacity="0.5"/><path d="M620 120 C625 85, 640 50, 635 25 C630 8, 618 8, 615 25 C608 50, 625 80, 620 120Z" fill="url(%23fg1)" opacity="0.6"/><path d="M640 120 C643 95, 648 70, 644 50 C640 35, 635 38, 636 50 C632 70, 638 95, 640 120Z" fill="%23ff8800" opacity="0.5"/><path d="M600 120 C602 100, 607 80, 604 65 C601 55, 596 57, 597 65 C594 78, 598 98, 600 120Z" fill="%23ff4444" opacity="0.4"/><circle cx="300" cy="90" r="4" fill="%23ff4444" opacity="0.15"/><circle cx="350" cy="70" r="3" fill="%23ff8800" opacity="0.12"/><circle cx="500" cy="95" r="2.5" fill="%23ff4444" opacity="0.1"/><circle cx="200" cy="100" r="2" fill="%23ff6600" opacity="0.08"/><path d="M250 120 C252 110, 255 100, 253 92 C251 86, 248 87, 249 92 C247 100, 250 110, 250 120Z" fill="%23ff4444" opacity="0.2"/><path d="M450 120 C452 108, 455 96, 453 88 C451 82, 448 83, 449 88 C447 96, 450 108, 450 120Z" fill="%23ff8800" opacity="0.15"/></svg>`,
   },
   warm: {
     color: '#d4a020', colorAlt: '#8B6914',
     label: 'Tiède', icon: '☀️',
-    gradient: 'linear-gradient(135deg, #1a1505 0%, #2d2208 40%, #3d2e0a 100%)',
-    bgSvg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 80" opacity="0.12"><circle cx="360" cy="20" r="18" fill="%23e8c878" opacity="0.5"/><line x1="360" y1="-2" x2="360" y2="-8" stroke="%23e8c878" stroke-width="2" opacity="0.3"/><line x1="360" y1="42" x2="360" y2="48" stroke="%23e8c878" stroke-width="2" opacity="0.3"/><line x1="338" y1="20" x2="332" y2="20" stroke="%23e8c878" stroke-width="2" opacity="0.3"/><line x1="382" y1="20" x2="388" y2="20" stroke="%23e8c878" stroke-width="2" opacity="0.3"/></svg>`,
+    gradient: 'linear-gradient(135deg, #2d2208 0%, #3d2e0a 30%, #2d2208 60%, #1a1505 100%)',
+    bgSvg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 120" opacity="0.18"><defs><radialGradient id="sg1" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="%23e8c878"/><stop offset="100%" stop-color="%23d4a020" stop-opacity="0"/></radialGradient></defs><circle cx="680" cy="30" r="32" fill="url(%23sg1)" opacity="0.6"/><line x1="680" y1="-10" x2="680" y2="-22" stroke="%23e8c878" stroke-width="2.5" stroke-linecap="round" opacity="0.4"/><line x1="680" y1="70" x2="680" y2="82" stroke="%23e8c878" stroke-width="2.5" stroke-linecap="round" opacity="0.4"/><line x1="640" y1="30" x2="628" y2="30" stroke="%23e8c878" stroke-width="2.5" stroke-linecap="round" opacity="0.4"/><line x1="720" y1="30" x2="732" y2="30" stroke="%23e8c878" stroke-width="2.5" stroke-linecap="round" opacity="0.4"/><line x1="652" y1="2" x2="643" y2="-7" stroke="%23e8c878" stroke-width="2" stroke-linecap="round" opacity="0.3"/><line x1="708" y1="58" x2="717" y2="67" stroke="%23e8c878" stroke-width="2" stroke-linecap="round" opacity="0.3"/><line x1="708" y1="2" x2="717" y2="-7" stroke="%23e8c878" stroke-width="2" stroke-linecap="round" opacity="0.3"/><line x1="652" y1="58" x2="643" y2="67" stroke="%23e8c878" stroke-width="2" stroke-linecap="round" opacity="0.3"/><path d="M0 100 Q100 85, 200 95 Q300 105, 400 90 Q500 75, 600 92 Q700 108, 800 95" stroke="%23d4a020" stroke-width="1" fill="none" opacity="0.12"/><circle cx="120" cy="50" r="6" fill="%23e8c878" opacity="0.08"/><circle cx="350" cy="35" r="4" fill="%23d4a020" opacity="0.06"/><path d="M50 90 Q80 80, 110 90" stroke="%23e8c878" stroke-width="0.8" fill="none" opacity="0.1"/></svg>`,
   },
   cold: {
     color: '#5b9bd5', colorAlt: '#2c5f8a',
     label: 'Froid', icon: '❄️',
-    gradient: 'linear-gradient(135deg, #050e1a 0%, #0a1a2d 40%, #0e2240 100%)',
-    bgSvg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 80" opacity="0.15"><path d="M30 40 L35 35 L30 30 M30 40 L25 35 L30 30 M30 20 L30 60 M20 40 L40 40" stroke="%235b9bd5" stroke-width="1" fill="none" opacity="0.6"/><path d="M370 30 L375 25 L370 20 M370 30 L365 25 L370 20 M370 10 L370 50 M360 30 L380 30" stroke="%235b9bd5" stroke-width="1" fill="none" opacity="0.4"/><circle cx="150" cy="60" r="1" fill="%235b9bd5" opacity="0.25"/><circle cx="250" cy="15" r="1.5" fill="%235b9bd5" opacity="0.2"/></svg>`,
+    gradient: 'linear-gradient(135deg, #081520 0%, #0c2040 30%, #0a1a30 60%, #050e1a 100%)',
+    bgSvg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 120" opacity="0.2"><path d="M100 60 L100 20 M100 60 L100 100 M100 60 L65 40 M100 60 L135 80 M100 60 L65 80 M100 60 L135 40" stroke="%235b9bd5" stroke-width="1.5" fill="none" opacity="0.5"/><path d="M92 35 L100 20 L108 35" stroke="%235b9bd5" stroke-width="1" fill="none" opacity="0.4"/><path d="M92 85 L100 100 L108 85" stroke="%235b9bd5" stroke-width="1" fill="none" opacity="0.4"/><path d="M700 50 L700 15 M700 50 L700 85 M700 50 L668 32 M700 50 L732 68 M700 50 L668 68 M700 50 L732 32" stroke="%235b9bd5" stroke-width="1.2" fill="none" opacity="0.35"/><path d="M693 28 L700 15 L707 28" stroke="%235b9bd5" stroke-width="0.8" fill="none" opacity="0.3"/><circle cx="300" cy="30" r="2" fill="%235b9bd5" opacity="0.2"/><circle cx="320" cy="80" r="1.5" fill="%235b9bd5" opacity="0.15"/><circle cx="450" cy="25" r="2.5" fill="%235b9bd5" opacity="0.12"/><circle cx="500" cy="90" r="1.8" fill="%235b9bd5" opacity="0.18"/><circle cx="200" cy="100" r="1" fill="%235b9bd5" opacity="0.1"/><circle cx="550" cy="50" r="1.2" fill="%235b9bd5" opacity="0.08"/><path d="M400 60 L400 45 M400 60 L400 75 M400 60 L388 52 M400 60 L412 68 M400 60 L388 68 M400 60 L412 52" stroke="%235b9bd5" stroke-width="0.8" fill="none" opacity="0.15"/></svg>`,
   },
   dead: {
     color: '#8B4513', colorAlt: '#5c3010',
     label: 'Enterré', icon: '🪨',
-    gradient: 'linear-gradient(135deg, #0f0a05 0%, #1a1008 40%, #25180a 100%)',
-    bgSvg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 80" opacity="0.12"><path d="M0 75 Q50 70, 100 72 Q150 74, 200 70 Q250 66, 300 72 Q350 78, 400 73 L400 80 L0 80 Z" fill="%238B4513" opacity="0.4"/><ellipse cx="80" cy="68" rx="15" ry="5" fill="%235c3010" opacity="0.3"/><ellipse cx="320" cy="72" rx="12" ry="4" fill="%235c3010" opacity="0.25"/></svg>`,
+    gradient: 'linear-gradient(135deg, #1a1008 0%, #25180a 30%, #1a1008 60%, #0f0a05 100%)',
+    bgSvg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 120" opacity="0.2"><path d="M0 95 Q80 85, 160 90 Q240 95, 320 88 Q400 80, 480 87 Q560 94, 640 85 Q720 76, 800 90 L800 120 L0 120 Z" fill="%238B4513" opacity="0.4"/><path d="M0 105 Q100 100, 200 103 Q300 106, 400 100 Q500 94, 600 102 Q700 110, 800 105 L800 120 L0 120 Z" fill="%235c3010" opacity="0.3"/><ellipse cx="120" cy="88" rx="25" ry="8" fill="%234a3520" opacity="0.4"/><ellipse cx="380" cy="82" rx="18" ry="6" fill="%23503820" opacity="0.3"/><ellipse cx="600" cy="86" rx="22" ry="7" fill="%234a3520" opacity="0.35"/><ellipse cx="720" cy="78" rx="14" ry="5" fill="%23503820" opacity="0.25"/><path d="M250 95 Q260 85, 270 90 Q280 95, 290 88" stroke="%238B4513" stroke-width="0.8" fill="none" opacity="0.2"/><circle cx="500" cy="75" r="3" fill="%235c3010" opacity="0.15"/><circle cx="180" cy="80" r="2" fill="%238B4513" opacity="0.1"/></svg>`,
   },
 }
 
@@ -93,7 +93,7 @@ interface Settings {
 
 export default function NurturingPage() {
   const router = useRouter()
-  const [tab, setTab] = useState<Tab>('overview')
+  const [tab, setTab] = useState<Tab>('contacts')
   const [contacts, setContacts] = useState<Contact[]>([])
   const [themes, setThemes] = useState<NurturingTheme[]>([])
   const [documents, setDocuments] = useState<NurturingDocument[]>([])
@@ -304,6 +304,22 @@ export default function NurturingPage() {
       {/* ═══ CONTACTS TAB ═══ */}
       {tab === 'contacts' && (
         <>
+          {/* Action bar — add contact + quick navigation */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <button onClick={() => router.push('/crm?action=new')} style={{ ...goldBtnStyle, width: 'auto', padding: '8px 16px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                + Nouveau contact
+              </button>
+              <LinkChip href="/crm" label="Ouvrir CRM Kanban" color="gold" />
+              <LinkChip href="/prospection/tns" label="Prospecter TNS" color="cyan" />
+            </div>
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+              <span style={{ fontSize: 10, color: C.textLo }}>Depuis :</span>
+              <LinkChip href="/cercle" label="Cercle interpro" color="purple" />
+              <LinkChip href="/sequences" label="Séquences" color="green" />
+            </div>
+          </div>
+
           {/* Alert banner */}
           {dueToday.length > 0 && (
             <div style={{ background: `${C.gold}12`, border: `1px solid ${C.gold}30`, borderRadius: 12, padding: '10px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -552,19 +568,20 @@ function ContactCard({ contact, onClick, router }: { contact: Contact; onClick: 
     <div onClick={onClick} style={{
       position: 'relative', overflow: 'hidden',
       background: temp.gradient,
-      border: `1px solid ${temp.color}30`,
-      borderRadius: 14, padding: '14px 20px',
+      border: `1px solid ${temp.color}40`,
+      borderRadius: 16, padding: '16px 22px',
       cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 14,
-      borderLeft: `4px solid ${temp.color}`,
+      borderLeft: `5px solid ${temp.color}`,
       transition: 'transform 0.15s, box-shadow 0.15s',
-      boxShadow: `0 2px 12px ${temp.color}15, inset 0 1px 0 ${temp.color}10`,
+      boxShadow: `0 3px 16px ${temp.color}20, inset 0 1px 0 ${temp.color}15`,
     }}
-      onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = `0 4px 20px ${temp.color}25` }}
-      onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = `0 2px 12px ${temp.color}15, inset 0 1px 0 ${temp.color}10` }}
+      onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px) scale(1.005)'; e.currentTarget.style.boxShadow = `0 6px 28px ${temp.color}35, inset 0 1px 0 ${temp.color}20` }}
+      onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0) scale(1)'; e.currentTarget.style.boxShadow = `0 3px 16px ${temp.color}20, inset 0 1px 0 ${temp.color}15` }}
     >
-      {/* BG illustration */}
-      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', backgroundImage: bgImage, backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }} />
-      <div style={{ position: 'absolute', top: -20, right: -20, width: 100, height: 100, borderRadius: '50%', pointerEvents: 'none', background: `radial-gradient(circle, ${temp.color}12 0%, transparent 70%)` }} />
+      {/* BG illustration — full card coverage */}
+      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', backgroundImage: bgImage, backgroundSize: '100% 100%', backgroundPosition: 'bottom center', backgroundRepeat: 'no-repeat' }} />
+      <div style={{ position: 'absolute', top: -30, right: -30, width: 140, height: 140, borderRadius: '50%', pointerEvents: 'none', background: `radial-gradient(circle, ${temp.color}18 0%, transparent 65%)` }} />
+      <div style={{ position: 'absolute', bottom: -20, left: -20, width: 100, height: 100, borderRadius: '50%', pointerEvents: 'none', background: `radial-gradient(circle, ${temp.color}10 0%, transparent 60%)` }} />
 
       {/* Temperature badge */}
       <div style={{ position: 'relative', zIndex: 1, width: 40, height: 40, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, background: `radial-gradient(circle, ${temp.color}30 0%, ${temp.color}10 100%)`, border: `2px solid ${temp.color}50`, boxShadow: `0 0 10px ${temp.color}25` }}>
