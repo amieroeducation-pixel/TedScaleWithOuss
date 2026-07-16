@@ -38,6 +38,8 @@ type RelanceRow = {
   phone: string | null
   email: string | null
   days_until: number
+  temperature?: string | null
+  next_action_channel?: string | null
 }
 
 type RdvRow = {
@@ -1016,6 +1018,12 @@ function TodayPageContent() {
                           {r.profession && <div style={{ fontSize: 9, color: C.textLo }}>{r.profession}</div>}
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                          {r.temperature && (
+                            <span style={{ fontSize: 11 }}>{r.temperature === 'hot' ? '🔥' : r.temperature === 'warm' ? '☀️' : r.temperature === 'cold' ? '❄️' : '🪨'}</span>
+                          )}
+                          {r.next_action_channel && (
+                            <span style={{ fontSize: 11 }}>{r.next_action_channel === 'telephone' ? '📞' : r.next_action_channel === 'email' ? '✉️' : r.next_action_channel === 'whatsapp' ? '💬' : r.next_action_channel === 'linkedin' ? '🔗' : r.next_action_channel === 'sms' ? '📱' : '📬'}</span>
+                          )}
                           {r.pipeline_stage && (
                             <span style={{ fontSize: 7, padding: '2px 5px', borderRadius: 3, background: C.surface2, color: C.textMid, border: `0.5px solid ${C.line}`, textTransform: 'uppercase' }}>
                               {r.pipeline_stage}

@@ -912,6 +912,9 @@ function CrmPageContent() {
   const filterStageParam = searchParams.get('stage')
 
   useEffect(() => {
+    if (searchParams.get('action') === 'new') {
+      setShowNewProspect(true)
+    }
     if (filterStageParam) {
       const stageMap: Record<string, string> = {
         'a_contacter': 'À contacter', 'rdv1': 'RDV1', 'rdv2': 'RDV2',
@@ -923,7 +926,7 @@ function CrmPageContent() {
         if (col) col.scrollIntoView({ behavior: 'smooth', block: 'start' })
       }, 500)
     }
-  }, [filterStageParam, prospects])
+  }, [filterStageParam, prospects, searchParams])
 
   // Fetch call scripts
   useEffect(() => {

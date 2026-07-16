@@ -1057,34 +1057,46 @@ function PerformanceTab({ data, objectives, currentMonth }: { data: DailyEntry[]
         </div>
       </div>
 
-      {/* OBJECTIVES GAUGE */}
-      <div style={{ fontSize: 14, color: C.gold, marginBottom: 12, fontWeight: 600 }}>🏆 Objectifs vs Réalisé — Jauges</div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 12, marginBottom: 32 }}>
-        {[
-          { label: 'Appels', pct: Math.min(100, Math.round(totalAppels / obj.appels * 100)), actual: totalAppels, target: obj.appels },
-          { label: 'CA', pct: Math.min(100, Math.round(totalCA / obj.ca * 100)), actual: totalCA, target: obj.ca, isCa: true },
-          { label: 'RDV', pct: Math.min(100, Math.round(totalRDV / obj.rdv * 100)), actual: totalRDV, target: obj.rdv },
-          { label: 'Contrats', pct: Math.min(100, Math.round(totalContrats / obj.contrats * 100)), actual: totalContrats, target: obj.contrats },
-          { label: 'Prospects', pct: Math.min(100, Math.round(totalProspects / obj.prospects * 100)), actual: totalProspects, target: obj.prospects },
-          { label: 'Blocs', pct: Math.min(100, Math.round(totalBlocs / obj.blocs * 100)), actual: totalBlocs, target: obj.blocs },
-        ].map(g => {
-          const barColor = g.pct >= 90 ? C.green : g.pct >= 70 ? C.gold : g.pct >= 50 ? '#fbbf24' : C.cyan
-          return (
-            <div key={g.label} style={{ background: `linear-gradient(135deg, ${C.surface1}, ${C.bgMid})`, border: `1px solid ${C.line}`, borderRadius: 10, padding: 16 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                <span style={{ fontSize: 12, color: C.textHi, fontWeight: 600 }}>{g.label}</span>
-                <span style={{ fontSize: 11, color: barColor, fontWeight: 700 }}>{g.pct}%</span>
-              </div>
-              <div style={{ height: 12, background: C.surface2, borderRadius: 6, overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: `${g.pct}%`, background: barColor, borderRadius: 6, transition: 'width 0.5s' }} />
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, fontSize: 10, color: C.textLo }}>
-                <span>{g.isCa ? g.actual.toLocaleString('fr-FR') + '€' : g.actual}</span>
-                <span>/ {g.isCa ? g.target.toLocaleString('fr-FR') + '€' : g.target}</span>
-              </div>
-            </div>
-          )
-        })}
+      {/* OBJECTIVES — 3 Chart.js charts identiques au HTML */}
+      <div style={{ fontSize: 14, color: C.gold, marginBottom: 12, fontWeight: 600 }}>🏆 Objectifs vs Réalisé</div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: 24, marginBottom: 32 }}>
+        <div style={{ background: `linear-gradient(135deg, ${C.surface1}, ${C.bgMid})`, border: `1px solid ${C.line}`, borderRadius: 12, padding: 24 }}>
+          <div style={{ fontSize: 14, color: C.gold, marginBottom: 16 }}>Objectifs mensuels — Appels</div>
+          <Bar data={{ labels: ['Ce mois', 'M+1', 'M+2', 'M+3', 'M+4', 'M+5'], datasets: [
+            { label: 'Objectif', data: [obj.appels, obj.appels, obj.appels, obj.appels, obj.appels, obj.appels], backgroundColor: '#2a2e4a', borderRadius: 4 },
+            { label: 'Réalisé', data: [totalAppels, 0, 0, 0, 0, 0], backgroundColor: C.gold, borderRadius: 4 }
+          ] }} options={{ ...chartDefaults, plugins: { legend: { display: true, labels: { color: '#8888aa' } } } } as never} />
+        </div>
+        <div style={{ background: `linear-gradient(135deg, ${C.surface1}, ${C.bgMid})`, border: `1px solid ${C.line}`, borderRadius: 12, padding: 24 }}>
+          <div style={{ fontSize: 14, color: C.gold, marginBottom: 16 }}>Objectifs mensuels — CA (€)</div>
+          <Bar data={{ labels: ['Ce mois', 'M+1', 'M+2', 'M+3', 'M+4', 'M+5'], datasets: [
+            { label: 'Objectif', data: [obj.ca, obj.ca, obj.ca, Math.round(obj.ca * 1.15), Math.round(obj.ca * 1.15), Math.round(obj.ca * 1.4)], backgroundColor: '#2a2e4a', borderRadius: 4 },
+            { label: 'Réalisé', data: [totalCA, 0, 0, 0, 0, 0], backgroundColor: C.green, borderRadius: 4 }
+          ] }} options={{ ...chartDefaults, plugins: { legend: { display: true, labels: { color: '#8888aa' } } } } as never} />
+        </div>
+        <div style={{ background: `linear-gradient(135deg, ${C.surface1}, ${C.bgMid})`, border: `1px solid ${C.line}`, borderRadius: 12, padding: 24 }}>
+          <div style={{ fontSize: 14, color: C.gold, marginBottom: 16 }}>Atteinte objectifs — Jauges</div>
+          <Bar data={{ labels: ['Appels', 'CA', 'RDV', 'Contrats', 'Prospects', 'Blocs'], datasets: [{
+            label: '% objectif',
+            data: [
+              Math.min(100, Math.round(totalAppels / obj.appels * 100)),
+              Math.min(100, Math.round(totalCA / obj.ca * 100)),
+              Math.min(100, Math.round(totalRDV / obj.rdv * 100)),
+              Math.min(100, Math.round(totalContrats / obj.contrats * 100)),
+              Math.min(100, Math.round(totalProspects / obj.prospects * 100)),
+              Math.min(100, Math.round(totalBlocs / obj.blocs * 100)),
+            ],
+            backgroundColor: [
+              Math.round(totalAppels / obj.appels * 100) >= 90 ? C.green : Math.round(totalAppels / obj.appels * 100) >= 70 ? C.gold : Math.round(totalAppels / obj.appels * 100) >= 50 ? '#fbbf24' : '#f87171',
+              Math.round(totalCA / obj.ca * 100) >= 90 ? C.green : Math.round(totalCA / obj.ca * 100) >= 70 ? C.gold : Math.round(totalCA / obj.ca * 100) >= 50 ? '#fbbf24' : '#f87171',
+              Math.round(totalRDV / obj.rdv * 100) >= 90 ? C.green : Math.round(totalRDV / obj.rdv * 100) >= 70 ? C.gold : Math.round(totalRDV / obj.rdv * 100) >= 50 ? '#fbbf24' : '#f87171',
+              Math.round(totalContrats / obj.contrats * 100) >= 90 ? C.green : Math.round(totalContrats / obj.contrats * 100) >= 70 ? C.gold : Math.round(totalContrats / obj.contrats * 100) >= 50 ? '#fbbf24' : '#f87171',
+              Math.round(totalProspects / obj.prospects * 100) >= 90 ? C.green : Math.round(totalProspects / obj.prospects * 100) >= 70 ? C.gold : Math.round(totalProspects / obj.prospects * 100) >= 50 ? '#fbbf24' : '#f87171',
+              Math.round(totalBlocs / obj.blocs * 100) >= 90 ? C.green : Math.round(totalBlocs / obj.blocs * 100) >= 70 ? C.gold : Math.round(totalBlocs / obj.blocs * 100) >= 50 ? '#fbbf24' : '#f87171',
+            ],
+            borderRadius: 4
+          }] }} options={{ ...chartDefaults, indexAxis: 'y' as const, plugins: { legend: { display: false } }, scales: { x: { max: 100, ticks: { color: '#8888aa', callback: (v: string | number) => v + '%' }, grid: { color: '#1a1e3a' } }, y: { ticks: { color: '#8888aa' }, grid: { color: '#1a1e3a' } } } } as never} />
+        </div>
       </div>
 
       {/* EXPORT */}

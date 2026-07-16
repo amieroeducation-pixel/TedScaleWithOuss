@@ -91,3 +91,12 @@ export interface DocumentMatch {
   already_sent: boolean
   sent_channels: string[]
 }
+
+export interface ContactNurturingConfig {
+  prospect_id: string
+  preferred_channel: NurturingChannel | null
+  contact_frequency_days: number
+  excluded_channels: NurturingChannel[]
+  notes: string
+  preferred_time_slot: 'matin' | 'midi' | 'apres-midi' | 'soir' | null
+}

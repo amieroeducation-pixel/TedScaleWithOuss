@@ -54,6 +54,8 @@ export async function GET(request: NextRequest) {
   let themes: Record<string, { id: string; name: string; color: string; icon: string }[]> = {}
   let sequences: Record<string, { id: string; status: string; step_order: number }> = {}
 
+  let preferredChannels: Record<string, string | null> = {}
+
   if (prospectIds.length > 0) {
     const { data: ptData } = await supabase
       .from('prospect_themes')
@@ -79,6 +81,18 @@ export async function GET(request: NextRequest) {
         sequences[s.prospect_id] = { id: s.id, status: s.status, step_order: 0 }
       }
     }
+
+    const { data: configData } = await supabase
+      .from('nurturing_contact_config')
+      .select('prospect_id, preferred_channel')
+      .eq('user_id', user.id)
+      .in('prospect_id', prospectIds)
+
+    if (configData) {
+      for (const c of configData) {
+        preferredChannels[c.prospect_id] = c.preferred_channel
+      }
+    }
   }
 
   const contacts = (prospects || []).map(p => ({
@@ -86,6 +100,7 @@ export async function GET(request: NextRequest) {
     themes: themes[p.id] || [],
     sequence_active: sequences[p.id]?.id || null,
     etape_sequence: sequences[p.id]?.step_order || null,
+    preferred_channel: preferredChannels[p.id] || null,
   }))
 
   return apiSuccess(contacts)

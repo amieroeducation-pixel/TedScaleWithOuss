@@ -14,6 +14,8 @@ export type RelanceRow = {
   phone: string | null
   email: string | null
   days_until: number
+  temperature: string | null
+  next_action_channel: string | null
 }
 
 export type RdvRow = {
@@ -43,7 +45,7 @@ export async function GET(_request: NextRequest) {
   // DATA-06 — Relances J+7
   const { data: prospectData, error: pError } = await supabase
     .from('prospects')
-    .select('id, full_name, profession, pipeline_stage, next_action_date, lead_score, phone, email')
+    .select('id, full_name, profession, pipeline_stage, next_action_date, lead_score, phone, email, temperature, next_action_channel')
     .eq('user_id', user.id)
     .not('next_action_date', 'is', null)
     .gte('next_action_date', todayStr)
@@ -67,6 +69,8 @@ export async function GET(_request: NextRequest) {
       phone: p.phone ?? null,
       email: p.email ?? null,
       days_until,
+      temperature: p.temperature ?? null,
+      next_action_channel: p.next_action_channel ?? null,
     }
   })
 

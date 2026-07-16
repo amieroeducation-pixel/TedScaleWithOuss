@@ -425,6 +425,501 @@ export default function WeeklyPage() {
           </div>
         </div>
       )}
+
+      {/* ═══ NURTURING SECTION ═══ */}
+      <NurturingSection router={router} />
     </>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// NURTURING SECTION — Complete integration from finalized.html
+// ═══════════════════════════════════════════════════════════════════════════
+
+type TemperatureLevel = 'hot' | 'warm' | 'cold' | 'dead'
+type PressureLevel = 'normal' | 'elevee' | 'a_stopper'
+type NurturingTab = 'overview' | 'contacts' | 'documents' | 'messages' | 'settings'
+
+interface Contact {
+  id: string
+  full_name: string
+  profession: string
+  temperature: TemperatureLevel
+  pressure: PressureLevel
+  category: string | null
+  sequence_active: string | null
+  total_touchpoints: number
+  responded_touchpoints: number
+  nb_relances_sans_reponse: number
+  next_action_date: string | null
+  next_action_channel: string | null
+  last_contact_at: string | null
+}
+
+const CARD_BG_TEXTURE = 'https://media.istockphoto.com/id/2061680164/fr/photo/fond-de-texture-de-basalte-de-pierre-de-roche-de-granit-de-roche-brun-fonc%C3%A9-noir-surface-des.jpg?s=612x612&w=0&k=20&c=jHAF29X3opSh64jeZDLF8YhW3qPR7ASgjpz1CV2qTvo='
+
+const TEMP_IMAGE: Record<TemperatureLevel, string> = {
+  hot: '/nurturing/flame.png',
+  warm: '/nurturing/sun.png.png',
+  cold: '/nurturing/ice.png.png',
+  dead: '/nurturing/earth.png.png',
+}
+
+const TEMP_CONFIG: Record<TemperatureLevel, { color: string; label: string; icon: string; gradient: string }> = {
+  hot: { color: '#ff4444', label: 'Brûlant', icon: '🔥', gradient: 'linear-gradient(135deg, #2d0808 0%, #4a1010 30%, #3d0808 60%, #1a0505 100%)' },
+  warm: { color: '#d4a020', label: 'Tiède', icon: '☀️', gradient: 'linear-gradient(135deg, #2d2208 0%, #3d2e0a 30%, #2d2208 60%, #1a1505 100%)' },
+  cold: { color: '#5b9bd5', label: 'Froid', icon: '❄️', gradient: 'linear-gradient(135deg, #081520 0%, #0c2040 30%, #0a1a30 60%, #050e1a 100%)' },
+  dead: { color: '#8B4513', label: 'Enterré', icon: '🪨', gradient: 'linear-gradient(135deg, #1a1008 0%, #25180a 30%, #1a1008 60%, #0f0a05 100%)' },
+}
+
+const PRESSURE_CONFIG: Record<PressureLevel, { color: string; label: string; icon: string }> = {
+  normal: { color: C.green, label: 'Normale', icon: '✓' },
+  elevee: { color: C.warn, label: 'Élevée', icon: '⚡' },
+  a_stopper: { color: '#ff6470', label: 'À stopper', icon: '🛑' },
+}
+
+const MOCK_CONTACTS: Contact[] = [
+  {
+    id: '1', full_name: 'Jean Dupont', profession: 'Dentiste', temperature: 'hot', pressure: 'normal',
+    category: '📅 RDV fait →', sequence_active: null, total_touchpoints: 5, responded_touchpoints: 2,
+    nb_relances_sans_reponse: 3, next_action_date: new Date().toISOString().split('T')[0],
+    next_action_channel: '📞', last_contact_at: '5j',
+  },
+  {
+    id: '2', full_name: 'Marie Laurent', profession: 'Avocate', temperature: 'warm', pressure: 'normal',
+    category: null, sequence_active: '▶ Séquence', total_touchpoints: 8, responded_touchpoints: 5,
+    nb_relances_sans_reponse: 0, next_action_date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    next_action_channel: '✉️', last_contact_at: null,
+  },
+  {
+    id: '3', full_name: 'Thomas Bernard', profession: 'Kinésithérapeute', temperature: 'cold', pressure: 'elevee',
+    category: null, sequence_active: null, total_touchpoints: 2, responded_touchpoints: 0,
+    nb_relances_sans_reponse: 2, next_action_date: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    next_action_channel: '💬', last_contact_at: null,
+  },
+  {
+    id: '4', full_name: 'Sophie Moreau', profession: 'Notaire', temperature: 'dead', pressure: 'a_stopper',
+    category: null, sequence_active: null, total_touchpoints: 6, responded_touchpoints: 1,
+    nb_relances_sans_reponse: 5, next_action_date: null, next_action_channel: null, last_contact_at: '45j',
+  },
+]
+
+function NurturingSection({ router }: { router: ReturnType<typeof useRouter> }) {
+  const [tab, setTab] = useState<NurturingTab>('contacts')
+  const [contacts] = useState<Contact[]>(MOCK_CONTACTS)
+  const [selectedContact, setSelectedContact] = useState<Contact | null>(null)
+  const [dropdownOpen, setDropdownOpen] = useState<string | null>(null)
+  const [selectedChannel, setSelectedChannel] = useState<string>('📞 Appel')
+
+  return (
+    <div style={{ marginTop: 24, background: C.surface1, border: `1px solid ${C.line}`, borderRadius: 12, padding: '24px 28px' }}>
+      {/* HEADER */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+        <div>
+          <h2 style={{ fontSize: 24, fontFamily: 'Oswald, sans-serif', color: C.textHi, fontWeight: 600, letterSpacing: 1 }}>
+            NURTURING
+          </h2>
+          <p style={{ fontSize: 11, color: C.textMid, marginTop: 4 }}>
+            Maturation & relances · 47 contacts actifs
+          </p>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            <LinkBadge href="/crm" label="CRM" value="12" color="gold" />
+            <LinkBadge href="/cercle" label="Cercle" value="8" color="purple" />
+            <LinkBadge href="/sequences" label="Séquences" value="5" color="green" />
+            <LinkBadge href="/today" label="Today" value="7" color="cyan" />
+          </div>
+          <button style={{ padding: '6px 10px', borderRadius: 6, background: `${C.gold}12`, color: C.gold, border: `1px solid ${C.gold}40`, fontSize: 11, cursor: 'pointer', fontFamily: 'JetBrains Mono, monospace' }}>
+            🔄 Recalculer scores
+          </button>
+        </div>
+      </div>
+
+      {/* TAB BAR */}
+      <div style={{ display: 'flex', gap: 4, borderBottom: `1px solid ${C.line}`, paddingBottom: 12, marginBottom: 20 }}>
+        {[
+          { id: 'overview' as NurturingTab, label: '📊 Vue globale', count: null },
+          { id: 'contacts' as NurturingTab, label: '👥 Contacts', count: 47 },
+          { id: 'documents' as NurturingTab, label: '📄 Bibliothèque', count: 12 },
+          { id: 'messages' as NurturingTab, label: '💬 Messages', count: 8 },
+          { id: 'settings' as NurturingTab, label: '⚙️ Configuration', count: null },
+        ].map(t => (
+          <button
+            key={t.id}
+            onClick={() => setTab(t.id)}
+            style={{
+              padding: '8px 14px', borderRadius: '8px 8px 0 0', border: 'none', cursor: 'pointer',
+              background: tab === t.id ? C.surface2 : 'transparent',
+              color: tab === t.id ? C.textHi : C.textMid, fontSize: 11, fontWeight: tab === t.id ? 700 : 400,
+              fontFamily: 'JetBrains Mono, monospace',
+              borderBottom: tab === t.id ? `2px solid ${C.gold}` : '2px solid transparent',
+              display: 'flex', alignItems: 'center', gap: 6, transition: 'all 0.15s',
+            }}
+          >
+            {t.label}
+            {t.count !== null && (
+              <span style={{ fontSize: 9, padding: '1px 5px', borderRadius: 8, background: tab === t.id ? `${C.gold}25` : C.surface3, color: tab === t.id ? C.gold : C.textLo, fontWeight: 700 }}>
+                {t.count}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* TAB CONTENT */}
+      {tab === 'contacts' && (
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <button onClick={() => router.push('/crm?action=new')} style={{ padding: '8px 14px', borderRadius: 8, border: 'none', background: C.gold, color: C.bgDeep, fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'JetBrains Mono, monospace' }}>
+                + Nouveau contact
+              </button>
+              <LinkChip href="/crm" label="Ouvrir CRM Kanban" color="gold" />
+              <LinkChip href="/prospection/tns" label="Prospecter TNS" color="cyan" />
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14, alignItems: 'center' }}>
+            <input placeholder="Rechercher un contact..." style={{ padding: '7px 10px', borderRadius: 8, border: `1px solid ${C.line}`, background: C.surface2, color: C.textHi, fontSize: 11, fontFamily: 'JetBrains Mono, monospace', width: 200 }} />
+            <select style={{ padding: '7px 10px', borderRadius: 8, border: `1px solid ${C.line}`, background: C.surface2, color: C.text, fontSize: 11, fontFamily: 'JetBrains Mono, monospace' }}>
+              <option>Température</option>
+              <option>🔥 Brûlant</option>
+              <option>☀️ Tiède</option>
+              <option>❄️ Froid</option>
+              <option>🪨 Enterré</option>
+            </select>
+            <select style={{ padding: '7px 10px', borderRadius: 8, border: `1px solid ${C.line}`, background: C.surface2, color: C.text, fontSize: 11, fontFamily: 'JetBrains Mono, monospace' }}>
+              <option>Pression</option>
+              <option>✓ Normale</option>
+              <option>⚡ Élevée</option>
+              <option>🛑 À stopper</option>
+            </select>
+          </div>
+
+          <div style={{ fontSize: 10, color: C.textLo, marginBottom: 10 }}>47 résultats</div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {contacts.map(c => (
+              <NurturingContactCard
+                key={c.id}
+                contact={c}
+                onClick={() => setSelectedContact(c)}
+                dropdownOpen={dropdownOpen === c.id}
+                onToggleDropdown={(e) => {
+                  e.stopPropagation()
+                  setDropdownOpen(dropdownOpen === c.id ? null : c.id)
+                }}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {tab === 'overview' && <NurturingOverview />}
+      {tab === 'documents' && <NurturingDocuments />}
+      {tab === 'messages' && <NurturingMessages />}
+      {tab === 'settings' && <NurturingSettings />}
+
+      {/* MODAL */}
+      {selectedContact && (
+        <NurturingContactModal
+          contact={selectedContact}
+          onClose={() => setSelectedContact(null)}
+          selectedChannel={selectedChannel}
+          setSelectedChannel={setSelectedChannel}
+        />
+      )}
+    </div>
+  )
+}
+
+function NurturingContactCard({ contact, onClick, dropdownOpen, onToggleDropdown }: {
+  contact: Contact
+  onClick: () => void
+  dropdownOpen: boolean
+  onToggleDropdown: (e: React.MouseEvent) => void
+}) {
+  const tempCfg = TEMP_CONFIG[contact.temperature]
+  const pressureCfg = PRESSURE_CONFIG[contact.pressure]
+
+  const formatNextAction = () => {
+    if (!contact.next_action_date) return null
+    const today = new Date().toISOString().split('T')[0]
+    const actionDate = contact.next_action_date
+    if (actionDate === today) return <span style={{ fontSize: 10, fontWeight: 700, color: '#ff4444' }}>🚨 Aujourd'hui</span>
+    const daysUntil = Math.ceil((new Date(actionDate).getTime() - new Date(today).getTime()) / (1000 * 60 * 60 * 24))
+    return <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.65)' }}>dans {daysUntil}j</span>
+  }
+
+  return (
+    <div
+      onClick={onClick}
+      style={{
+        position: 'relative', overflow: 'hidden', borderRadius: 14, padding: '14px 18px', cursor: 'pointer',
+        display: 'flex', alignItems: 'center', gap: 12, borderLeft: `4px solid ${tempCfg.color}`,
+        background: tempCfg.gradient, transition: 'transform 0.15s',
+      }}
+      onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)' }}
+      onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)' }}
+    >
+      {/* Texture + PNG + Glow */}
+      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', backgroundImage: `url('${CARD_BG_TEXTURE}')`, backgroundSize: 'cover', backgroundPosition: 'center', opacity: 0.08 }} />
+      <div style={{ position: 'absolute', right: -10, bottom: -10, width: 120, height: 120, pointerEvents: 'none', backgroundSize: 'contain', backgroundPosition: 'bottom right', backgroundRepeat: 'no-repeat', opacity: 0.18, backgroundImage: `url('${TEMP_IMAGE[contact.temperature]}')` }} />
+      <div style={{ position: 'absolute', top: -25, right: -25, width: 120, height: 120, borderRadius: '50%', pointerEvents: 'none', background: contact.temperature === 'hot' ? 'radial-gradient(circle, rgba(255,68,68,0.15) 0%, transparent 65%)' : contact.temperature === 'warm' ? 'radial-gradient(circle, rgba(212,160,32,0.12) 0%, transparent 65%)' : contact.temperature === 'cold' ? 'radial-gradient(circle, rgba(91,155,213,0.12) 0%, transparent 65%)' : 'radial-gradient(circle, rgba(139,69,19,0.1) 0%, transparent 65%)' }} />
+
+      {/* Avatar */}
+      <div style={{ position: 'relative', zIndex: 1, width: 36, height: 36, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, background: contact.temperature === 'hot' ? 'radial-gradient(circle, rgba(255,68,68,0.3), rgba(255,68,68,0.1))' : contact.temperature === 'warm' ? 'radial-gradient(circle, rgba(212,160,32,0.25), rgba(212,160,32,0.08))' : contact.temperature === 'cold' ? 'radial-gradient(circle, rgba(91,155,213,0.25), rgba(91,155,213,0.08))' : 'radial-gradient(circle, rgba(139,69,19,0.2), rgba(139,69,19,0.05))', border: contact.temperature === 'hot' ? '2px solid rgba(255,68,68,0.5)' : contact.temperature === 'warm' ? '2px solid rgba(212,160,32,0.45)' : contact.temperature === 'cold' ? '2px solid rgba(91,155,213,0.45)' : '2px solid rgba(139,69,19,0.4)' }}>
+        {tempCfg.icon}
+      </div>
+
+      {/* Info */}
+      <div style={{ flex: 1, minWidth: 0, position: 'relative', zIndex: 1 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: '#fff', textShadow: '0 1px 2px rgba(0,0,0,0.4)' }}>{contact.full_name}</span>
+          {contact.category && <span style={{ fontSize: 9, color: C.gold, background: `${C.gold}20`, padding: '2px 6px', borderRadius: 4 }}>{contact.category}</span>}
+          {contact.sequence_active && <span style={{ fontSize: 9, color: C.green, background: `${C.green}16`, padding: '2px 6px', borderRadius: 4 }}>{contact.sequence_active}</span>}
+        </div>
+        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)', marginTop: 4, display: 'flex', gap: 10, alignItems: 'center' }}>
+          <span style={{ fontWeight: 500 }}>{contact.profession}</span>
+          <span>📊 {contact.total_touchpoints}tp · {contact.responded_touchpoints} rép.</span>
+          {contact.nb_relances_sans_reponse > 0 && <span style={{ color: C.warn, fontWeight: 600 }}>⚠ {contact.nb_relances_sans_reponse} sans réponse</span>}
+        </div>
+      </div>
+
+      {/* Pressure */}
+      <div style={{ position: 'relative', zIndex: 1, fontSize: 9, padding: '4px 7px', borderRadius: 5, background: `${pressureCfg.color}20`, color: pressureCfg.color, fontWeight: 600 }}>
+        {pressureCfg.icon} {pressureCfg.label}
+      </div>
+
+      {/* Next action */}
+      <div style={{ textAlign: 'right', minWidth: 70, position: 'relative', zIndex: 1 }}>
+        {formatNextAction()}
+        {contact.last_contact_at && !contact.next_action_date && <div style={{ fontSize: 10, color: C.textLo }}>il y a {contact.last_contact_at}</div>}
+        {contact.next_action_channel && <div style={{ fontSize: 13, marginTop: 2 }}>{contact.next_action_channel}</div>}
+      </div>
+
+      {/* Dropdown toggle */}
+      <div onClick={onToggleDropdown} style={{ position: 'absolute', bottom: 0, left: '50%', transform: 'translateX(-50%)', width: 50, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.5)', borderRadius: '8px 8px 0 0', color: C.textLo, fontSize: 8, cursor: 'pointer', zIndex: 5, opacity: 0, transition: 'opacity 0.2s' }}
+        onMouseEnter={(e) => { e.currentTarget.style.opacity = '1' }}
+        onMouseLeave={(e) => { if (!dropdownOpen) e.currentTarget.style.opacity = '0' }}>
+        {dropdownOpen ? '▲ Fermer' : '▼ Menu'}
+      </div>
+
+      {/* Dropdown */}
+      {dropdownOpen && (
+        <div onClick={(e) => e.stopPropagation()} style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: C.surface1, borderTop: `1px solid ${C.line}`, padding: '8px 12px', zIndex: 10, borderRadius: '0 0 14px 14px' }}>
+          <div style={{ display: 'flex', gap: 4, marginBottom: 6, flexWrap: 'wrap' }}>
+            {contact.temperature !== 'dead' ? (
+              <>
+                <button style={{ padding: '3px 7px', borderRadius: 4, background: C.surface2, border: `1px solid ${C.line}`, color: C.textMid, fontSize: 9, cursor: 'pointer' }}>📞 Appeler</button>
+                <button style={{ padding: '3px 7px', borderRadius: 4, background: C.surface2, border: `1px solid ${C.line}`, color: C.textMid, fontSize: 9, cursor: 'pointer' }}>💬 WhatsApp</button>
+                <button style={{ padding: '3px 7px', borderRadius: 4, background: C.surface2, border: `1px solid ${C.line}`, color: C.textMid, fontSize: 9, cursor: 'pointer' }}>📧 Email</button>
+                <button style={{ padding: '3px 7px', borderRadius: 4, background: C.surface2, border: `1px solid ${C.line}`, color: C.textMid, fontSize: 9, cursor: 'pointer' }}>🔗 LinkedIn</button>
+              </>
+            ) : (
+              <button style={{ padding: '3px 7px', borderRadius: 4, background: C.surface2, border: `1px solid ${C.line}`, color: C.textMid, fontSize: 9, cursor: 'pointer' }}>📧 Email rupture</button>
+            )}
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 8, color: C.textLo }}>
+            {contact.sequence_active ? (
+              <>
+                <span>Séquence: étape 3/6</span>
+                <span style={{ background: 'rgba(255,100,112,0.12)', color: '#ff6470', padding: '2px 5px', borderRadius: 3, cursor: 'pointer' }}>⏸ Pause</span>
+              </>
+            ) : contact.temperature !== 'dead' ? (
+              <>
+                <span>Dernier: 📧 il y a {contact.last_contact_at || '?'}</span>
+                <span style={{ background: `${C.gold}20`, color: C.gold, padding: '2px 5px', borderRadius: 3, cursor: 'pointer', fontWeight: 600 }}>▶ Lancer séquence</span>
+              </>
+            ) : (
+              <span style={{ color: '#ff6470' }}>5 relances sans réponse — STOP recommandé</span>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function NurturingOverview() {
+  return (
+    <div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10, marginBottom: 20 }}>
+        <NurturingKpi value={47} label="En nurturing" icon="👥" />
+        <NurturingKpi value={7} label="À traiter" icon="⚡" highlight />
+        <NurturingKpi value={9} label="Chauds" icon="🔥" />
+        <NurturingKpi value={3} label="Sur-sollicités" icon="🛑" />
+        <NurturingKpi value={11} label="Sans action" icon="😴" />
+      </div>
+      <div style={{ fontSize: 11, color: C.textMid, textAlign: 'center' }}>Vue globale — Mini calendrier & métriques à venir</div>
+    </div>
+  )
+}
+
+function NurturingDocuments() {
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 14 }}>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button style={{ padding: '5px 10px', borderRadius: 6, background: C.surface3, color: C.text, border: 'none', fontSize: 10, cursor: 'pointer' }}>Tous</button>
+          <button style={{ padding: '5px 10px', borderRadius: 6, background: C.surface2, color: C.text, border: 'none', fontSize: 10, cursor: 'pointer' }}>📊 Retraite TNS</button>
+        </div>
+        <button style={{ padding: '7px 12px', borderRadius: 7, background: C.gold, color: C.bgDeep, border: 'none', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>+ Document</button>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+        <div style={{ background: C.surface2, border: `1px solid ${C.line}`, borderRadius: 10, padding: 14 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: C.textHi }}>Simulateur Retraite TNS</div>
+          <div style={{ fontSize: 10, color: C.textMid, marginTop: 3 }}>PDF · email, whatsapp</div>
+          <span style={{ display: 'inline-block', marginTop: 8, fontSize: 9, padding: '2px 6px', borderRadius: 4, background: `${C.green}20`, color: C.green }}>📊 Retraite TNS</span>
+        </div>
+        <div style={{ background: C.surface2, border: `1px solid ${C.line}`, borderRadius: 10, padding: 14 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: C.textHi }}>Guide SCPI 2026</div>
+          <div style={{ fontSize: 10, color: C.textMid, marginTop: 3 }}>PDF · email, courrier</div>
+          <span style={{ display: 'inline-block', marginTop: 8, fontSize: 9, padding: '2px 6px', borderRadius: 4, background: `${C.gold}20`, color: C.gold }}>🏠 Immobilier</span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function NurturingMessages() {
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 14 }}>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button style={{ padding: '5px 10px', borderRadius: 6, background: C.surface3, color: C.text, border: 'none', fontSize: 10, cursor: 'pointer' }}>Tous</button>
+        </div>
+        <button style={{ padding: '7px 12px', borderRadius: 7, background: C.gold, color: C.bgDeep, border: 'none', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>+ Message</button>
+      </div>
+      <div style={{ marginBottom: 20 }}>
+        <h3 style={{ fontSize: 12, color: C.gold, marginBottom: 10 }}>SUGGESTIONS D'EXPERTS PPP/Vendue</h3>
+        <div style={{ background: `${C.gold}06`, border: `1px solid ${C.gold}20`, borderRadius: 10, padding: 12, marginBottom: 8 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+                <span style={{ fontSize: 13 }}>✉️</span>
+                <span style={{ fontSize: 11, fontWeight: 600, color: C.textHi }}>Relance contextualisée après rencontre</span>
+              </div>
+              <div style={{ fontSize: 10, color: C.textMid, lineHeight: 1.4, marginBottom: 5 }}>{'{Prénom}, on a échangé {lieu} — votre situation m\'a interpellé...'}</div>
+              <div style={{ fontSize: 9, color: C.gold, fontStyle: 'italic' }}>💡 Les 2 premières lignes sont décisives. Ancrez dans un contexte réel partagé.</div>
+            </div>
+            <button style={{ padding: '5px 9px', borderRadius: 6, background: `${C.gold}16`, color: C.gold, border: 'none', fontSize: 10, cursor: 'pointer', marginLeft: 8 }}>✏️ Adapter</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function NurturingSettings() {
+  return (
+    <div style={{ maxWidth: 650 }}>
+      <h3 style={{ fontSize: 14, color: C.textHi, marginBottom: 12 }}>Cadence recommandée PPP2</h3>
+      <div style={{ background: C.surface2, border: `1px solid ${C.gold}32`, borderRadius: 10, padding: 14 }}>
+        <h4 style={{ fontSize: 10, color: C.gold, marginBottom: 8, textTransform: 'uppercase' }}>Séquence optimale B2B</h4>
+        <div style={{ display: 'flex', gap: 5, alignItems: 'center', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 10, padding: '3px 7px', borderRadius: 5, background: C.surface1, color: C.textHi }}>✉️ email</span>
+          <span style={{ color: C.textLo, fontSize: 9 }}>→</span>
+          <span style={{ fontSize: 10, padding: '3px 7px', borderRadius: 5, background: C.surface1, color: C.textHi }}>🔗 linkedin</span>
+          <span style={{ color: C.textLo, fontSize: 9 }}>→</span>
+          <span style={{ fontSize: 10, padding: '3px 7px', borderRadius: 5, background: C.surface1, color: C.textHi }}>📞 téléphone</span>
+          <span style={{ color: C.textLo, fontSize: 9 }}>→</span>
+          <span style={{ fontSize: 10, padding: '3px 7px', borderRadius: 5, background: C.surface1, color: C.textHi }}>💬 whatsapp</span>
+          <span style={{ color: C.textLo, fontSize: 9 }}>→</span>
+          <span style={{ fontSize: 10, padding: '3px 7px', borderRadius: 5, background: C.surface1, color: C.textHi }}>✉️ email rupture</span>
+        </div>
+        <div style={{ fontSize: 9, color: C.textLo, marginTop: 7 }}>6 touches max prospect froid · 8 touches tiède · 5 touches post-RDV</div>
+      </div>
+      <div style={{ background: 'rgba(255,100,112,0.05)', border: '1px solid rgba(255,100,112,0.15)', borderRadius: 9, padding: 11, marginTop: 11 }}>
+        <div style={{ fontSize: 9, color: '#ff6470', fontWeight: 600, marginBottom: 3 }}>Règles anti-pression PPP2</div>
+        <div style={{ fontSize: 9, color: C.textMid }}>• Max 2 touches/semaine, jamais 2 canaux le même jour</div>
+        <div style={{ fontSize: 9, color: C.textMid }}>• STOP après 6 tentatives sans interaction (froid)</div>
+        <div style={{ fontSize: 9, color: C.textMid }}>• Si 3 messages sans vue → STOP et changer de canal</div>
+      </div>
+    </div>
+  )
+}
+
+function NurturingKpi({ value, label, icon, highlight }: { value: number; label: string; icon: string; highlight?: boolean }) {
+  return (
+    <div style={{ background: highlight ? `${C.gold}10` : C.surface2, border: highlight ? `1px solid ${C.gold}64` : `1px solid ${C.line}`, borderRadius: 9, padding: '12px 14px', textAlign: 'center', cursor: 'pointer', transition: 'transform 0.1s' }}>
+      <div style={{ fontSize: 18 }}>{icon}</div>
+      <div style={{ fontSize: 20, fontWeight: 700, color: highlight ? C.gold : C.indigo, marginTop: 3 }}>{value}</div>
+      <div style={{ fontSize: 9, color: C.textMid, marginTop: 2 }}>{label}</div>
+    </div>
+  )
+}
+
+function NurturingContactModal({ contact, onClose, selectedChannel, setSelectedChannel }: {
+  contact: Contact
+  onClose: () => void
+  selectedChannel: string
+  setSelectedChannel: (ch: string) => void
+}) {
+  return (
+    <div onClick={onClose} style={{ display: 'flex', position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 9999, alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background: C.bgMid, border: `1px solid ${C.line}`, borderRadius: 14, padding: 24, width: '100%', maxWidth: 850, maxHeight: '85vh', overflowY: 'auto' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 18 }}>
+          <div>
+            <h2 style={{ fontSize: 20, color: C.textHi }}>{contact.full_name}</h2>
+            <div style={{ fontSize: 10, color: C.textMid, marginTop: 3 }}>{contact.profession} · {TEMP_CONFIG[contact.temperature].icon} {TEMP_CONFIG[contact.temperature].label}</div>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: C.textLo, fontSize: 20, cursor: 'pointer' }}>✕</button>
+        </div>
+
+        {/* Timeline */}
+        <div style={{ background: C.surface1, border: `1px solid ${C.line}`, borderRadius: 10, padding: 14, marginBottom: 18 }}>
+          <h4 style={{ fontSize: 10, color: C.cyan, marginBottom: 9, textTransform: 'uppercase' }}>⚡ Séquence en cours</h4>
+          <div style={{ display: 'flex', gap: 7, overflowX: 'auto', padding: '10px 0' }}>
+            {[
+              { icon: '📧', day: 'J+1', label: 'Email', status: 'done' },
+              { icon: '🔗', day: 'J+3', label: 'LinkedIn', status: 'done' },
+              { icon: '📞', day: 'J+7', label: 'Appel', status: 'current' },
+              { icon: '💬', day: 'J+10', label: 'WhatsApp', status: 'pending' },
+              { icon: '📧', day: 'J+14', label: 'Rupture', status: 'pending' },
+            ].map((step, i) => (
+              <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 80 }}>
+                <div style={{ width: 32, height: 32, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: step.status === 'done' ? 'rgba(52,211,153,0.12)' : step.status === 'current' ? 'rgba(34,211,238,0.12)' : C.surface2, border: step.status === 'done' ? `2px solid ${C.green}` : step.status === 'current' ? `2px solid ${C.cyan}` : `2px solid ${C.line}`, fontSize: 13, cursor: 'pointer', boxShadow: step.status === 'current' ? `0 0 10px ${C.cyan}50` : 'none' }}>
+                  {step.icon}
+                </div>
+                <div style={{ fontSize: 8, color: C.textLo, marginTop: 3, fontWeight: 600 }}>{step.day}</div>
+                <div style={{ fontSize: 8, color: C.textMid, marginTop: 1 }}>{step.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Send */}
+        <div style={{ background: `${C.gold}06`, border: `1px solid ${C.gold}30`, borderRadius: 10, padding: 14, marginBottom: 18 }}>
+          <h4 style={{ fontSize: 10, color: C.gold, textTransform: 'uppercase', marginBottom: 10 }}>📨 Envoyer un message</h4>
+          <div style={{ display: 'flex', gap: 5, marginBottom: 10 }}>
+            {['📞 Appel', '✉️ Email', '💬 WhatsApp'].map(ch => (
+              <button key={ch} onClick={() => setSelectedChannel(ch)} style={{ padding: '5px 10px', borderRadius: 7, border: selectedChannel === ch ? `1px solid ${C.gold}` : `1px solid ${C.line}`, background: selectedChannel === ch ? `${C.gold}20` : C.surface2, color: selectedChannel === ch ? C.gold : C.textMid, fontSize: 11, cursor: 'pointer', transition: 'all 0.15s' }}>
+                {ch}
+              </button>
+            ))}
+          </div>
+          <textarea style={{ width: '100%', minHeight: 70, padding: '9px 12px', borderRadius: 7, border: `1px solid ${C.line}`, background: C.surface2, color: C.textHi, fontSize: 11, fontFamily: 'JetBrains Mono, monospace', resize: 'vertical', lineHeight: 1.4 }} placeholder="Votre message..." defaultValue="Bonjour Jean, c'est [votre_nom]. On s'est échangé lors de notre rendez-vous. Je vous appelle parce que j'ai finalisé la simulation retraite. Est-ce que vous avez 2 minutes ou je vous rappelle ?" />
+          <div style={{ background: `${C.gold}10`, border: `1px solid ${C.gold}20`, borderRadius: 7, padding: '7px 9px', marginTop: 7 }}>
+            <div style={{ fontSize: 9, color: C.gold, fontWeight: 600 }}>💡 Préconisation PPP — Téléphone</div>
+            <div style={{ fontSize: 9, color: C.textMid, marginTop: 2 }}>Identifiez-vous + contexte en 10s. UNE question ouverte. 2 min max si non qualifié. Meilleur créneau: mardi-jeudi 9h-11h30.</div>
+          </div>
+          <button style={{ padding: '7px 14px', borderRadius: 7, border: 'none', background: C.gold, color: C.bgDeep, fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'JetBrains Mono, monospace', marginTop: 9 }}>📞 Appeler maintenant</button>
+        </div>
+
+        {/* Quick log */}
+        <div style={{ background: C.surface1, border: `1px solid ${C.line}`, borderRadius: 10, padding: 12 }}>
+          <h4 style={{ fontSize: 10, color: C.textMid, marginBottom: 9, textTransform: 'uppercase' }}>✏️ Enregistrer une interaction</h4>
+          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+            {['📞 Appel fait', '✉️ Email envoyé', '💬 WhatsApp envoyé', '🔗 LinkedIn envoyé'].map(action => (
+              <button key={action} style={{ padding: '7px 12px', borderRadius: 7, border: `1px dashed ${C.line}`, background: 'transparent', color: C.textMid, fontSize: 10, cursor: 'pointer', fontFamily: 'JetBrains Mono, monospace', transition: 'all 0.15s' }}>
+                {action}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }
