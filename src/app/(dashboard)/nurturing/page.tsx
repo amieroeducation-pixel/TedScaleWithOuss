@@ -1,898 +1,997 @@
 'use client'
 
-import { useState } from 'react'
-import { C } from '@/lib/theme'
+import { useState, useEffect } from 'react'
 import { saveLastSection } from '@/lib/navigation-state'
-import { useEffect } from 'react'
 
-// ─── TYPES ───────────────────────────────────────────────────────────────────
-
-type TemperatureLevel = 'hot' | 'warm' | 'cold' | 'dead'
-type PressureLevel = 'normal' | 'elevee' | 'a_stopper'
-type Tab = 'overview' | 'contacts' | 'documents' | 'messages' | 'settings'
-
-// ─── TEMPERATURE CONFIG ──────────────────────────────────────────────────────
-
-const CARD_BG_TEXTURE = 'https://media.istockphoto.com/id/2061680164/fr/photo/fond-de-texture-de-basalte-de-pierre-de-roche-de-granit-de-roche-brun-fonc%C3%A9-noir-surface-des.jpg?s=612x612&w=0&k=20&c=jHAF29X3opSh64jeZDLF8YhW3qPR7ASgjpz1CV2qTvo='
-
-const TEMP_IMAGE: Record<TemperatureLevel, string> = {
-  hot: '/nurturing/flame.png',
-  warm: '/nurturing/sun.png.png',
-  cold: '/nurturing/ice.png.png',
-  dead: '/nurturing/earth.png.png',
+// ─── VARIABLES CSS (thème PSG Cosmos) ───────────────────────────────────────
+const V = {
+  bgDeep: '#0a0e22',
+  bgMid: '#0f1430',
+  surface1: '#141a3a',
+  surface2: '#1a2150',
+  surface3: '#232d60',
+  line: '#2a3470',
+  text: '#d8e1ff',
+  textHi: '#ffffff',
+  textMid: '#8ea0d9',
+  textLo: '#5a6a9a',
+  gold: '#e8c878',
+  green: '#4caf50',
+  cyan: '#4ecdc4',
+  purple: '#a78bfa',
+  indigo: '#818cf8',
+  warn: '#fbbf24',
+  red: '#ff6470',
+  hot: '#ff4444',
+  warm: '#d4a020',
+  cold: '#5b9bd5',
 }
 
-const TEMP_CONFIG: Record<TemperatureLevel, { color: string; label: string; icon: string; gradient: string }> = {
-  hot: {
-    color: '#ff4444',
-    label: 'Brûlant',
-    icon: '🔥',
-    gradient: 'linear-gradient(135deg, #2d0808 0%, #4a1010 30%, #3d0808 60%, #1a0505 100%)',
-  },
-  warm: {
-    color: '#d4a020',
-    label: 'Tiède',
-    icon: '☀️',
-    gradient: 'linear-gradient(135deg, #2d2208 0%, #3d2e0a 30%, #2d2208 60%, #1a1505 100%)',
-  },
-  cold: {
-    color: '#5b9bd5',
-    label: 'Froid',
-    icon: '❄️',
-    gradient: 'linear-gradient(135deg, #081520 0%, #0c2040 30%, #0a1a30 60%, #050e1a 100%)',
-  },
-  dead: {
-    color: '#8B4513',
-    label: 'Enterré',
-    icon: '🪨',
-    gradient: 'linear-gradient(135deg, #1a1008 0%, #25180a 30%, #1a1008 60%, #0f0a05 100%)',
-  },
-}
-
-const PRESSURE_CONFIG: Record<PressureLevel, { color: string; label: string; icon: string }> = {
-  normal:    { color: C.green, label: 'Normale', icon: '✓' },
-  elevee:    { color: C.warn, label: 'Élevée', icon: '⚡' },
-  a_stopper: { color: '#ff6470', label: 'À stopper', icon: '🛑' },
-}
-
-// ─── MOCK DATA ───────────────────────────────────────────────────────────────
-
-interface Contact {
-  id: string
-  full_name: string
-  profession: string
-  temperature: TemperatureLevel
-  pressure: PressureLevel
-  category: string | null
-  sequence_active: string | null
-  total_touchpoints: number
-  responded_touchpoints: number
-  nb_relances_sans_reponse: number
-  next_action_date: string | null
-  next_action_channel: string | null
-  last_contact_at: string | null
-}
-
-const MOCK_CONTACTS: Contact[] = [
-  {
-    id: '1',
-    full_name: 'Jean Dupont',
-    profession: 'Dentiste',
-    temperature: 'hot',
-    pressure: 'normal',
-    category: '📅 RDV fait →',
-    sequence_active: null,
-    total_touchpoints: 5,
-    responded_touchpoints: 2,
-    nb_relances_sans_reponse: 3,
-    next_action_date: new Date().toISOString().split('T')[0],
-    next_action_channel: '📞',
-    last_contact_at: '5j',
-  },
-  {
-    id: '2',
-    full_name: 'Marie Laurent',
-    profession: 'Avocate',
-    temperature: 'warm',
-    pressure: 'normal',
-    category: null,
-    sequence_active: '▶ Séquence',
-    total_touchpoints: 8,
-    responded_touchpoints: 5,
-    nb_relances_sans_reponse: 0,
-    next_action_date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    next_action_channel: '✉️',
-    last_contact_at: null,
-  },
-  {
-    id: '3',
-    full_name: 'Thomas Bernard',
-    profession: 'Kinésithérapeute',
-    temperature: 'cold',
-    pressure: 'elevee',
-    category: null,
-    sequence_active: null,
-    total_touchpoints: 2,
-    responded_touchpoints: 0,
-    nb_relances_sans_reponse: 2,
-    next_action_date: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    next_action_channel: '💬',
-    last_contact_at: null,
-  },
-  {
-    id: '4',
-    full_name: 'Sophie Moreau',
-    profession: 'Notaire',
-    temperature: 'dead',
-    pressure: 'a_stopper',
-    category: null,
-    sequence_active: null,
-    total_touchpoints: 6,
-    responded_touchpoints: 1,
-    nb_relances_sans_reponse: 5,
-    next_action_date: null,
-    next_action_channel: null,
-    last_contact_at: '45j',
-  },
-]
-
-// ─── MAIN COMPONENT ──────────────────────────────────────────────────────────
+type DetailTab = 'sequence' | 'history' | 'config'
 
 export default function NurturingPage() {
-  const [tab, setTab] = useState<Tab>('contacts')
-  const [contacts] = useState<Contact[]>(MOCK_CONTACTS)
-  const [selectedContact, setSelectedContact] = useState<Contact | null>(null)
-  const [dropdownOpen, setDropdownOpen] = useState<string | null>(null)
-  const [selectedChannel, setSelectedChannel] = useState<string>('📞 Appel')
+  const [selectedContactIdx, setSelectedContactIdx] = useState(0)
+  const [detailTab, setDetailTab] = useState<DetailTab>('sequence')
+  const [openMenuIdx, setOpenMenuIdx] = useState<number | null>(null)
+  const [selectedChannel, setSelectedChannel] = useState('📞 Appel')
+  const [libraryOpen, setLibraryOpen] = useState(false)
 
   useEffect(() => { saveLastSection('/nurturing') }, [])
 
-  // ─── RENDER ──────────────────────────────────────────────────────────────────
+  // Mock contact data
+  const contacts = [
+    {
+      temp: 'hot' as const,
+      icon: '🔥',
+      name: 'Jean Dupont',
+      job: 'Dentiste',
+      stage: 'RDV 1 fait',
+      stats: '5tp · 2 rép.',
+      warning: '⚠ 3 NR',
+      preferredChannel: '📞 préféré',
+      badges: ['▶ Seq.'],
+      nextTime: 'Aujourd\'hui',
+      nextChannel: '📞',
+      urgent: true,
+    },
+    {
+      temp: 'hot' as const,
+      icon: '🔥',
+      name: 'Pierre Martin',
+      job: 'Pharmacien',
+      stage: 'RDV 2',
+      stats: '7tp · 3 rép.',
+      nextTime: 'Demain',
+      nextChannel: '✉️',
+      urgent: false,
+    },
+    {
+      temp: 'warm' as const,
+      icon: '☀️',
+      name: 'Marie Laurent',
+      job: 'Avocate',
+      stage: 'RDV fait',
+      stats: '8tp · 5 rép.',
+      badges: ['▶ Seq.'],
+      nextTime: 'dans 2j',
+      nextChannel: '💬',
+      urgent: false,
+    },
+    {
+      temp: 'warm' as const,
+      icon: '☀️',
+      name: 'Claire Rousseau',
+      job: 'Architecte',
+      stage: 'Prospect tiède',
+      stats: '4tp · 1 rép.',
+      warning: '⚠ 2 NR',
+      nextTime: 'dans 3j',
+      nextChannel: '🔗',
+      urgent: false,
+    },
+    {
+      temp: 'cold' as const,
+      icon: '❄️',
+      name: 'Thomas Bernard',
+      job: 'Kinésithérapeute',
+      stage: 'Prospect froid',
+      stats: '2tp · 0 rép.',
+      nextTime: 'dans 5j',
+      nextChannel: '✉️',
+      urgent: false,
+    },
+    {
+      temp: 'cold' as const,
+      icon: '❄️',
+      name: 'Nathalie Petit',
+      job: 'Notaire',
+      stage: 'Interpro',
+      stats: '3tp · 1 rép.',
+      nextTime: 'dans 7j',
+      nextChannel: '📞',
+      urgent: false,
+    },
+    {
+      temp: 'dead' as const,
+      icon: '🪨',
+      name: 'Sophie Moreau',
+      job: 'Sage-femme',
+      stage: 'Perdu',
+      stats: '6tp · 1 rép.',
+      warning: '5 NR · Stop',
+      nextTime: 'il y a 45j',
+      urgent: false,
+    },
+  ]
 
-  return (
-    <div style={{ padding: '24px 32px', fontFamily: 'JetBrains Mono, monospace', color: C.text, minHeight: '100vh', maxWidth: 1400, margin: '0 auto' }}>
+  const selectedContact = contacts[selectedContactIdx]
 
-      {/* ═══ HEADER ═══ */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
-        <div>
-          <h1 style={{ fontSize: 28, fontFamily: 'Oswald, sans-serif', color: C.textHi, fontWeight: 600, letterSpacing: 1 }}>
-            NURTURING
-          </h1>
-          <p style={{ fontSize: 12, color: C.textMid, marginTop: 4 }}>
-            Maturation & relances · 47 contacts actifs
-          </p>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
-          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 6, fontSize: 10, fontWeight: 600, cursor: 'pointer', background: `${C.gold}16`, color: C.gold, border: `1px solid ${C.gold}40` }}>
-              CRM <strong>12</strong>
-            </span>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 6, fontSize: 10, fontWeight: 600, cursor: 'pointer', background: 'rgba(167,139,250,0.1)', color: C.purple, border: '1px solid rgba(167,139,250,0.25)' }}>
-              Cercle <strong>8</strong>
-            </span>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 6, fontSize: 10, fontWeight: 600, cursor: 'pointer', background: `${C.green}16`, color: C.green, border: `1px solid ${C.green}40` }}>
-              Séquences <strong>5</strong>
-            </span>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 6, fontSize: 10, fontWeight: 600, cursor: 'pointer', background: `${C.cyan}16`, color: C.cyan, border: `1px solid ${C.cyan}40` }}>
-              Today <strong>7</strong>
-            </span>
-          </div>
-          <button style={{ padding: '6px 10px', borderRadius: 6, background: `${C.gold}12`, color: C.gold, border: `1px solid ${C.gold}40`, fontSize: 11, cursor: 'pointer', fontFamily: 'JetBrains Mono, monospace' }}>
-            🔄 Recalculer scores
-          </button>
-        </div>
-      </div>
-
-      {/* ═══ TAB BAR ═══ */}
-      <div style={{ display: 'flex', gap: 4, borderBottom: `1px solid ${C.line}`, paddingBottom: 12, marginBottom: 24 }}>
-        {[
-          { id: 'overview' as Tab, label: '📊 Vue globale', count: null },
-          { id: 'contacts' as Tab, label: '👥 Contacts', count: 47 },
-          { id: 'documents' as Tab, label: '📄 Bibliothèque', count: 12 },
-          { id: 'messages' as Tab, label: '💬 Messages', count: 8 },
-          { id: 'settings' as Tab, label: '⚙️ Configuration', count: null },
-        ].map(t => (
-          <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            style={{
-              padding: '8px 16px',
-              borderRadius: '8px 8px 0 0',
-              border: 'none',
-              cursor: 'pointer',
-              background: tab === t.id ? C.surface2 : 'transparent',
-              color: tab === t.id ? C.textHi : C.textMid,
-              fontSize: 12,
-              fontWeight: tab === t.id ? 700 : 400,
-              fontFamily: 'JetBrains Mono, monospace',
-              borderBottom: tab === t.id ? `2px solid ${C.gold}` : '2px solid transparent',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-              transition: 'all 0.15s',
-            }}
-          >
-            {t.label}
-            {t.count !== null && (
-              <span style={{ fontSize: 9, padding: '1px 5px', borderRadius: 8, background: tab === t.id ? `${C.gold}25` : C.surface3, color: tab === t.id ? C.gold : C.textLo, fontWeight: 700 }}>
-                {t.count}
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
-
-      {/* ═══ OVERVIEW TAB ═══ */}
-      {tab === 'overview' && (
-        <div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, marginBottom: 24 }}>
-            <KpiCard value={47} label="En nurturing" icon="👥" />
-            <KpiCard value={7} label="À traiter" icon="⚡" highlight />
-            <KpiCard value={9} label="Chauds" icon="🔥" />
-            <KpiCard value={3} label="Sur-sollicités" icon="🛑" />
-            <KpiCard value={11} label="Sans action" icon="😴" />
-          </div>
-
-          {/* Mini Calendar */}
-          <div style={{ background: C.surface1, border: `1px solid ${C.line}`, borderRadius: 12, padding: 16, marginBottom: 24 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-              <h3 style={{ fontSize: 14, color: C.textHi }}>Planning 7 jours</h3>
-              <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 4, background: `${C.gold}12`, color: C.gold, border: `1px solid ${C.gold}32`, cursor: 'pointer' }}>
-                Voir dans Today →
-              </span>
-            </div>
-            <div style={{ display: 'flex', gap: 6 }}>
-              {[
-                { day: 'LUN', date: 16, dots: ['#ff4444', '#ff4444', '#d4a020'], count: 3, today: true },
-                { day: 'MAR', date: 17, dots: ['#d4a020', '#5b9bd5'], count: 2, today: false },
-                { day: 'MER', date: 18, dots: ['#ff4444'], count: 1, today: false },
-                { day: 'JEU', date: 19, dots: ['#d4a020', '#d4a020', '#5b9bd5', '#5b9bd5'], count: 4, today: false },
-                { day: 'VEN', date: 20, dots: ['#5b9bd5'], count: 1, today: false },
-                { day: 'SAM', date: 21, dots: [], count: 0, today: false },
-                { day: 'DIM', date: 22, dots: [], count: 0, today: false },
-              ].map((d, i) => (
-                <div key={i} style={{ flex: 1, textAlign: 'center', padding: '8px 4px', borderRadius: 8, background: C.surface2, border: d.today ? `1px solid ${C.gold}` : `1px solid ${C.line}` }}>
-                  <div style={{ fontSize: 9, color: d.today ? C.gold : C.textLo, fontWeight: d.today ? 700 : 400 }}>{d.day}</div>
-                  <div style={{ fontSize: 12, color: C.textHi, fontWeight: 600, margin: '4px 0' }}>{d.date}</div>
-                  <div style={{ minHeight: 12 }}>
-                    {d.dots.map((color, j) => (
-                      <span key={j} style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: color, margin: '1px' }} />
-                    ))}
-                  </div>
-                  <div style={{ fontSize: 9, color: d.today ? C.gold : C.textLo, marginTop: 3 }}>
-                    {d.count > 0 ? `${d.count} action${d.count > 1 ? 's' : ''}` : '—'}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Conversion Metrics */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 24 }}>
-            <MetricPill icon="📈" value="23%" label="Taux nurturing → RDV" color={C.green} />
-            <MetricPill icon="⏱️" value="18j" label="Temps moyen → conversion" color={C.textHi} />
-            <MetricPill icon="🔄" value="4" label="Réactivés ce mois" color={C.cyan} />
-          </div>
-        </div>
-      )}
-
-      {/* ═══ CONTACTS TAB ═══ */}
-      {tab === 'contacts' && (
-        <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              <button style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: C.gold, color: C.bgDeep, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'JetBrains Mono, monospace' }}>
-                + Nouveau contact
-              </button>
-              <button style={{ padding: '5px 10px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 11, fontFamily: 'JetBrains Mono, monospace', color: C.gold, background: C.surface2 }}>
-                Ouvrir CRM Kanban
-              </button>
-              <button style={{ padding: '5px 10px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 11, fontFamily: 'JetBrains Mono, monospace', color: C.cyan, background: C.surface2 }}>
-                Prospecter TNS
-              </button>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16, alignItems: 'center' }}>
-            <input placeholder="Rechercher un contact..." style={{ padding: '7px 10px', borderRadius: 8, border: `1px solid ${C.line}`, background: C.surface2, color: C.textHi, fontSize: 12, fontFamily: 'JetBrains Mono, monospace', width: 220 }} />
-            <select style={{ padding: '7px 10px', borderRadius: 8, border: `1px solid ${C.line}`, background: C.surface2, color: C.text, fontSize: 12, fontFamily: 'JetBrains Mono, monospace' }}>
-              <option>Température</option>
-              <option>🔥 Brûlant</option>
-              <option>☀️ Tiède</option>
-              <option>❄️ Froid</option>
-              <option>🪨 Enterré</option>
-            </select>
-            <select style={{ padding: '7px 10px', borderRadius: 8, border: `1px solid ${C.line}`, background: C.surface2, color: C.text, fontSize: 12, fontFamily: 'JetBrains Mono, monospace' }}>
-              <option>Pression</option>
-              <option>✓ Normale</option>
-              <option>⚡ Élevée</option>
-              <option>🛑 À stopper</option>
-            </select>
-          </div>
-
-          <div style={{ fontSize: 11, color: C.textLo, marginBottom: 10 }}>47 résultats</div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {contacts.map(c => (
-              <ContactCard
-                key={c.id}
-                contact={c}
-                onClick={() => setSelectedContact(c)}
-                dropdownOpen={dropdownOpen === c.id}
-                onToggleDropdown={(e) => {
-                  e.stopPropagation()
-                  setDropdownOpen(dropdownOpen === c.id ? null : c.id)
-                }}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* ═══ DOCUMENTS TAB ═══ */}
-      {tab === 'documents' && (
-        <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <div style={{ display: 'flex', gap: 6 }}>
-              <button style={{ padding: '5px 10px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 11, fontFamily: 'JetBrains Mono, monospace', color: C.text, background: C.surface3 }}>Tous</button>
-              <button style={{ padding: '5px 10px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 11, fontFamily: 'JetBrains Mono, monospace', color: C.text, background: C.surface2 }}>📊 Retraite TNS</button>
-              <button style={{ padding: '5px 10px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 11, fontFamily: 'JetBrains Mono, monospace', color: C.text, background: C.surface2 }}>🏠 Immobilier</button>
-            </div>
-            <button style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: C.gold, color: C.bgDeep, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'JetBrains Mono, monospace' }}>
-              + Document
-            </button>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
-            <DocumentCard title="Simulateur Retraite TNS" type="PDF · email, whatsapp" tag="📊 Retraite TNS" tagColor={C.green} />
-            <DocumentCard title="Guide SCPI 2026" type="PDF · email, courrier" tag="🏠 Immobilier" tagColor={C.gold} />
-          </div>
-        </div>
-      )}
-
-      {/* ═══ MESSAGES TAB ═══ */}
-      {tab === 'messages' && (
-        <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <div style={{ display: 'flex', gap: 6 }}>
-              <button style={{ padding: '5px 10px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 11, fontFamily: 'JetBrains Mono, monospace', color: C.text, background: C.surface3 }}>Tous</button>
-              <button style={{ padding: '5px 10px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 11, fontFamily: 'JetBrains Mono, monospace', color: C.text, background: C.surface2 }}>✉️</button>
-              <button style={{ padding: '5px 10px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 11, fontFamily: 'JetBrains Mono, monospace', color: C.text, background: C.surface2 }}>💬</button>
-              <button style={{ padding: '5px 10px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 11, fontFamily: 'JetBrains Mono, monospace', color: C.text, background: C.surface2 }}>🔗</button>
-            </div>
-            <button style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: C.gold, color: C.bgDeep, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'JetBrains Mono, monospace' }}>
-              + Message
-            </button>
-          </div>
-          <div style={{ marginBottom: 24 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-              <h3 style={{ fontSize: 13, color: C.gold }}>SUGGESTIONS D'EXPERTS PPP/Vendue</h3>
-            </div>
-            <SuggestionCard
-              icon="✉️"
-              title="Relance contextualisée après rencontre"
-              preview="{Prénom}, on a échangé {lieu} — votre situation m'a interpellé..."
-              tip="💡 Les 2 premières lignes sont décisives. Ancrez dans un contexte réel partagé."
-            />
-            <SuggestionCard
-              icon="💬"
-              title="Micro-relance WhatsApp (J+5)"
-              preview="Court, pas intrusif, offre une porte de sortie. Un vocal 30s vaut 10 messages écrits."
-              tip="💡 Règle PPP2: Max 2 touchpoints/semaine, jamais 2 canaux le même jour."
-            />
-          </div>
-        </div>
-      )}
-
-      {/* ═══ SETTINGS TAB ═══ */}
-      {tab === 'settings' && (
-        <div style={{ maxWidth: 720 }}>
-          <div style={{ marginBottom: 32 }}>
-            <h3 style={{ fontSize: 15, color: C.textHi, marginBottom: 12 }}>Cadence recommandée PPP2</h3>
-            <div style={{ background: C.surface1, border: `1px solid ${C.gold}32`, borderRadius: 12, padding: 16 }}>
-              <h4 style={{ fontSize: 11, color: C.gold, marginBottom: 10, textTransform: 'uppercase' }}>Séquence optimale B2B</h4>
-              <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-                <span style={{ fontSize: 11, padding: '4px 8px', borderRadius: 6, background: C.surface2, color: C.textHi, display: 'flex', alignItems: 'center', gap: 4 }}>✉️ email</span>
-                <span style={{ color: C.textLo, fontSize: 10 }}>→</span>
-                <span style={{ fontSize: 11, padding: '4px 8px', borderRadius: 6, background: C.surface2, color: C.textHi }}>🔗 linkedin</span>
-                <span style={{ color: C.textLo, fontSize: 10 }}>→</span>
-                <span style={{ fontSize: 11, padding: '4px 8px', borderRadius: 6, background: C.surface2, color: C.textHi }}>📞 téléphone</span>
-                <span style={{ color: C.textLo, fontSize: 10 }}>→</span>
-                <span style={{ fontSize: 11, padding: '4px 8px', borderRadius: 6, background: C.surface2, color: C.textHi }}>💬 whatsapp</span>
-                <span style={{ color: C.textLo, fontSize: 10 }}>→</span>
-                <span style={{ fontSize: 11, padding: '4px 8px', borderRadius: 6, background: C.surface2, color: C.textHi }}>✉️ email rupture</span>
-              </div>
-              <div style={{ fontSize: 10, color: C.textLo, marginTop: 8 }}>
-                6 touches max prospect froid · 8 touches tiède · 5 touches post-RDV
-              </div>
-            </div>
-            <div style={{ background: 'rgba(255,100,112,0.05)', border: '1px solid rgba(255,100,112,0.15)', borderRadius: 10, padding: 12, marginTop: 12 }}>
-              <div style={{ fontSize: 10, color: '#ff6470', fontWeight: 600, marginBottom: 4 }}>Règles anti-pression PPP2</div>
-              <div style={{ fontSize: 10, color: C.textMid }}>• Max 2 touches/semaine, jamais 2 canaux le même jour</div>
-              <div style={{ fontSize: 10, color: C.textMid }}>• STOP après 6 tentatives sans interaction (froid)</div>
-              <div style={{ fontSize: 10, color: C.textMid }}>• Si 3 messages sans vue → STOP et changer de canal</div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ═══ MODAL ═══ */}
-      {selectedContact && (
-        <div
-          onClick={() => setSelectedContact(null)}
-          style={{
-            display: 'flex',
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0,0,0,0.75)',
-            zIndex: 1000,
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: 20,
-          }}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              background: C.bgMid,
-              border: `1px solid ${C.line}`,
-              borderRadius: 16,
-              padding: 28,
-              width: '100%',
-              maxWidth: 900,
-              maxHeight: '88vh',
-              overflowY: 'auto',
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
-              <div>
-                <h2 style={{ fontSize: 22, color: C.textHi }}>{selectedContact.full_name}</h2>
-                <div style={{ fontSize: 11, color: C.textMid, marginTop: 4 }}>
-                  {selectedContact.profession} · {TEMP_CONFIG[selectedContact.temperature].icon} {TEMP_CONFIG[selectedContact.temperature].label}
-                </div>
-              </div>
-              <button onClick={() => setSelectedContact(null)} style={{ background: 'none', border: 'none', color: C.textLo, fontSize: 22, cursor: 'pointer' }}>✕</button>
-            </div>
-
-            {/* PPP2 Sequence Timeline */}
-            <div style={{ background: C.surface1, border: `1px solid ${C.line}`, borderRadius: 12, padding: 16, marginBottom: 20 }}>
-              <h4 style={{ fontSize: 11, color: C.cyan, marginBottom: 10, textTransform: 'uppercase' }}>⚡ Séquence en cours</h4>
-              <div style={{ display: 'flex', gap: 8, overflowX: 'auto', padding: '12px 0', position: 'relative' }}>
-                {[
-                  { icon: '📧', day: 'J+1', label: 'Email', status: 'done' },
-                  { icon: '🔗', day: 'J+3', label: 'LinkedIn', status: 'done' },
-                  { icon: '📞', day: 'J+7', label: 'Appel', status: 'current' },
-                  { icon: '💬', day: 'J+10', label: 'WhatsApp', status: 'pending' },
-                  { icon: '📧', day: 'J+14', label: 'Rupture', status: 'pending' },
-                ].map((step, i) => (
-                  <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 90, position: 'relative' }}>
-                    <div
-                      style={{
-                        width: 36,
-                        height: 36,
-                        borderRadius: '50%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        background: step.status === 'done' ? 'rgba(52,211,153,0.12)' : step.status === 'current' ? 'rgba(34,211,238,0.12)' : C.surface2,
-                        border: step.status === 'done' ? `2px solid ${C.green}` : step.status === 'current' ? `2px solid ${C.cyan}` : `2px solid ${C.line}`,
-                        fontSize: 14,
-                        position: 'relative',
-                        zIndex: 1,
-                        cursor: 'pointer',
-                        transition: 'all 0.15s',
-                        boxShadow: step.status === 'current' ? `0 0 12px ${C.cyan}50` : 'none',
-                      }}
-                    >
-                      {step.icon}
-                    </div>
-                    <div style={{ fontSize: 9, color: C.textLo, marginTop: 4, fontWeight: 600 }}>{step.day}</div>
-                    <div style={{ fontSize: 9, color: C.textMid, marginTop: 2 }}>{step.label}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Send message */}
-            <div style={{ background: `${C.gold}06`, border: `1px solid ${C.gold}30`, borderRadius: 12, padding: 16, marginBottom: 20 }}>
-              <h4 style={{ fontSize: 11, color: C.gold, textTransform: 'uppercase', marginBottom: 12 }}>📨 Envoyer un message</h4>
-              <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
-                {['📞 Appel', '✉️ Email', '💬 WhatsApp'].map(ch => (
-                  <button
-                    key={ch}
-                    onClick={() => setSelectedChannel(ch)}
-                    style={{
-                      padding: '6px 12px',
-                      borderRadius: 8,
-                      border: selectedChannel === ch ? `1px solid ${C.gold}` : `1px solid ${C.line}`,
-                      background: selectedChannel === ch ? `${C.gold}20` : C.surface2,
-                      color: selectedChannel === ch ? C.gold : C.textMid,
-                      fontSize: 13,
-                      cursor: 'pointer',
-                      transition: 'all 0.15s',
-                    }}
-                  >
-                    {ch}
-                  </button>
-                ))}
-              </div>
-              <textarea
-                style={{
-                  width: '100%',
-                  minHeight: 80,
-                  padding: '10px 14px',
-                  borderRadius: 8,
-                  border: `1px solid ${C.line}`,
-                  background: C.surface2,
-                  color: C.textHi,
-                  fontSize: 12,
-                  fontFamily: 'JetBrains Mono, monospace',
-                  resize: 'vertical',
-                  lineHeight: 1.5,
-                }}
-                placeholder="Votre message..."
-                defaultValue="Bonjour Jean, c'est [votre_nom]. On s'est échangé lors de notre rendez-vous. Je vous appelle parce que j'ai finalisé la simulation retraite. Est-ce que vous avez 2 minutes ou je vous rappelle ?"
-              />
-              <div style={{ background: `${C.gold}10`, border: `1px solid ${C.gold}20`, borderRadius: 8, padding: '8px 10px', marginTop: 8 }}>
-                <div style={{ fontSize: 10, color: C.gold, fontWeight: 600 }}>💡 Préconisation PPP — Téléphone</div>
-                <div style={{ fontSize: 10, color: C.textMid, marginTop: 3 }}>
-                  Identifiez-vous + contexte en 10s. UNE question ouverte. 2 min max si non qualifié. Meilleur créneau: mardi-jeudi 9h-11h30.
-                </div>
-              </div>
-              <button style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: C.gold, color: C.bgDeep, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'JetBrains Mono, monospace', marginTop: 10 }}>
-                📞 Appeler maintenant
-              </button>
-            </div>
-
-            {/* Quick log */}
-            <div style={{ background: C.surface1, border: `1px solid ${C.line}`, borderRadius: 12, padding: 14 }}>
-              <h4 style={{ fontSize: 11, color: C.textMid, marginBottom: 10, textTransform: 'uppercase' }}>✏️ Enregistrer une interaction</h4>
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                {['📞 Appel fait', '✉️ Email envoyé', '💬 WhatsApp envoyé', '🔗 LinkedIn envoyé'].map(action => (
-                  <button
-                    key={action}
-                    style={{
-                      padding: '8px 14px',
-                      borderRadius: 8,
-                      border: `1px dashed ${C.line}`,
-                      background: 'transparent',
-                      color: C.textMid,
-                      fontSize: 11,
-                      cursor: 'pointer',
-                      fontFamily: 'JetBrains Mono, monospace',
-                      transition: 'all 0.15s',
-                    }}
-                  >
-                    {action}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ─── COMPONENTS ──────────────────────────────────────────────────────────────
-
-function KpiCard({ value, label, icon, highlight }: { value: number; label: string; icon: string; highlight?: boolean }) {
-  return (
-    <div
-      style={{
-        background: highlight ? `${C.gold}10` : C.surface1,
-        border: highlight ? `1px solid ${C.gold}64` : `1px solid ${C.line}`,
-        borderRadius: 10,
-        padding: '14px 16px',
-        textAlign: 'center',
-        cursor: 'pointer',
-        transition: 'transform 0.1s',
-      }}
-    >
-      <div style={{ fontSize: 20 }}>{icon}</div>
-      <div style={{ fontSize: 22, fontWeight: 700, color: highlight ? C.gold : C.indigo, marginTop: 4 }}>{value}</div>
-      <div style={{ fontSize: 10, color: C.textMid, marginTop: 2 }}>{label}</div>
-    </div>
-  )
-}
-
-function MetricPill({ icon, value, label, color }: { icon: string; value: string; label: string; color: string }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', background: C.surface1, border: `1px solid ${C.line}`, borderRadius: 10 }}>
-      <div style={{ fontSize: 22 }}>{icon}</div>
-      <div>
-        <div style={{ fontSize: 16, fontWeight: 700, color }}>{value}</div>
-        <div style={{ fontSize: 10, color: C.textMid }}>{label}</div>
-      </div>
-    </div>
-  )
-}
-
-function ContactCard({ contact, onClick, dropdownOpen, onToggleDropdown }: {
-  contact: Contact
-  onClick: () => void
-  dropdownOpen: boolean
-  onToggleDropdown: (e: React.MouseEvent) => void
-}) {
-  const tempCfg = TEMP_CONFIG[contact.temperature]
-  const pressureCfg = PRESSURE_CONFIG[contact.pressure]
-
-  const formatNextAction = () => {
-    if (!contact.next_action_date) return null
-    const today = new Date().toISOString().split('T')[0]
-    const actionDate = contact.next_action_date
-    if (actionDate === today) return <span style={{ fontSize: 11, fontWeight: 700, color: '#ff4444' }}>🚨 Aujourd'hui</span>
-    const daysUntil = Math.ceil((new Date(actionDate).getTime() - new Date(today).getTime()) / (1000 * 60 * 60 * 24))
-    return <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.65)' }}>dans {daysUntil}j</span>
+  const tempColors: Record<string, { border: string; bg: string; iconBg: string; iconBorder: string }> = {
+    hot: {
+      border: V.hot,
+      bg: 'linear-gradient(135deg, #2d0808, #4a1010 30%, #3d0808)',
+      iconBg: 'radial-gradient(circle,rgba(255,68,68,0.3),rgba(255,68,68,0.1))',
+      iconBorder: 'rgba(255,68,68,0.5)',
+    },
+    warm: {
+      border: V.warm,
+      bg: 'linear-gradient(135deg, #2d2208, #3d2e0a 30%, #2d2208)',
+      iconBg: 'radial-gradient(circle,rgba(212,160,32,0.25),rgba(212,160,32,0.08))',
+      iconBorder: 'rgba(212,160,32,0.45)',
+    },
+    cold: {
+      border: V.cold,
+      bg: 'linear-gradient(135deg, #081520, #0c2040 30%, #0a1a30)',
+      iconBg: 'radial-gradient(circle,rgba(91,155,213,0.25),rgba(91,155,213,0.08))',
+      iconBorder: 'rgba(91,155,213,0.45)',
+    },
+    dead: {
+      border: '#8B4513',
+      bg: 'linear-gradient(135deg, #1a1008, #25180a 30%, #1a1008)',
+      iconBg: 'radial-gradient(circle,rgba(139,69,19,0.2),rgba(139,69,19,0.05))',
+      iconBorder: 'rgba(139,69,19,0.4)',
+    },
   }
 
   return (
-    <div
-      onClick={onClick}
-      style={{
-        position: 'relative',
-        overflow: 'hidden',
-        borderRadius: 16,
-        padding: '16px 22px',
-        cursor: 'pointer',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 14,
-        borderLeft: `5px solid ${tempCfg.color}`,
-        background: tempCfg.gradient,
-        transition: 'transform 0.15s, box-shadow 0.15s',
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.transform = 'translateY(-2px) scale(1.005)'
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.transform = 'translateY(0) scale(1)'
-      }}
-    >
-      {/* Texture basalt */}
-      <div style={{
-        position: 'absolute',
-        inset: 0,
-        pointerEvents: 'none',
-        backgroundImage: `url('${CARD_BG_TEXTURE}')`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        opacity: 0.08,
-      }} />
-
-      {/* PNG image */}
-      <div style={{
-        position: 'absolute',
-        right: -10,
-        bottom: -10,
-        width: 140,
-        height: 140,
-        pointerEvents: 'none',
-        backgroundSize: 'contain',
-        backgroundPosition: 'bottom right',
-        backgroundRepeat: 'no-repeat',
-        opacity: 0.18,
-        backgroundImage: `url('${TEMP_IMAGE[contact.temperature]}')`,
-      }} />
-
-      {/* Glow effects */}
-      <div style={{
-        position: 'absolute',
-        top: -30,
-        right: -30,
-        width: 140,
-        height: 140,
-        borderRadius: '50%',
-        pointerEvents: 'none',
-        background: contact.temperature === 'hot'
-          ? 'radial-gradient(circle, rgba(255,68,68,0.15) 0%, transparent 65%)'
-          : contact.temperature === 'warm'
-          ? 'radial-gradient(circle, rgba(212,160,32,0.12) 0%, transparent 65%)'
-          : contact.temperature === 'cold'
-          ? 'radial-gradient(circle, rgba(91,155,213,0.12) 0%, transparent 65%)'
-          : 'radial-gradient(circle, rgba(139,69,19,0.1) 0%, transparent 65%)',
-      }} />
-      <div style={{
-        position: 'absolute',
-        bottom: -20,
-        left: -20,
-        width: 100,
-        height: 100,
-        borderRadius: '50%',
-        pointerEvents: 'none',
-        background: contact.temperature === 'hot'
-          ? 'radial-gradient(circle, rgba(255,68,68,0.08) 0%, transparent 60%)'
-          : contact.temperature === 'warm'
-          ? 'radial-gradient(circle, rgba(212,160,32,0.06) 0%, transparent 60%)'
-          : contact.temperature === 'cold'
-          ? 'radial-gradient(circle, rgba(91,155,213,0.06) 0%, transparent 60%)'
-          : 'radial-gradient(circle, rgba(139,69,19,0.05) 0%, transparent 60%)',
-      }} />
-
-      {/* Avatar */}
-      <div style={{
-        position: 'relative',
-        zIndex: 1,
-        width: 40,
-        height: 40,
-        borderRadius: '50%',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontSize: 20,
-        background: contact.temperature === 'hot'
-          ? 'radial-gradient(circle, rgba(255,68,68,0.3), rgba(255,68,68,0.1))'
-          : contact.temperature === 'warm'
-          ? 'radial-gradient(circle, rgba(212,160,32,0.25), rgba(212,160,32,0.08))'
-          : contact.temperature === 'cold'
-          ? 'radial-gradient(circle, rgba(91,155,213,0.25), rgba(91,155,213,0.08))'
-          : 'radial-gradient(circle, rgba(139,69,19,0.2), rgba(139,69,19,0.05))',
-        border: contact.temperature === 'hot'
-          ? '2px solid rgba(255,68,68,0.5)'
-          : contact.temperature === 'warm'
-          ? '2px solid rgba(212,160,32,0.45)'
-          : contact.temperature === 'cold'
-          ? '2px solid rgba(91,155,213,0.45)'
-          : '2px solid rgba(139,69,19,0.4)',
-      }}>
-        {tempCfg.icon}
-      </div>
-
-      {/* Info */}
-      <div style={{ flex: 1, minWidth: 0, position: 'relative', zIndex: 1 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 14, fontWeight: 600, color: '#fff', textShadow: '0 1px 2px rgba(0,0,0,0.4)' }}>
-            {contact.full_name}
-          </span>
-          {contact.category && (
-            <span style={{ fontSize: 10, color: C.gold, background: `${C.gold}20`, padding: '2px 7px', borderRadius: 4 }}>
-              {contact.category}
-            </span>
-          )}
-          {contact.sequence_active && (
-            <span style={{ fontSize: 10, color: C.green, background: `${C.green}16`, padding: '2px 7px', borderRadius: 4 }}>
-              {contact.sequence_active}
-            </span>
-          )}
+    <div style={{ padding: '24px 32px', maxWidth: '1800px', margin: '0 auto' }}>
+      {/* ═══ HEADER ═══ */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
+        <div>
+          <h1 style={{ fontSize: '28px', color: V.textHi, fontWeight: 600, letterSpacing: '1px', fontFamily: 'Oswald, sans-serif' }}>NURTURING</h1>
+          <p style={{ fontSize: '12px', color: V.textMid, marginTop: '4px' }}>Maturation & relances multicanales · 47 contacts actifs · 5 séquences</p>
         </div>
-        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', marginTop: 5, display: 'flex', gap: 12, alignItems: 'center' }}>
-          <span style={{ fontWeight: 500 }}>{contact.profession}</span>
-          <span>📊 {contact.total_touchpoints}tp · {contact.responded_touchpoints} rép.</span>
-          {contact.nb_relances_sans_reponse > 0 && (
-            <span style={{ color: C.warn, fontWeight: 600 }}>⚠ {contact.nb_relances_sans_reponse} sans réponse</span>
-          )}
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: 600, background: 'rgba(232,200,120,0.1)', color: V.gold, border: `1px solid rgba(232,200,120,0.25)`, cursor: 'pointer' }}>Séquences <strong>5</strong></span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: 600, background: 'rgba(78,205,196,0.1)', color: V.cyan, border: `1px solid rgba(78,205,196,0.25)`, cursor: 'pointer' }}>Today <strong>7</strong></span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: 600, background: 'rgba(76,175,80,0.1)', color: V.green, border: `1px solid rgba(76,175,80,0.25)`, cursor: 'pointer' }}>Conversion <strong>23%</strong></span>
+          <button style={{ padding: '5px 10px', borderRadius: '6px', border: '1px solid rgba(232,200,120,0.25)', cursor: 'pointer', fontSize: '11px', fontFamily: 'inherit', color: V.gold, background: 'rgba(232,200,120,0.08)' }}>+ Nouveau contact</button>
         </div>
       </div>
 
-      {/* Pressure badge */}
-      <div style={{
-        position: 'relative',
-        zIndex: 1,
-        fontSize: 10,
-        padding: '4px 8px',
-        borderRadius: 5,
-        background: `${pressureCfg.color}20`,
-        color: pressureCfg.color,
-        fontWeight: 600,
-      }}>
-        {pressureCfg.icon} {pressureCfg.label}
-      </div>
+      {/* ═══ MAIN 2-COL LAYOUT ═══ */}
+      <div style={{ display: 'grid', gridTemplateColumns: '340px 1fr', gap: '20px', minHeight: 'calc(100vh - 160px)' }}>
 
-      {/* Next action */}
-      <div style={{ textAlign: 'right', minWidth: 80, position: 'relative', zIndex: 1 }}>
-        {formatNextAction()}
-        {contact.last_contact_at && !contact.next_action_date && (
-          <div style={{ fontSize: 11, color: C.textLo }}>il y a {contact.last_contact_at}</div>
-        )}
-        {contact.next_action_channel && (
-          <div style={{ fontSize: 14, marginTop: 2 }}>{contact.next_action_channel}</div>
-        )}
-      </div>
+        {/* ─── LEFT: PROSPECT LIST ─── */}
+        <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          {/* Search + filters */}
+          <div style={{ marginBottom: '12px' }}>
+            <input
+              type="text"
+              placeholder="Rechercher un prospect..."
+              style={{
+                width: '100%',
+                padding: '8px 12px',
+                borderRadius: '8px',
+                border: `1px solid ${V.line}`,
+                background: V.surface2,
+                color: V.textHi,
+                fontSize: '12px',
+                fontFamily: 'inherit',
+                outline: 'none',
+                marginBottom: '8px',
+              }}
+            />
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+              <button style={{ padding: '5px 10px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '11px', fontFamily: 'inherit', color: V.textHi, background: 'rgba(232,200,120,0.15)', fontWeight: 600 }}>Tous (47)</button>
+              <button style={{ padding: '5px 10px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '11px', fontFamily: 'inherit', color: V.hot, background: V.surface2 }}>Chauds (9)</button>
+              <button style={{ padding: '5px 10px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '11px', fontFamily: 'inherit', color: V.warm, background: V.surface2 }}>Tièdes (18)</button>
+              <button style={{ padding: '5px 10px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '11px', fontFamily: 'inherit', color: V.cold, background: V.surface2 }}>Froids (14)</button>
+            </div>
+          </div>
 
-      {/* Dropdown toggle */}
-      <div
-        onClick={onToggleDropdown}
-        style={{
-          position: 'absolute',
-          bottom: 0,
-          left: '50%',
-          transform: 'translateX(-50%)',
-          width: 60,
-          height: 20,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: 'rgba(0,0,0,0.5)',
-          borderRadius: '10px 10px 0 0',
-          color: C.textLo,
-          fontSize: 9,
-          cursor: 'pointer',
-          zIndex: 5,
-          opacity: 0,
-          transition: 'opacity 0.2s',
-        }}
-        onMouseEnter={(e) => { e.currentTarget.style.opacity = '1' }}
-        onMouseLeave={(e) => { if (!dropdownOpen) e.currentTarget.style.opacity = '0' }}
-      >
-        {dropdownOpen ? '▲ Fermer' : '▼ Menu'}
-      </div>
+          {/* Contact list */}
+          <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px', paddingRight: '4px' }}>
+            {contacts.map((contact, idx) => {
+              const colors = tempColors[contact.temp]
+              return (
+                <div
+                  key={idx}
+                  onClick={() => {
+                    setSelectedContactIdx(idx)
+                    setOpenMenuIdx(null)
+                  }}
+                  style={{
+                    position: 'relative',
+                    padding: '12px 14px',
+                    borderRadius: '12px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    transition: 'all 0.15s',
+                    borderLeft: `4px solid ${colors.border}`,
+                    background: selectedContactIdx === idx ? V.surface2 : 'transparent',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (selectedContactIdx !== idx) {
+                      e.currentTarget.style.background = V.surface1
+                      e.currentTarget.style.transform = 'translateX(2px)'
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (selectedContactIdx !== idx) {
+                      e.currentTarget.style.background = 'transparent'
+                      e.currentTarget.style.transform = 'translateX(0)'
+                    }
+                  }}
+                >
+                  {/* Dropdown menu button */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setOpenMenuIdx(openMenuIdx === idx ? null : idx)
+                    }}
+                    style={{
+                      position: 'absolute',
+                      top: '8px',
+                      right: '8px',
+                      width: '24px',
+                      height: '24px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      background: 'transparent',
+                      color: V.textLo,
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      opacity: selectedContactIdx === idx || openMenuIdx === idx ? 1 : 0,
+                      transition: 'opacity 0.15s',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = V.surface3
+                      e.currentTarget.style.color = V.textMid
+                      e.currentTarget.style.opacity = '1'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'transparent'
+                      e.currentTarget.style.color = V.textLo
+                      if (selectedContactIdx !== idx && openMenuIdx !== idx) {
+                        e.currentTarget.style.opacity = '0'
+                      }
+                    }}
+                  >
+                    ⋮
+                  </button>
 
-      {/* Dropdown */}
-      {dropdownOpen && (
-        <div
-          onClick={(e) => e.stopPropagation()}
-          style={{
-            position: 'absolute',
-            bottom: 0,
-            left: 0,
-            right: 0,
-            background: C.surface1,
-            borderTop: `1px solid ${C.line}`,
-            padding: '10px 14px',
-            zIndex: 10,
-            borderRadius: '0 0 16px 16px',
-          }}
-        >
-          <div style={{ display: 'flex', gap: 5, marginBottom: 8, flexWrap: 'wrap' }}>
-            {contact.temperature !== 'dead' ? (
-              <>
-                <button style={{ padding: '4px 8px', borderRadius: 5, background: C.surface2, border: `1px solid ${C.line}`, color: C.textMid, fontSize: 10, cursor: 'pointer', transition: 'all 0.15s' }}>📞 Appeler</button>
-                <button style={{ padding: '4px 8px', borderRadius: 5, background: C.surface2, border: `1px solid ${C.line}`, color: C.textMid, fontSize: 10, cursor: 'pointer', transition: 'all 0.15s' }}>💬 WhatsApp</button>
-                <button style={{ padding: '4px 8px', borderRadius: 5, background: C.surface2, border: `1px solid ${C.line}`, color: C.textMid, fontSize: 10, cursor: 'pointer', transition: 'all 0.15s' }}>📧 Email</button>
-                <button style={{ padding: '4px 8px', borderRadius: 5, background: C.surface2, border: `1px solid ${C.line}`, color: C.textMid, fontSize: 10, cursor: 'pointer', transition: 'all 0.15s' }}>🔗 LinkedIn</button>
-              </>
-            ) : (
-              <button style={{ padding: '4px 8px', borderRadius: 5, background: C.surface2, border: `1px solid ${C.line}`, color: C.textMid, fontSize: 10, cursor: 'pointer', transition: 'all 0.15s' }}>📧 Email rupture</button>
+                  {/* Dropdown menu */}
+                  {openMenuIdx === idx && (
+                    <div
+                      onClick={(e) => e.stopPropagation()}
+                      style={{
+                        position: 'absolute',
+                        top: '32px',
+                        right: '8px',
+                        zIndex: 100,
+                        background: V.bgMid,
+                        border: `1px solid ${V.line}`,
+                        borderRadius: '10px',
+                        padding: '6px',
+                        minWidth: '180px',
+                        boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+                      }}
+                    >
+                      {['📞 Appeler maintenant', '💬 WhatsApp rapide', '✉️ Envoyer un email', null, '▶ Lancer séquence', '📄 Envoyer document', null, '📅 Planifier relance', '🔗 Ouvrir CRM'].map((item, i) =>
+                        item === null ? (
+                          <div key={i} style={{ height: '1px', background: V.line, margin: '4px 0' }} />
+                        ) : (
+                          <div
+                            key={i}
+                            style={{
+                              padding: '8px 12px',
+                              borderRadius: '6px',
+                              fontSize: '11px',
+                              color: V.text,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              transition: 'background 0.1s',
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background = V.surface2
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = 'transparent'
+                            }}
+                          >
+                            {item}
+                          </div>
+                        )
+                      )}
+                    </div>
+                  )}
+
+                  {/* Avatar */}
+                  <div
+                    style={{
+                      width: '36px',
+                      height: '36px',
+                      borderRadius: '50%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '16px',
+                      background: colors.iconBg,
+                      border: `2px solid ${colors.iconBorder}`,
+                      flexShrink: 0,
+                    }}
+                  >
+                    {contact.icon}
+                  </div>
+
+                  {/* Info */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: V.textHi, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {contact.name}
+                    </div>
+                    <div style={{ fontSize: '10px', color: V.textMid, marginTop: '2px', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <span>{contact.job}</span>
+                      {contact.badges?.map((badge, i) => (
+                        <span key={i} style={{ color: V.green, fontWeight: 600 }}>{badge}</span>
+                      ))}
+                      {contact.warning && <span style={{ color: V.warn, fontWeight: 600 }}>{contact.warning}</span>}
+                    </div>
+                  </div>
+
+                  {/* Right: next action */}
+                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                    <div
+                      style={{
+                        fontSize: '10px',
+                        color: contact.urgent ? V.hot : V.textLo,
+                        fontWeight: contact.urgent ? 700 : 400,
+                      }}
+                    >
+                      {contact.nextTime}
+                    </div>
+                    {contact.nextChannel && <div style={{ fontSize: '14px', marginTop: '2px' }}>{contact.nextChannel}</div>}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* ─── RIGHT: DETAIL PANEL ─── */}
+        <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          {/* Tab bar */}
+          <div style={{ display: 'flex', gap: '4px', marginBottom: '16px', borderBottom: `1px solid ${V.line}`, paddingBottom: '8px' }}>
+            {[
+              { id: 'sequence', label: 'Séquence & Messages' },
+              { id: 'history', label: 'Historique', count: 12 },
+              { id: 'config', label: 'Config' },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setDetailTab(tab.id as DetailTab)}
+                style={{
+                  padding: '8px 14px',
+                  borderRadius: '8px 8px 0 0',
+                  border: 'none',
+                  cursor: 'pointer',
+                  background: detailTab === tab.id ? V.surface2 : 'transparent',
+                  color: detailTab === tab.id ? V.textHi : V.textMid,
+                  fontSize: '12px',
+                  fontFamily: 'inherit',
+                  borderBottom: detailTab === tab.id ? `2px solid ${V.gold}` : '2px solid transparent',
+                  fontWeight: detailTab === tab.id ? 700 : 400,
+                  transition: 'all 0.15s',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+              >
+                {tab.label}
+                {tab.count && (
+                  <span
+                    style={{
+                      fontSize: '9px',
+                      padding: '1px 5px',
+                      borderRadius: '8px',
+                      background: detailTab === tab.id ? 'rgba(232,200,120,0.15)' : V.surface3,
+                      color: detailTab === tab.id ? V.gold : V.textLo,
+                      fontWeight: 700,
+                    }}
+                  >
+                    {tab.count}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+
+          {/* Panel content */}
+          <div style={{ flex: 1, overflowY: 'auto', paddingRight: '4px' }}>
+            {/* ═══ TAB: SEQUENCE & MESSAGES ═══ */}
+            {detailTab === 'sequence' && (
+              <div>
+                {/* Prospect header */}
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    marginBottom: '16px',
+                    padding: '12px 16px',
+                    background: tempColors[selectedContact.temp].bg,
+                    borderRadius: '12px',
+                    border: `1px solid ${tempColors[selectedContact.temp].border}`,
+                  }}
+                >
+                  <div style={{ fontSize: '24px' }}>{selectedContact.icon}</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '16px', fontWeight: 600, color: V.textHi }}>{selectedContact.name}</div>
+                    <div style={{ fontSize: '11px', color: V.textMid, display: 'flex', gap: '10px', marginTop: '3px' }}>
+                      <span>{selectedContact.job} · {selectedContact.stage}</span>
+                      <span style={{ color: V.gold }}>📊 Retraite TNS, Prévoyance</span>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <span style={{ fontSize: '9px', padding: '2px 7px', borderRadius: '4px', background: 'rgba(232,200,120,0.12)', color: V.gold, border: '1px solid rgba(232,200,120,0.2)', fontWeight: 600 }}>📞 Préféré</span>
+                    <span style={{ fontSize: '9px', padding: '2px 7px', borderRadius: '4px', background: 'rgba(76,175,80,0.12)', color: V.green, border: '1px solid rgba(76,175,80,0.2)', fontWeight: 600 }}>Pression OK</span>
+                  </div>
+                </div>
+
+                {/* KPIs */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginBottom: '16px' }}>
+                  {[
+                    { icon: selectedContact.icon, label: selectedContact.temp === 'hot' ? 'Brûlant' : selectedContact.temp === 'warm' ? 'Tiède' : selectedContact.temp === 'cold' ? 'Froid' : 'Enterré', color: tempColors[selectedContact.temp].border },
+                    { value: '5', label: 'Touchpoints' },
+                    { value: '2', label: 'Réponses', color: V.green },
+                    { value: '3', label: 'Sans réponse', color: V.warn },
+                  ].map((stat, i) => (
+                    <div
+                      key={i}
+                      style={{
+                        background: V.surface1,
+                        border: `1px solid ${V.line}`,
+                        borderRadius: '10px',
+                        padding: '10px',
+                        textAlign: 'center',
+                      }}
+                    >
+                      <div style={{ fontSize: stat.icon ? '22px' : '18px', fontWeight: 700, color: stat.color || V.textHi }}>
+                        {stat.icon || stat.value}
+                      </div>
+                      <div style={{ fontSize: '9px', color: V.textMid, marginTop: '2px' }}>{stat.label}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Recommendation IA */}
+                <div style={{ background: 'rgba(232,200,120,0.05)', border: '1px solid rgba(232,200,120,0.18)', borderRadius: '10px', padding: '10px 14px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span style={{ fontSize: '16px' }}>💡</span>
+                  <div style={{ fontSize: '11px', color: V.textMid, flex: 1 }}>
+                    Canal le plus efficace : <strong style={{ color: V.textHi }}>✉️ email</strong> (67% réponses). 3 relances sans réponse — envisager un changement de canal.
+                  </div>
+                  <button style={{ padding: '5px 10px', borderRadius: '6px', border: '1px solid rgba(232,200,120,0.3)', cursor: 'pointer', fontSize: '11px', fontFamily: 'inherit', color: V.gold, background: 'transparent' }}>Appliquer</button>
+                </div>
+
+                {/* SEQUENCE TIMELINE */}
+                <div style={{ marginBottom: '24px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: V.textHi, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span>▶ Séquence active</span>
+                      <span style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '4px', background: 'rgba(76,175,80,0.12)', color: V.green }}>En cours · Étape 3/5</span>
+                    </div>
+                    <button style={{ padding: '5px 10px', borderRadius: '6px', border: `1px solid ${V.line}`, cursor: 'pointer', fontSize: '11px', fontFamily: 'inherit', color: V.text, background: 'transparent' }}>Modifier séquence</button>
+                  </div>
+
+                  <div style={{ position: 'relative', paddingLeft: '20px' }}>
+                    {/* Vertical line */}
+                    <div
+                      style={{
+                        position: 'absolute',
+                        left: '8px',
+                        top: '12px',
+                        bottom: '12px',
+                        width: '2px',
+                        background: 'linear-gradient(to bottom, #e8c878, #4ecdc4, #2a3470)',
+                        borderRadius: '1px',
+                      }}
+                    />
+
+                    {/* Steps */}
+                    {[
+                      { label: '✉️ Email de suivi post-RDV', date: '28 juin · Envoyé ✅', preview: '"Jean, comme convenu voici le récapitulatif de notre échange sur votre retraite TNS..."', status: 'done' },
+                      { label: '💬 WhatsApp J+5', date: '3 juil · Répondu ✅', preview: '"Jean, je reviens vers vous — avez-vous pu consulter le document ?"', status: 'done' },
+                      { label: '📞 Appel de relance', date: 'Aujourd\'hui', preview: '"Jean, c\'est [nom]. On s\'est échangé sur la retraite TNS. J\'ai finalisé la simulation..."', status: 'current', actions: true },
+                      { label: '📄 Envoi document (Simulateur Retraite)', date: 'dans 3j', preview: 'Joint : Simulateur Retraite TNS (PDF)', status: 'upcoming' },
+                      { label: '🔗 LinkedIn — message de valeur', date: 'dans 7j', preview: 'Partager article pertinent + mention personnalisée', status: 'upcoming' },
+                    ].map((step, i) => (
+                      <div
+                        key={i}
+                        style={{
+                          position: 'relative',
+                          padding: '10px 14px',
+                          marginBottom: '8px',
+                          borderRadius: '10px',
+                          background: V.surface1,
+                          border: `1px solid ${V.line}`,
+                          transition: 'all 0.15s',
+                        }}
+                      >
+                        {/* Circle indicator */}
+                        <div
+                          style={{
+                            position: 'absolute',
+                            left: '-16px',
+                            top: '14px',
+                            width: '10px',
+                            height: '10px',
+                            borderRadius: '50%',
+                            border: `2px solid ${step.status === 'done' ? V.green : step.status === 'current' ? V.gold : V.textLo}`,
+                            background: step.status === 'done' ? V.green : step.status === 'current' ? V.gold : V.surface2,
+                            boxShadow: step.status === 'current' ? '0 0 8px rgba(232,200,120,0.4)' : 'none',
+                          }}
+                        />
+
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div style={{ fontSize: '12px', fontWeight: 500, color: V.textHi, display: 'flex', alignItems: 'center', gap: '6px' }}>{step.label}</div>
+                          <div style={{ fontSize: '10px', color: step.status === 'current' ? V.hot : V.textLo, fontWeight: step.status === 'current' ? 600 : 400 }}>{step.date}</div>
+                        </div>
+                        <div style={{ fontSize: '11px', color: V.textMid, marginTop: '4px', lineHeight: 1.4 }}>{step.preview}</div>
+                        {step.actions && (
+                          <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
+                            <button style={{ padding: '5px 12px', borderRadius: '6px', border: 'none', background: V.gold, color: V.bgDeep, fontSize: '11px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>📞 Exécuter maintenant</button>
+                            <button style={{ padding: '5px 10px', borderRadius: '6px', border: `1px solid ${V.line}`, cursor: 'pointer', fontSize: '11px', fontFamily: 'inherit', color: V.text, background: 'transparent' }}>Reporter +2j</button>
+                            <button style={{ padding: '5px 10px', borderRadius: '6px', border: `1px solid ${V.line}`, cursor: 'pointer', fontSize: '11px', fontFamily: 'inherit', color: V.text, background: 'transparent' }}>Changer canal</button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+
+                    {/* Add step button */}
+                    <button
+                      style={{
+                        width: '100%',
+                        padding: '10px',
+                        borderRadius: '10px',
+                        border: `2px dashed ${V.line}`,
+                        background: 'transparent',
+                        color: V.textLo,
+                        fontSize: '12px',
+                        cursor: 'pointer',
+                        fontFamily: 'inherit',
+                        transition: 'all 0.15s',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px',
+                        marginTop: '4px',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = V.gold
+                        e.currentTarget.style.color = V.gold
+                        e.currentTarget.style.background = 'rgba(232,200,120,0.04)'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = V.line
+                        e.currentTarget.style.color = V.textLo
+                        e.currentTarget.style.background = 'transparent'
+                      }}
+                    >
+                      + Ajouter une étape à la séquence
+                    </button>
+                  </div>
+                </div>
+
+                {/* QUICK COMPOSE */}
+                <div style={{ position: 'relative', background: 'rgba(232,200,120,0.04)', border: '1px solid rgba(232,200,120,0.18)', borderRadius: '14px', padding: '18px', marginBottom: '20px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                    <div style={{ fontSize: '12px', fontWeight: 600, color: V.gold, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Composer un message</div>
+                    <span style={{ fontSize: '9px', color: V.textLo }}>Variables auto-remplies : {'{prenom}'}, {'{metier}'}, {'{theme}'}</span>
+                  </div>
+
+                  {/* Channel selector */}
+                  <div style={{ display: 'flex', gap: '6px', marginBottom: '12px' }}>
+                    {['📞 Appel', '✉️ Email', '💬 WhatsApp', '🔗 LinkedIn', '📱 SMS'].map((ch) => (
+                      <button
+                        key={ch}
+                        onClick={() => setSelectedChannel(ch)}
+                        style={{
+                          padding: '6px 12px',
+                          borderRadius: '8px',
+                          border: `1px solid ${selectedChannel === ch ? V.gold : V.line}`,
+                          background: selectedChannel === ch ? 'rgba(232,200,120,0.12)' : V.surface2,
+                          color: selectedChannel === ch ? V.gold : V.textMid,
+                          fontSize: '12px',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s',
+                          fontFamily: 'inherit',
+                        }}
+                      >
+                        {ch}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Template dropdown */}
+                  <div style={{ position: 'relative', marginBottom: '12px' }}>
+                    <select
+                      style={{
+                        width: '100%',
+                        padding: '8px 12px',
+                        borderRadius: '8px',
+                        border: `1px solid ${V.line}`,
+                        background: V.surface2,
+                        color: V.text,
+                        fontSize: '12px',
+                        fontFamily: 'inherit',
+                        cursor: 'pointer',
+                        appearance: 'none',
+                        outline: 'none',
+                      }}
+                    >
+                      <option value="">Choisir un template de la bibliothèque...</option>
+                      <optgroup label="📊 Retraite TNS">
+                        <option>Relance post-RDV retraite</option>
+                        <option>Envoi simulateur + relance</option>
+                        <option>Micro-relance après silence</option>
+                      </optgroup>
+                      <optgroup label="🏠 Immobilier">
+                        <option>Relance SCPI + guide PDF</option>
+                        <option>Suivi intérêt investissement</option>
+                      </optgroup>
+                      <optgroup label="💰 Défiscalisation">
+                        <option>Rappel fin d'année fiscale</option>
+                        <option>Partage infographie Girardin</option>
+                      </optgroup>
+                    </select>
+                    <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: V.textLo, fontSize: '10px', pointerEvents: 'none' }}>▼</span>
+                  </div>
+
+                  {/* Textarea */}
+                  <textarea
+                    style={{
+                      width: '100%',
+                      minHeight: '90px',
+                      padding: '12px 14px',
+                      borderRadius: '10px',
+                      border: `1px solid ${V.line}`,
+                      background: V.surface1,
+                      color: V.textHi,
+                      fontSize: '12px',
+                      fontFamily: 'inherit',
+                      resize: 'vertical',
+                      lineHeight: 1.6,
+                      outline: 'none',
+                    }}
+                    placeholder="Rédigez votre message ici ou sélectionnez un template..."
+                    defaultValue="Jean, c'est [votre_nom]. On s'est échangé lors de notre rendez-vous sur la retraite TNS. Je vous appelle parce que j'ai finalisé la simulation. Est-ce que vous avez 2 minutes ou je vous rappelle à un meilleur moment ?"
+                  />
+
+                  {/* Library picker overlay */}
+                  {libraryOpen && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        bottom: '100%',
+                        left: 0,
+                        right: 0,
+                        marginBottom: '6px',
+                        background: V.bgMid,
+                        border: `1px solid ${V.line}`,
+                        borderRadius: '12px',
+                        padding: '12px',
+                        maxHeight: '280px',
+                        overflowY: 'auto',
+                        boxShadow: '0 -8px 32px rgba(0,0,0,0.5)',
+                        zIndex: 50,
+                      }}
+                    >
+                      <div style={{ fontSize: '11px', color: V.textMid, marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Bibliothèque de documents</div>
+                      {[
+                        { icon: '📊', name: 'Simulateur Retraite TNS', meta: 'PDF · email, whatsapp', tag: 'Retraite', tagColor: V.green },
+                        { icon: '📄', name: 'Guide SCPI 2026', meta: 'PDF · email, courrier', tag: 'Immobilier', tagColor: V.gold },
+                        { icon: '🖼️', name: 'Infographie Loi Girardin', meta: 'Image · email, linkedin', tag: 'Défiscalisation', tagColor: V.indigo },
+                        { icon: '📊', name: 'Comparatif Madelin/PER', meta: 'PDF · email', tag: 'Retraite', tagColor: V.green },
+                      ].map((doc, i) => (
+                        <div
+                          key={i}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '10px',
+                            padding: '8px 10px',
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            transition: 'background 0.1s',
+                            marginBottom: '4px',
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = V.surface2
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'transparent'
+                          }}
+                        >
+                          <div style={{ fontSize: '18px', flexShrink: 0 }}>{doc.icon}</div>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: '12px', fontWeight: 500, color: V.textHi }}>{doc.name}</div>
+                            <div style={{ fontSize: '10px', color: V.textLo, marginTop: '2px' }}>{doc.meta}</div>
+                          </div>
+                          <span style={{ fontSize: '9px', padding: '2px 6px', borderRadius: '4px', background: `rgba(${doc.tagColor === V.green ? '76,175,80' : doc.tagColor === V.gold ? '232,200,120' : '129,140,248'},0.12)`, color: doc.tagColor }}>{doc.tag}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Footer */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px' }}>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <button style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', background: V.gold, color: V.bgDeep, fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>📞 Exécuter</button>
+                      <button style={{ padding: '5px 10px', borderRadius: '6px', border: `1px solid ${V.line}`, cursor: 'pointer', fontSize: '11px', fontFamily: 'inherit', color: V.text, background: 'transparent' }}>💾 Sauver template</button>
+                      <button
+                        onClick={() => setLibraryOpen(!libraryOpen)}
+                        style={{ padding: '5px 10px', borderRadius: '6px', border: `1px solid ${V.line}`, cursor: 'pointer', fontSize: '11px', fontFamily: 'inherit', color: V.text, background: 'transparent' }}
+                      >
+                        📄 Joindre document
+                      </button>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <button style={{ padding: '5px 10px', borderRadius: '6px', border: `1px solid ${V.line}`, cursor: 'pointer', fontSize: '11px', fontFamily: 'inherit', color: V.text, background: 'transparent' }}>📅 Planifier</button>
+                      <span style={{ fontSize: '9px', color: V.textLo }}>ou ajouter à la séquence</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Prochaines actions planifiées */}
+                <div style={{ marginBottom: '24px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: V.textHi }}>📅 Prochaines actions planifiées</div>
+                    <button style={{ padding: '5px 10px', borderRadius: '6px', border: `1px solid ${V.line}`, cursor: 'pointer', fontSize: '11px', fontFamily: 'inherit', color: V.text, background: 'transparent' }}>+ Planifier</button>
+                  </div>
+                  <div style={{ background: V.surface1, border: `1px solid ${V.line}`, borderRadius: '12px', padding: '14px' }}>
+                    {[
+                      { date: 'Aujourd\'hui', action: '📞 Appel relance retraite TNS', urgent: true },
+                      { date: '20 juil.', action: '📄 Envoi Simulateur Retraite (PDF)' },
+                      { date: '24 juil.', action: '🔗 LinkedIn — partage article retraite' },
+                      { date: '28 juil.', action: '💬 WhatsApp — micro-relance' },
+                    ].map((item, i) => (
+                      <div
+                        key={i}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '10px',
+                          padding: '8px 0',
+                          borderBottom: i < 3 ? `1px solid rgba(42,52,112,0.4)` : 'none',
+                        }}
+                      >
+                        <div style={{ fontSize: '11px', color: item.urgent ? V.hot : V.textMid, minWidth: '85px', fontWeight: item.urgent ? 600 : 500 }}>{item.date}</div>
+                        <div style={{ fontSize: '12px', color: V.textHi, flex: 1, display: 'flex', alignItems: 'center', gap: '6px' }}>{item.action}</div>
+                        <div style={{ fontSize: '10px', color: V.textLo, cursor: 'pointer', padding: '3px 8px', borderRadius: '4px', border: '1px solid transparent', transition: 'all 0.1s' }}>Modifier</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ═══ TAB: HISTORY ═══ */}
+            {detailTab === 'history' && (
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                  <div style={{ fontSize: '13px', fontWeight: 600, color: V.textHi }}>Historique des interactions</div>
+                  <span style={{ fontSize: '10px', color: V.textLo }}>12 total</span>
+                </div>
+
+                {/* Channel stats */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px', marginBottom: '20px' }}>
+                  {[
+                    { icon: '📞', percent: '40%', ratio: '2/5 rép.', color: V.warn },
+                    { icon: '✉️', percent: '67%', ratio: '2/3 rép.', color: V.green, best: true },
+                    { icon: '💬', percent: '33%', ratio: '1/3 rép.', color: V.textMid },
+                    { icon: '🔗', percent: '0%', ratio: '0/1', color: V.textLo },
+                    { icon: '📱', percent: '—', ratio: 'jamais', color: V.textLo },
+                  ].map((ch, i) => (
+                    <div
+                      key={i}
+                      style={{
+                        background: ch.best ? 'rgba(232,200,120,0.06)' : V.surface1,
+                        border: ch.best ? '1px solid rgba(232,200,120,0.25)' : `1px solid ${V.line}`,
+                        borderRadius: '8px',
+                        padding: '10px',
+                        textAlign: 'center',
+                      }}
+                    >
+                      <div style={{ fontSize: '16px' }}>{ch.icon}</div>
+                      <div style={{ fontSize: '14px', fontWeight: 700, color: ch.color, marginTop: '4px' }}>{ch.percent}</div>
+                      <div style={{ fontSize: '9px', color: V.textLo }}>{ch.ratio}</div>
+                      {ch.best && <div style={{ fontSize: '8px', color: V.gold, fontWeight: 700, marginTop: '2px' }}>MEILLEUR</div>}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Timeline */}
+                <div style={{ background: V.surface1, border: `1px solid ${V.line}`, borderRadius: '12px', padding: '14px' }}>
+                  {[
+                    { icon: '📞', channel: 'telephone', date: '12 juil. 26', note: 'Pas dispo cette semaine, rappeler lundi', status: '⏳', statusType: 'pending' },
+                    { icon: '✉️', channel: 'email', date: '08 juil. 26', note: 'Simulateur retraite envoyé — ouvert 2x', status: '👁️', statusType: 'seen' },
+                    { icon: '💬', channel: 'whatsapp', date: '03 juil. 26', note: '"OK on se rappelle la semaine prochaine"', status: '✅', statusType: 'replied' },
+                    { icon: '✉️', channel: 'email', date: '28 juin 26', note: '"Merci pour le document, je regarde ça"', status: '✅', statusType: 'replied' },
+                    { icon: '📞', channel: 'telephone', date: '25 juin 26', note: 'Messagerie laissée', status: '⏳', statusType: 'pending' },
+                    { icon: '📅', channel: 'rdv', date: '20 juin 26', note: 'RDV 1 — Bilan patrimonial, intérêt retraite TNS', status: '✅', statusType: 'replied' },
+                  ].map((h, i) => (
+                    <div
+                      key={i}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '10px',
+                        padding: '8px 10px',
+                        borderRadius: '8px',
+                        borderLeft: `3px solid ${h.statusType === 'replied' ? V.green : h.statusType === 'seen' ? V.gold : V.warn}`,
+                        marginBottom: '4px',
+                        transition: 'background 0.1s',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'rgba(232,200,120,0.03)'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'transparent'
+                      }}
+                    >
+                      <span style={{ fontSize: '14px', flexShrink: 0 }}>{h.icon}</span>
+                      <span style={{ fontSize: '10px', color: V.textMid, minWidth: '65px' }}>{h.channel}</span>
+                      <span style={{ fontSize: '10px', color: V.textLo, minWidth: '75px' }}>{h.date}</span>
+                      <span style={{ fontSize: '10px', color: V.textLo, flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{h.note}</span>
+                      <span style={{ fontSize: '12px', flexShrink: 0 }}>{h.status}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Quick log */}
+                <div style={{ marginTop: '16px' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 600, color: V.textHi, marginBottom: '8px' }}>Enregistrer une interaction</div>
+                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                    {['📞 Appel fait', '✉️ Email envoyé', '💬 WhatsApp envoyé', '🔗 LinkedIn envoyé', '📅 RDV pris', '🚫 Refus'].map((action, i) => (
+                      <button
+                        key={i}
+                        style={{
+                          padding: '5px 10px',
+                          borderRadius: '6px',
+                          border: `1px solid ${action.includes('Refus') ? 'rgba(255,100,112,0.3)' : V.line}`,
+                          cursor: 'pointer',
+                          fontSize: '11px',
+                          fontFamily: 'inherit',
+                          color: action.includes('Refus') ? V.red : V.text,
+                          background: 'transparent',
+                        }}
+                      >
+                        {action}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ═══ TAB: CONFIG ═══ */}
+            {detailTab === 'config' && (
+              <div>
+                <div style={{ background: V.surface1, border: '1px solid rgba(232,200,120,0.2)', borderRadius: '12px', padding: '18px', marginBottom: '20px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: V.gold }}>Configuration nurturing — {selectedContact.name}</div>
+                    <button style={{ padding: '5px 12px', borderRadius: '6px', border: 'none', background: V.gold, color: V.bgDeep, fontSize: '11px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>💾 Sauvegarder</button>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    <div>
+                      <div style={{ fontSize: '10px', color: V.textMid, marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Canal préféré</div>
+                      <select style={{ padding: '7px 10px', borderRadius: '8px', border: `1px solid ${V.line}`, background: V.surface2, color: V.text, fontSize: '12px', fontFamily: 'inherit', width: '100%', outline: 'none' }}>
+                        <option>📞 Téléphone</option>
+                        <option>✉️ Email</option>
+                        <option>💬 WhatsApp</option>
+                        <option>🔗 LinkedIn</option>
+                      </select>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '10px', color: V.textMid, marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Fréquence de relance</div>
+                      <select style={{ padding: '7px 10px', borderRadius: '8px', border: `1px solid ${V.line}`, background: V.surface2, color: V.text, fontSize: '12px', fontFamily: 'inherit', width: '100%', outline: 'none' }}>
+                        <option>Hebdomadaire (7j)</option>
+                        <option>Bi-mensuel (14j)</option>
+                        <option>Mensuel (30j)</option>
+                        <option>Personnalisé...</option>
+                      </select>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '10px', color: V.textMid, marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Créneau préféré</div>
+                      <select style={{ padding: '7px 10px', borderRadius: '8px', border: `1px solid ${V.line}`, background: V.surface2, color: V.text, fontSize: '12px', fontFamily: 'inherit', width: '100%', outline: 'none' }}>
+                        <option>Matin (8h-12h)</option>
+                        <option>Après-midi (14h-18h)</option>
+                        <option>Soir (18h-20h)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '10px', color: V.textMid, marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Pression max (relances/mois)</div>
+                      <select style={{ padding: '7px 10px', borderRadius: '8px', border: `1px solid ${V.line}`, background: V.surface2, color: V.text, fontSize: '12px', fontFamily: 'inherit', width: '100%', outline: 'none' }}>
+                        <option>2 par mois</option>
+                        <option>4 par mois</option>
+                        <option>6 par mois</option>
+                        <option>Illimité</option>
+                      </select>
+                    </div>
+                    <div style={{ gridColumn: '1/-1' }}>
+                      <div style={{ fontSize: '10px', color: V.textMid, marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Canaux exclus</div>
+                      <div style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>
+                        {['📞', '✉️', '💬', '🔗', '📬', '📱'].map((ch, i) => (
+                          <button
+                            key={i}
+                            style={{
+                              padding: '5px 10px',
+                              borderRadius: '6px',
+                              border: `1px solid ${i === 4 ? 'rgba(255,100,112,0.3)' : V.line}`,
+                              cursor: 'pointer',
+                              fontSize: '11px',
+                              fontFamily: 'inherit',
+                              color: i === 4 ? V.red : V.text,
+                              background: 'transparent',
+                              textDecoration: i === 4 ? 'line-through' : 'none',
+                            }}
+                          >
+                            {ch}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div style={{ gridColumn: '1/-1' }}>
+                      <div style={{ fontSize: '10px', color: V.textMid, marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Thèmes / Besoins identifiés</div>
+                      <div style={{ display: 'flex', gap: '6px', marginTop: '4px', flexWrap: 'wrap' }}>
+                        <span style={{ padding: '5px 10px', borderRadius: '6px', background: 'rgba(52,211,153,0.12)', color: V.green, fontSize: '11px', fontWeight: 600, border: '1px solid rgba(52,211,153,0.2)' }}>📊 Retraite TNS</span>
+                        <span style={{ padding: '5px 10px', borderRadius: '6px', background: 'rgba(167,139,250,0.12)', color: V.purple, fontSize: '11px', fontWeight: 600, border: '1px solid rgba(167,139,250,0.2)' }}>🛡️ Prévoyance</span>
+                        <button style={{ padding: '5px 10px', borderRadius: '6px', border: `1px solid ${V.line}`, cursor: 'pointer', fontSize: '10px', fontFamily: 'inherit', color: V.text, background: 'transparent' }}>+ Ajouter thème</button>
+                      </div>
+                    </div>
+                    <div style={{ gridColumn: '1/-1' }}>
+                      <div style={{ fontSize: '10px', color: V.textMid, marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Notes personnelles</div>
+                      <textarea
+                        style={{
+                          width: '100%',
+                          minHeight: '60px',
+                          padding: '8px 12px',
+                          borderRadius: '8px',
+                          border: `1px solid ${V.line}`,
+                          background: V.surface2,
+                          color: V.textHi,
+                          fontSize: '12px',
+                          fontFamily: 'inherit',
+                          resize: 'vertical',
+                          outline: 'none',
+                          marginTop: '4px',
+                        }}
+                        defaultValue="Aime le golf, enfants en études sup, sensible défiscalisation. Préfère qu'on l'appelle le matin. Ne pas envoyer de courrier postal."
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
             )}
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 9, color: C.textLo }}>
-            {contact.sequence_active ? (
-              <>
-                <span>Séquence: étape 3/6</span>
-                <span style={{ background: 'rgba(255,100,112,0.12)', color: '#ff6470', padding: '2px 6px', borderRadius: 4, cursor: 'pointer' }}>⏸ Pause</span>
-              </>
-            ) : contact.temperature !== 'dead' ? (
-              <>
-                <span>Dernier: 📧 il y a {contact.last_contact_at || '?'}</span>
-                <span style={{ background: `${C.gold}20`, color: C.gold, padding: '2px 6px', borderRadius: 4, cursor: 'pointer', fontWeight: 600 }}>▶ Lancer séquence</span>
-              </>
-            ) : (
-              <span style={{ color: '#ff6470' }}>5 relances sans réponse — STOP recommandé</span>
-            )}
-          </div>
         </div>
-      )}
-    </div>
-  )
-}
-
-function DocumentCard({ title, type, tag, tagColor }: { title: string; type: string; tag: string; tagColor: string }) {
-  return (
-    <div style={{ background: C.surface1, border: `1px solid ${C.line}`, borderRadius: 12, padding: 16 }}>
-      <div style={{ fontSize: 13, fontWeight: 600, color: C.textHi }}>{title}</div>
-      <div style={{ fontSize: 11, color: C.textMid, marginTop: 3 }}>{type}</div>
-      <span style={{ display: 'inline-block', marginTop: 8, fontSize: 10, padding: '2px 7px', borderRadius: 4, background: `${tagColor}20`, color: tagColor }}>
-        {tag}
-      </span>
-    </div>
-  )
-}
-
-function SuggestionCard({ icon, title, preview, tip }: { icon: string; title: string; preview: string; tip: string }) {
-  return (
-    <div style={{ background: `${C.gold}06`, border: `1px solid ${C.gold}20`, borderRadius: 12, padding: 14, marginBottom: 8 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-        <div style={{ flex: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-            <span style={{ fontSize: 14 }}>{icon}</span>
-            <span style={{ fontSize: 12, fontWeight: 600, color: C.textHi }}>{title}</span>
-          </div>
-          <div style={{ fontSize: 11, color: C.textMid, lineHeight: 1.5, marginBottom: 6 }}>{preview}</div>
-          <div style={{ fontSize: 10, color: C.gold, fontStyle: 'italic' }}>{tip}</div>
-        </div>
-        <button style={{ padding: '5px 10px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 11, fontFamily: 'JetBrains Mono, monospace', background: `${C.gold}16`, color: C.gold, marginLeft: 8 }}>
-          ✏️ Adapter
-        </button>
       </div>
     </div>
   )
