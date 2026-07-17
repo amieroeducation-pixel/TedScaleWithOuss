@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nurturing V2 — PSG Cosmos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Oswald:wght@500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-deep: #0a0e22;
+  --bg-mid: #0f1430;
+  --surface1: #141a3a;
+  --surface2: #1a2150;
+  --surface3: #232d60;
+  --line: #2a3470;
+  --text: #d8e1ff;
+  --text-hi: #ffffff;
+  --text-mid: #8ea0d9;
+  --text-lo: #5a6a9a;
+  --gold: #e8c878;
+  --green: #4caf50;
+  --cyan: #4ecdc4;
+  --purple: #a78bfa;
+  --indigo: #818cf8;
+  --warn: #fbbf24;
+  --red: #ff6470;
+  --hot: #ff4444;
+  --warm: #d4a020;
+  --cold: #5b9bd5;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Inter', -apple-system, sans-serif;
+  background: var(--bg-deep);
+  color: var(--text);
+  min-height: 100vh;
+  padding: 24px 32px;
+}
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--surface1); border-radius: 3px; }
+::-webkit-scrollbar-thumb { background: var(--line); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-lo); }
+
+.page { max-width: 1800px; margin: 0 auto; }
+
+/* Header */
+.header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
+.header h1 { font-family: 'Oswald', sans-serif; font-size: 28px; color: var(--text-hi); font-weight: 600; letter-spacing: 1px; }
+.header-sub { font-size: 12px; color: var(--text-mid); margin-top: 4px; }
+.header-actions { display: flex; gap: 8px; align-items: center; }
+
+/* Badges */
+.badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 6px; font-size: 10px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+.badge:hover { transform: scale(1.05); }
+
+/* Main Layout: 2 columns */
+.main-grid { display: grid; grid-template-columns: 340px 1fr; gap: 20px; min-height: calc(100vh - 160px); }
+
+/* LEFT PANEL — Prospect list */
+.panel-left { display: flex; flex-direction: column; overflow: hidden; }
+.search-input {
+  width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--surface2); color: var(--text-hi); font-size: 12px; font-family: inherit;
+  outline: none; margin-bottom: 8px;
+}
+.search-input:focus { border-color: var(--gold); }
+.search-input::placeholder { color: var(--text-lo); }
+
+/* Filter chips */
+.filter-row { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+.filter-chip {
+  padding: 5px 10px; border-radius: 6px; border: none; cursor: pointer;
+  font-size: 11px; font-family: inherit; background: var(--surface2);
+  transition: all 0.15s;
+}
+.filter-chip.active { background: rgba(232,200,120,0.15); color: var(--gold); font-weight: 600; }
+.filter-chip:hover { background: var(--surface3); }
+
+/* Contact list */
+.contact-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; padding-right: 4px; }
+
+/* Prospect card mini */
+.prospect-mini {
+  position: relative; padding: 12px 14px; border-radius: 12px; cursor: pointer;
+  display: flex; align-items: center; gap: 10px;
+  transition: all 0.15s; border-left: 4px solid transparent;
+}
+.prospect-mini:hover { background: var(--surface1); transform: translateX(2px); }
+.prospect-mini.active { background: var(--surface2); }
+
+.prospect-avatar {
+  width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center;
+  justify-content: center; font-size: 16px; flex-shrink: 0;
+}
+.prospect-info { flex: 1; min-width: 0; }
+.prospect-name { font-size: 13px; font-weight: 600; color: var(--text-hi); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.prospect-meta { font-size: 10px; color: var(--text-mid); margin-top: 2px; display: flex; gap: 8px; align-items: center; }
+.prospect-right { text-align: right; flex-shrink: 0; }
+.prospect-time { font-size: 10px; color: var(--text-lo); }
+.prospect-channel { font-size: 14px; margin-top: 2px; }
+
+/* Dropdown menu on prospect card */
+.prospect-menu-btn {
+  position: absolute; top: 8px; right: 8px; width: 24px; height: 24px;
+  border-radius: 6px; border: none; background: transparent; color: var(--text-lo);
+  cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity 0.15s;
+}
+.prospect-mini:hover .prospect-menu-btn,
+.prospect-mini.active .prospect-menu-btn { opacity: 1; }
+.prospect-menu-btn:hover { background: var(--surface3); color: var(--text-mid); }
+
+.dropdown-menu {
+  position: absolute; top: 32px; right: 8px; z-index: 100;
+  background: var(--bg-mid); border: 1px solid var(--line); border-radius: 10px;
+  padding: 6px; min-width: 180px; box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  display: none;
+}
+.dropdown-menu.open { display: block; }
+.dropdown-item {
+  padding: 8px 12px; border-radius: 6px; font-size: 11px; color: var(--text);
+  cursor: pointer; display: flex; align-items: center; gap: 8px; transition: background 0.1s;
+}
+.dropdown-item:hover { background: var(--surface2); }
+.dropdown-sep { height: 1px; background: var(--line); margin: 4px 0; }
+
+/* RIGHT PANEL */
+.panel-right { display: flex; flex-direction: column; overflow: hidden; }
+
+/* Tabs */
+.tab-bar { display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 1px solid var(--line); padding-bottom: 8px; }
+.tab-btn {
+  padding: 8px 14px; border-radius: 8px 8px 0 0; border: none; cursor: pointer;
+  background: transparent; color: var(--text-mid); font-size: 12px; font-family: inherit;
+  border-bottom: 2px solid transparent; font-weight: 400; transition: all 0.15s;
+  display: flex; align-items: center; gap: 6px;
+}
+.tab-btn.active { background: var(--surface2); color: var(--text-hi); border-bottom-color: var(--gold); font-weight: 700; }
+.tab-btn:hover:not(.active) { color: var(--text); }
+.tab-count { font-size: 9px; padding: 1px 5px; border-radius: 8px; background: var(--surface3); color: var(--text-lo); font-weight: 700; }
+.tab-btn.active .tab-count { background: rgba(232,200,120,0.15); color: var(--gold); }
+
+/* Right panel content */
+.panel-content { flex: 1; overflow-y: auto; padding-right: 4px; }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* Prospect header mini */
+.prospect-header {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 16px; padding: 12px 16px;
+  border-radius: 12px; border: 1px solid;
+}
+.prospect-header-icon { font-size: 24px; }
+.prospect-header-info { flex: 1; }
+.prospect-header-name { font-size: 16px; font-weight: 600; color: var(--text-hi); }
+.prospect-header-meta { font-size: 11px; color: var(--text-mid); display: flex; gap: 10px; margin-top: 3px; }
+.prospect-header-badges { display: flex; gap: 6px; }
+
+/* KPIs */
+.stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 16px; }
+.stat-card {
+  background: var(--surface1); border: 1px solid var(--line); border-radius: 10px;
+  padding: 10px; text-align: center;
+}
+.stat-value { font-size: 18px; font-weight: 700; color: var(--text-hi); }
+.stat-label { font-size: 9px; color: var(--text-mid); margin-top: 2px; }
+
+/* Recommendation */
+.recommendation {
+  background: rgba(232,200,120,0.05); border: 1px solid rgba(232,200,120,0.18);
+  border-radius: 10px; padding: 10px 14px; margin-bottom: 16px;
+  display: flex; align-items: center; gap: 10px;
+}
+
+/* SEQUENCE TIMELINE */
+.sequence-section { margin-bottom: 24px; }
+.section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.section-title { font-size: 13px; font-weight: 600; color: var(--text-hi); display: flex; align-items: center; gap: 8px; }
+
+.sequence-timeline { position: relative; padding-left: 20px; }
+.sequence-timeline::before {
+  content: ''; position: absolute; left: 8px; top: 12px; bottom: 12px;
+  width: 2px; background: linear-gradient(to bottom, var(--gold), var(--cyan), var(--line));
+  border-radius: 1px;
+}
+.seq-step {
+  position: relative; padding: 10px 14px; margin-bottom: 8px; border-radius: 10px;
+  background: var(--surface1); border: 1px solid var(--line); transition: all 0.15s;
+}
+.seq-step:hover { border-color: rgba(232,200,120,0.3); }
+.seq-step::before {
+  content: ''; position: absolute; left: -16px; top: 14px;
+  width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--line);
+  background: var(--bg-deep);
+}
+.seq-step.done::before { background: var(--green); border-color: var(--green); }
+.seq-step.current::before { background: var(--gold); border-color: var(--gold); box-shadow: 0 0 8px rgba(232,200,120,0.4); }
+.seq-step.upcoming::before { background: var(--surface2); border-color: var(--text-lo); }
+
+.seq-step-header { display: flex; justify-content: space-between; align-items: center; }
+.seq-step-label { font-size: 12px; font-weight: 500; color: var(--text-hi); display: flex; align-items: center; gap: 6px; }
+.seq-step-date { font-size: 10px; color: var(--text-lo); }
+.seq-step.current .seq-step-date { color: var(--hot); font-weight: 600; }
+.seq-step-preview { font-size: 11px; color: var(--text-mid); margin-top: 4px; line-height: 1.4; }
+.seq-step-actions { display: flex; gap: 6px; margin-top: 8px; }
+
+/* Add step button */
+.add-step-btn {
+  width: 100%; padding: 10px; border-radius: 10px; border: 2px dashed var(--line);
+  background: transparent; color: var(--text-lo); font-size: 12px; cursor: pointer;
+  font-family: inherit; transition: all 0.15s; display: flex; align-items: center;
+  justify-content: center; gap: 6px; margin-top: 4px;
+}
+.add-step-btn:hover { border-color: var(--gold); color: var(--gold); background: rgba(232,200,120,0.04); }
+
+/* QUICK COMPOSE PANEL */
+.compose-panel {
+  position: relative; background: rgba(232,200,120,0.04); border: 1px solid rgba(232,200,120,0.18);
+  border-radius: 14px; padding: 18px; margin-bottom: 20px;
+}
+.compose-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+.compose-title { font-size: 12px; font-weight: 600; color: var(--gold); text-transform: uppercase; letter-spacing: 0.5px; }
+
+/* Channel selector */
+.channel-row { display: flex; gap: 6px; margin-bottom: 12px; }
+.channel-btn {
+  padding: 6px 12px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--surface2); color: var(--text-mid); font-size: 12px;
+  cursor: pointer; transition: all 0.15s; font-family: inherit;
+}
+.channel-btn.active { border-color: var(--gold); background: rgba(232,200,120,0.12); color: var(--gold); }
+.channel-btn:hover:not(.active) { border-color: var(--text-lo); }
+
+/* Template dropdown */
+.template-select-wrapper { position: relative; margin-bottom: 12px; }
+.template-select {
+  width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--surface2); color: var(--text); font-size: 12px; font-family: inherit;
+  cursor: pointer; appearance: none; outline: none;
+}
+.template-select:focus { border-color: var(--gold); }
+.template-select-arrow {
+  position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+  color: var(--text-lo); font-size: 10px; pointer-events: none;
+}
+
+/* Compose textarea */
+.compose-textarea {
+  width: 100%; min-height: 90px; padding: 12px 14px; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--surface1); color: var(--text-hi);
+  font-size: 12px; font-family: inherit; resize: vertical; line-height: 1.6;
+  outline: none;
+}
+.compose-textarea:focus { border-color: var(--gold); }
+.compose-textarea::placeholder { color: var(--text-lo); }
+
+.compose-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
+.compose-actions { display: flex; gap: 8px; align-items: center; }
+
+/* Library picker (dropdown overlay) */
+.library-picker {
+  position: absolute; bottom: 100%; left: 0; right: 0; margin-bottom: 6px;
+  background: var(--bg-mid); border: 1px solid var(--line); border-radius: 12px;
+  padding: 12px; max-height: 280px; overflow-y: auto;
+  box-shadow: 0 -8px 32px rgba(0,0,0,0.5); display: none; z-index: 50;
+}
+.library-picker.open { display: block; }
+.library-picker-title { font-size: 11px; color: var(--text-mid); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+.library-item {
+  display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px;
+  cursor: pointer; transition: background 0.1s; margin-bottom: 4px;
+}
+.library-item:hover { background: var(--surface2); }
+.library-item-icon { font-size: 18px; flex-shrink: 0; }
+.library-item-info { flex: 1; }
+.library-item-name { font-size: 12px; font-weight: 500; color: var(--text-hi); }
+.library-item-meta { font-size: 10px; color: var(--text-lo); margin-top: 2px; }
+.library-item-tag { font-size: 9px; padding: 2px 6px; border-radius: 4px; }
+
+/* BUTTONS */
+.btn {
+  padding: 8px 16px; border-radius: 8px; border: none; font-size: 12px;
+  font-weight: 600; cursor: pointer; font-family: inherit; transition: all 0.15s;
+}
+.btn-gold { background: var(--gold); color: var(--bg-deep); }
+.btn-gold:hover { background: #f0d48a; transform: translateY(-1px); }
+.btn-outline {
+  background: transparent; border: 1px solid var(--line); color: var(--text);
+}
+.btn-outline:hover { border-color: var(--text-lo); background: var(--surface2); }
+.btn-sm { padding: 5px 10px; font-size: 11px; font-weight: 500; border-radius: 6px; }
+
+/* HISTORY / INTERACTIONS */
+.history-item {
+  display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px;
+  border-left: 3px solid var(--line); margin-bottom: 4px; transition: background 0.1s;
+}
+.history-item:hover { background: rgba(232,200,120,0.03); }
+.history-item.replied { border-left-color: var(--green); }
+.history-item.seen { border-left-color: var(--gold); }
+.history-item.pending { border-left-color: var(--warn); }
+.history-icon { font-size: 14px; flex-shrink: 0; }
+.history-channel { font-size: 10px; color: var(--text-mid); min-width: 65px; }
+.history-date { font-size: 10px; color: var(--text-lo); min-width: 75px; }
+.history-note { font-size: 10px; color: var(--text-lo); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.history-status { font-size: 12px; flex-shrink: 0; }
+
+/* SCHEDULE MINI */
+.schedule-row {
+  display: flex; align-items: center; gap: 10px; padding: 8px 0;
+  border-bottom: 1px solid rgba(42,52,112,0.4);
+}
+.schedule-row:last-child { border-bottom: none; }
+.schedule-date { font-size: 11px; color: var(--text-mid); min-width: 85px; font-weight: 500; }
+.schedule-action { font-size: 12px; color: var(--text-hi); flex: 1; display: flex; align-items: center; gap: 6px; }
+.schedule-edit { font-size: 10px; color: var(--text-lo); cursor: pointer; padding: 3px 8px; border-radius: 4px; border: 1px solid transparent; transition: all 0.1s; }
+.schedule-edit:hover { border-color: var(--line); color: var(--text-mid); }
+
+/* CONFIG PANEL */
+.config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.config-label { font-size: 10px; color: var(--text-mid); margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.5px; }
+.config-select {
+  padding: 7px 10px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--surface2); color: var(--text); font-size: 12px;
+  font-family: inherit; width: 100%; outline: none;
+}
+
+/* RESPONSIVE */
+@media (max-width: 1024px) {
+  .main-grid { grid-template-columns: 1fr; height: auto; }
+  .panel-left { max-height: 300px; }
+}
+@media (max-width: 768px) {
+  body { padding: 16px; }
+  .header { flex-direction: column; gap: 12px; }
+  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+</head>
+<body>
+
+<div class="page">
+  <!-- ═══ HEADER ═══ -->
+  <header class="header">
+    <div>
+      <h1>NURTURING</h1>
+      <p class="header-sub">Maturation & relances multicanales · 47 contacts actifs · 5 séquences</p>
+    </div>
+    <div class="header-actions">
+      <span class="badge" style="background: rgba(232,200,120,0.1); color: var(--gold); border: 1px solid rgba(232,200,120,0.25);">Séquences <strong>5</strong></span>
+      <span class="badge" style="background: rgba(78,205,196,0.1); color: var(--cyan); border: 1px solid rgba(78,205,196,0.25);">Today <strong>7</strong></span>
+      <span class="badge" style="background: rgba(76,175,80,0.1); color: var(--green); border: 1px solid rgba(76,175,80,0.25);">Conversion <strong>23%</strong></span>
+      <button class="btn btn-sm btn-outline">+ Nouveau contact</button>
+    </div>
+  </header>
+
+  <!-- ═══ MAIN 2-COL LAYOUT ═══ -->
+  <div class="main-grid">
+
+    <!-- ─── LEFT: PROSPECT LIST ─── -->
+    <aside class="panel-left">
+      <input class="search-input" type="text" placeholder="Rechercher un prospect..." />
+
+      <div class="filter-row">
+        <button class="filter-chip active">Tous (47)</button>
+        <button class="filter-chip" style="color: var(--hot);">Chauds (9)</button>
+        <button class="filter-chip" style="color: var(--warm);">Tièdes (18)</button>
+        <button class="filter-chip" style="color: var(--cold);">Froids (14)</button>
+      </div>
+
+      <div class="contact-list" id="contact-list">
+        <!-- Contact 1: HOT + urgent -->
+        <div class="prospect-mini active" data-idx="0" style="border-left-color: var(--hot);" onclick="selectProspect(0)">
+          <button class="prospect-menu-btn" onclick="event.stopPropagation(); toggleMenu(0)">⋮</button>
+          <div class="dropdown-menu" id="menu-0">
+            <div class="dropdown-item">📞 Appeler maintenant</div>
+            <div class="dropdown-item">💬 WhatsApp rapide</div>
+            <div class="dropdown-item">✉️ Envoyer un email</div>
+            <div class="dropdown-sep"></div>
+            <div class="dropdown-item">▶ Lancer séquence</div>
+            <div class="dropdown-item">📄 Envoyer document</div>
+            <div class="dropdown-sep"></div>
+            <div class="dropdown-item">📅 Planifier relance</div>
+            <div class="dropdown-item">🔗 Ouvrir CRM</div>
+          </div>
+          <div class="prospect-avatar" style="background: radial-gradient(circle,rgba(255,68,68,0.3),rgba(255,68,68,0.1)); border: 2px solid rgba(255,68,68,0.5);">🔥</div>
+          <div class="prospect-info">
+            <div class="prospect-name">Jean Dupont</div>
+            <div class="prospect-meta">
+              <span>Dentiste</span>
+              <span style="color: var(--gold); font-weight: 600;">▶ Seq.</span>
+              <span style="color: var(--warn); font-weight: 600;">⚠ 3 NR</span>
+            </div>
+          </div>
+          <div class="prospect-right">
+            <div class="prospect-time" style="color: var(--hot); font-weight: 700;">Aujourd'hui</div>
+            <div class="prospect-channel">📞</div>
+          </div>
+        </div>
+
+        <!-- Contact 2: HOT -->
+        <div class="prospect-mini" data-idx="1" style="border-left-color: var(--hot);" onclick="selectProspect(1)">
+          <button class="prospect-menu-btn" onclick="event.stopPropagation(); toggleMenu(1)">⋮</button>
+          <div class="dropdown-menu" id="menu-1">
+            <div class="dropdown-item">📞 Appeler maintenant</div>
+            <div class="dropdown-item">💬 WhatsApp rapide</div>
+            <div class="dropdown-item">✉️ Envoyer un email</div>
+            <div class="dropdown-sep"></div>
+            <div class="dropdown-item">▶ Lancer séquence</div>
+            <div class="dropdown-item">📄 Envoyer document</div>
+            <div class="dropdown-sep"></div>
+            <div class="dropdown-item">📅 Planifier relance</div>
+            <div class="dropdown-item">🔗 Ouvrir CRM</div>
+          </div>
+          <div class="prospect-avatar" style="background: radial-gradient(circle,rgba(255,68,68,0.3),rgba(255,68,68,0.1)); border: 2px solid rgba(255,68,68,0.5);">🔥</div>
+          <div class="prospect-info">
+            <div class="prospect-name">Pierre Martin</div>
+            <div class="prospect-meta">
+              <span>Pharmacien</span>
+              <span>RDV 2</span>
+            </div>
+          </div>
+          <div class="prospect-right">
+            <div class="prospect-time">Demain</div>
+            <div class="prospect-channel">✉️</div>
+          </div>
+        </div>
+
+        <!-- Contact 3: WARM -->
+        <div class="prospect-mini" data-idx="2" style="border-left-color: var(--warm);" onclick="selectProspect(2)">
+          <button class="prospect-menu-btn" onclick="event.stopPropagation(); toggleMenu(2)">⋮</button>
+          <div class="dropdown-menu" id="menu-2">
+            <div class="dropdown-item">📞 Appeler maintenant</div>
+            <div class="dropdown-item">💬 WhatsApp rapide</div>
+            <div class="dropdown-item">✉️ Envoyer un email</div>
+            <div class="dropdown-sep"></div>
+            <div class="dropdown-item">▶ Lancer séquence</div>
+            <div class="dropdown-item">📄 Envoyer document</div>
+            <div class="dropdown-sep"></div>
+            <div class="dropdown-item">📅 Planifier relance</div>
+            <div class="dropdown-item">🔗 Ouvrir CRM</div>
+          </div>
+          <div class="prospect-avatar" style="background: radial-gradient(circle,rgba(212,160,32,0.25),rgba(212,160,32,0.08)); border: 2px solid rgba(212,160,32,0.45);">☀️</div>
+          <div class="prospect-info">
+            <div class="prospect-name">Marie Laurent</div>
+            <div class="prospect-meta">
+              <span>Avocate</span>
+              <span style="color: var(--green); font-weight: 600;">▶ Seq.</span>
+            </div>
+          </div>
+          <div class="prospect-right">
+            <div class="prospect-time">dans 2j</div>
+            <div class="prospect-channel">💬</div>
+          </div>
+        </div>
+
+        <!-- Contact 4: WARM -->
+        <div class="prospect-mini" data-idx="3" style="border-left-color: var(--warm);" onclick="selectProspect(3)">
+          <button class="prospect-menu-btn" onclick="event.stopPropagation(); toggleMenu(3)">⋮</button>
+          <div class="dropdown-menu" id="menu-3">
+            <div class="dropdown-item">📞 Appeler maintenant</div>
+            <div class="dropdown-item">💬 WhatsApp rapide</div>
+            <div class="dropdown-item">✉️ Envoyer un email</div>
+            <div class="dropdown-sep"></div>
+            <div class="dropdown-item">▶ Lancer séquence</div>
+            <div class="dropdown-item">📄 Envoyer document</div>
+            <div class="dropdown-sep"></div>
+            <div class="dropdown-item">📅 Planifier relance</div>
+            <div class="dropdown-item">🔗 Ouvrir CRM</div>
+          </div>
+          <div class="prospect-avatar" style="background: radial-gradient(circle,rgba(212,160,32,0.25),rgba(212,160,32,0.08)); border: 2px solid rgba(212,160,32,0.45);">☀️</div>
+          <div class="prospect-info">
+            <div class="prospect-name">Claire Rousseau</div>
+            <div class="prospect-meta">
+              <span>Architecte</span>
+              <span style="color: var(--warn); font-weight: 600;">⚠ 2 NR</span>
+            </div>
+          </div>
+          <div class="prospect-right">
+            <div class="prospect-time">dans 3j</div>
+            <div class="prospect-channel">🔗</div>
+          </div>
+        </div>
+
+        <!-- Contact 5: COLD -->
+        <div class="prospect-mini" data-idx="4" style="border-left-color: var(--cold);" onclick="selectProspect(4)">
+          <button class="prospect-menu-btn" onclick="event.stopPropagation(); toggleMenu(4)">⋮</button>
+          <div class="dropdown-menu" id="menu-4">
+            <div class="dropdown-item">📞 Appeler maintenant</div>
+            <div class="dropdown-item">💬 WhatsApp rapide</div>
+            <div class="dropdown-item">✉️ Envoyer un email</div>
+            <div class="dropdown-sep"></div>
+            <div class="dropdown-item">▶ Lancer séquence</div>
+            <div class="dropdown-item">📄 Envoyer document</div>
+            <div class="dropdown-sep"></div>
+            <div class="dropdown-item">📅 Planifier relance</div>
+            <div class="dropdown-item">🔗 Ouvrir CRM</div>
+          </div>
+          <div class="prospect-avatar" style="background: radial-gradient(circle,rgba(91,155,213,0.25),rgba(91,155,213,0.08)); border: 2px solid rgba(91,155,213,0.45);">❄️</div>
+          <div class="prospect-info">
+            <div class="prospect-name">Thomas Bernard</div>
+            <div class="prospect-meta">
+              <span>Kinésithérapeute</span>
+            </div>
+          </div>
+          <div class="prospect-right">
+            <div class="prospect-time">dans 5j</div>
+            <div class="prospect-channel">✉️</div>
+          </div>
+        </div>
+
+        <!-- Contact 6: COLD -->
+        <div class="prospect-mini" data-idx="5" style="border-left-color: var(--cold);" onclick="selectProspect(5)">
+          <button class="prospect-menu-btn" onclick="event.stopPropagation(); toggleMenu(5)">⋮</button>
+          <div class="dropdown-menu" id="menu-5">
+            <div class="dropdown-item">📞 Appeler maintenant</div>
+            <div class="dropdown-item">💬 WhatsApp rapide</div>
+            <div class="dropdown-item">✉️ Envoyer un email</div>
+            <div class="dropdown-sep"></div>
+            <div class="dropdown-item">▶ Lancer séquence</div>
+            <div class="dropdown-item">📄 Envoyer document</div>
+            <div class="dropdown-sep"></div>
+            <div class="dropdown-item">📅 Planifier relance</div>
+            <div class="dropdown-item">🔗 Ouvrir CRM</div>
+          </div>
+          <div class="prospect-avatar" style="background: radial-gradient(circle,rgba(91,155,213,0.25),rgba(91,155,213,0.08)); border: 2px solid rgba(91,155,213,0.45);">❄️</div>
+          <div class="prospect-info">
+            <div class="prospect-name">Nathalie Petit</div>
+            <div class="prospect-meta">
+              <span>Notaire</span>
+            </div>
+          </div>
+          <div class="prospect-right">
+            <div class="prospect-time">dans 7j</div>
+            <div class="prospect-channel">📞</div>
+          </div>
+        </div>
+
+        <!-- Contact 7: DEAD -->
+        <div class="prospect-mini" data-idx="6" style="border-left-color: #8B4513;" onclick="selectProspect(6)">
+          <button class="prospect-menu-btn" onclick="event.stopPropagation(); toggleMenu(6)">⋮</button>
+          <div class="dropdown-menu" id="menu-6">
+            <div class="dropdown-item">📞 Appeler maintenant</div>
+            <div class="dropdown-item">💬 WhatsApp rapide</div>
+            <div class="dropdown-item">✉️ Envoyer un email</div>
+            <div class="dropdown-sep"></div>
+            <div class="dropdown-item">▶ Lancer séquence</div>
+            <div class="dropdown-item">📄 Envoyer document</div>
+            <div class="dropdown-sep"></div>
+            <div class="dropdown-item">📅 Planifier relance</div>
+            <div class="dropdown-item">🔗 Ouvrir CRM</div>
+          </div>
+          <div class="prospect-avatar" style="background: radial-gradient(circle,rgba(139,69,19,0.2),rgba(139,69,19,0.05)); border: 2px solid rgba(139,69,19,0.4);">🪨</div>
+          <div class="prospect-info">
+            <div class="prospect-name">Sophie Moreau</div>
+            <div class="prospect-meta">
+              <span style="color: var(--red); font-weight: 600;">5 NR · Stop</span>
+            </div>
+          </div>
+          <div class="prospect-right">
+            <div class="prospect-time">il y a 45j</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ─── RIGHT: DETAIL PANEL ─── -->
+    <main class="panel-right">
+      <!-- Tab navigation -->
+      <div class="tab-bar">
+        <button class="tab-btn active" data-tab="sequence">Séquence & Messages</button>
+        <button class="tab-btn" data-tab="history">Historique <span class="tab-count">12</span></button>
+        <button class="tab-btn" data-tab="config">Config</button>
+      </div>
+
+      <div class="panel-content">
+        <!-- ═══ TAB: SEQUENCE & MESSAGES ═══ -->
+        <div id="tab-sequence" class="tab-content active">
+
+          <!-- Prospect header -->
+          <div class="prospect-header" style="background: linear-gradient(135deg, #2d0808, #4a1010 30%, #3d0808); border-color: var(--hot);">
+            <div class="prospect-header-icon">🔥</div>
+            <div class="prospect-header-info">
+              <div class="prospect-header-name">Jean Dupont</div>
+              <div class="prospect-header-meta">
+                <span>Dentiste · RDV 1 fait</span>
+                <span style="color: var(--gold);">📊 Retraite TNS, Prévoyance</span>
+              </div>
+            </div>
+            <div class="prospect-header-badges">
+              <span style="font-size: 9px; padding: 2px 7px; border-radius: 4px; background: rgba(232,200,120,0.12); color: var(--gold); border: 1px solid rgba(232,200,120,0.2); font-weight: 600;">📞 Préféré</span>
+              <span style="font-size: 9px; padding: 2px 7px; border-radius: 4px; background: rgba(76,175,80,0.12); color: var(--green); border: 1px solid rgba(76,175,80,0.2); font-weight: 600;">Pression OK</span>
+            </div>
+          </div>
+
+          <!-- KPIs -->
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-value" style="color: var(--hot);">🔥</div>
+              <div class="stat-label">Brûlant</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value">5</div>
+              <div class="stat-label">Touchpoints</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value" style="color: var(--green);">2</div>
+              <div class="stat-label">Réponses</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value" style="color: var(--warn);">3</div>
+              <div class="stat-label">Sans réponse</div>
+            </div>
+          </div>
+
+          <!-- Recommendation IA -->
+          <div class="recommendation">
+            <span style="font-size: 16px;">💡</span>
+            <div style="font-size: 11px; color: var(--text-mid); flex: 1;">
+              Canal le plus efficace : <strong style="color: var(--text-hi);">✉️ email</strong> (67% réponses). 3 relances sans réponse — envisager un changement de canal.
+            </div>
+            <button class="btn btn-sm btn-outline" style="color: var(--gold); border-color: rgba(232,200,120,0.3);">Appliquer</button>
+          </div>
+
+          <!-- SEQUENCE TIMELINE -->
+          <div class="sequence-section">
+            <div class="section-header">
+              <div class="section-title">
+                <span>▶ Séquence active</span>
+                <span style="font-size: 10px; padding: 2px 8px; border-radius: 4px; background: rgba(76,175,80,0.12); color: var(--green);">En cours · Étape 3/5</span>
+              </div>
+              <button class="btn btn-sm btn-outline">Modifier séquence</button>
+            </div>
+
+            <div class="sequence-timeline">
+              <!-- Step 1: Done -->
+              <div class="seq-step done">
+                <div class="seq-step-header">
+                  <div class="seq-step-label"><span>✉️</span> Email de suivi post-RDV</div>
+                  <div class="seq-step-date">28 juin · Envoyé ✅</div>
+                </div>
+                <div class="seq-step-preview">"Jean, comme convenu voici le récapitulatif de notre échange sur votre retraite TNS..."</div>
+              </div>
+
+              <!-- Step 2: Done -->
+              <div class="seq-step done">
+                <div class="seq-step-header">
+                  <div class="seq-step-label"><span>💬</span> WhatsApp J+5</div>
+                  <div class="seq-step-date">3 juil · Répondu ✅</div>
+                </div>
+                <div class="seq-step-preview">"Jean, je reviens vers vous — avez-vous pu consulter le document ?"</div>
+              </div>
+
+              <!-- Step 3: Current -->
+              <div class="seq-step current">
+                <div class="seq-step-header">
+                  <div class="seq-step-label"><span>📞</span> Appel de relance</div>
+                  <div class="seq-step-date">Aujourd'hui</div>
+                </div>
+                <div class="seq-step-preview">"Jean, c'est [nom]. On s'est échangé sur la retraite TNS. J'ai finalisé la simulation..."</div>
+                <div class="seq-step-actions">
+                  <button class="btn btn-gold btn-sm">📞 Exécuter maintenant</button>
+                  <button class="btn btn-sm btn-outline">Reporter +2j</button>
+                  <button class="btn btn-sm btn-outline">Changer canal</button>
+                </div>
+              </div>
+
+              <!-- Step 4: Upcoming -->
+              <div class="seq-step upcoming">
+                <div class="seq-step-header">
+                  <div class="seq-step-label" style="color: var(--text-mid);"><span>📄</span> Envoi document (Simulateur Retraite)</div>
+                  <div class="seq-step-date">dans 3j</div>
+                </div>
+                <div class="seq-step-preview" style="color: var(--text-lo);">Joint : Simulateur Retraite TNS (PDF)</div>
+              </div>
+
+              <!-- Step 5: Upcoming -->
+              <div class="seq-step upcoming">
+                <div class="seq-step-header">
+                  <div class="seq-step-label" style="color: var(--text-mid);"><span>🔗</span> LinkedIn — message de valeur</div>
+                  <div class="seq-step-date">dans 7j</div>
+                </div>
+                <div class="seq-step-preview" style="color: var(--text-lo);">Partager article pertinent + mention personnalisée</div>
+              </div>
+            </div>
+
+            <!-- Add step -->
+            <button class="add-step-btn">+ Ajouter une étape à la séquence</button>
+          </div>
+
+          <!-- QUICK COMPOSE -->
+          <div class="compose-panel">
+            <div class="compose-header">
+              <div class="compose-title">Composer un message</div>
+              <span style="font-size: 9px; color: var(--text-lo);">Variables auto-remplies : {prenom}, {metier}, {theme}</span>
+            </div>
+
+            <!-- Channel selector -->
+            <div class="channel-row">
+              <button class="channel-btn active" data-channel="call">📞 Appel</button>
+              <button class="channel-btn" data-channel="email">✉️ Email</button>
+              <button class="channel-btn" data-channel="whatsapp">💬 WhatsApp</button>
+              <button class="channel-btn" data-channel="linkedin">🔗 LinkedIn</button>
+              <button class="channel-btn" data-channel="sms">📱 SMS</button>
+            </div>
+
+            <!-- Template dropdown -->
+            <div class="template-select-wrapper">
+              <select class="template-select">
+                <option value="">Choisir un template de la bibliothèque...</option>
+                <optgroup label="📊 Retraite TNS">
+                  <option>Relance post-RDV retraite</option>
+                  <option>Envoi simulateur + relance</option>
+                  <option>Micro-relance après silence</option>
+                </optgroup>
+                <optgroup label="🏠 Immobilier">
+                  <option>Relance SCPI + guide PDF</option>
+                  <option>Suivi intérêt investissement</option>
+                </optgroup>
+                <optgroup label="💰 Défiscalisation">
+                  <option>Rappel fin d'année fiscale</option>
+                  <option>Partage infographie Girardin</option>
+                </optgroup>
+              </select>
+              <span class="template-select-arrow">▼</span>
+            </div>
+
+            <!-- Textarea -->
+            <textarea class="compose-textarea" placeholder="Rédigez votre message ici ou sélectionnez un template...">Jean, c'est [votre_nom]. On s'est échangé lors de notre rendez-vous sur la retraite TNS. Je vous appelle parce que j'ai finalisé la simulation. Est-ce que vous avez 2 minutes ou je vous rappelle à un meilleur moment ?</textarea>
+
+            <!-- Library picker overlay -->
+            <div class="library-picker" id="library-picker">
+              <div class="library-picker-title">Bibliothèque de documents</div>
+              <div class="library-item">
+                <div class="library-item-icon">📊</div>
+                <div class="library-item-info">
+                  <div class="library-item-name">Simulateur Retraite TNS</div>
+                  <div class="library-item-meta">PDF · email, whatsapp</div>
+                </div>
+                <span class="library-item-tag" style="background: rgba(76,175,80,0.12); color: var(--green);">Retraite</span>
+              </div>
+              <div class="library-item">
+                <div class="library-item-icon">📄</div>
+                <div class="library-item-info">
+                  <div class="library-item-name">Guide SCPI 2026</div>
+                  <div class="library-item-meta">PDF · email, courrier</div>
+                </div>
+                <span class="library-item-tag" style="background: rgba(232,200,120,0.12); color: var(--gold);">Immobilier</span>
+              </div>
+              <div class="library-item">
+                <div class="library-item-icon">🖼️</div>
+                <div class="library-item-info">
+                  <div class="library-item-name">Infographie Loi Girardin</div>
+                  <div class="library-item-meta">Image · email, linkedin</div>
+                </div>
+                <span class="library-item-tag" style="background: rgba(129,140,248,0.12); color: var(--indigo);">Défiscalisation</span>
+              </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="compose-footer">
+              <div class="compose-actions">
+                <button class="btn btn-gold">📞 Exécuter</button>
+                <button class="btn btn-sm btn-outline">💾 Sauver template</button>
+                <button class="btn btn-sm btn-outline" onclick="toggleLibrary()">📄 Joindre document</button>
+              </div>
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <button class="btn btn-sm btn-outline">📅 Planifier</button>
+                <span style="font-size: 9px; color: var(--text-lo);">ou ajouter à la séquence</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Prochaines actions planifiées -->
+          <div class="sequence-section">
+            <div class="section-header">
+              <div class="section-title">📅 Prochaines actions planifiées</div>
+              <button class="btn btn-sm btn-outline">+ Planifier</button>
+            </div>
+            <div style="background: var(--surface1); border: 1px solid var(--line); border-radius: 12px; padding: 14px;">
+              <div class="schedule-row">
+                <div class="schedule-date" style="color: var(--hot); font-weight: 600;">Aujourd'hui</div>
+                <div class="schedule-action"><span>📞</span> Appel relance retraite TNS</div>
+                <div class="schedule-edit">Modifier</div>
+              </div>
+              <div class="schedule-row">
+                <div class="schedule-date">20 juil.</div>
+                <div class="schedule-action"><span>📄</span> Envoi Simulateur Retraite (PDF)</div>
+                <div class="schedule-edit">Modifier</div>
+              </div>
+              <div class="schedule-row">
+                <div class="schedule-date">24 juil.</div>
+                <div class="schedule-action"><span>🔗</span> LinkedIn — partage article retraite</div>
+                <div class="schedule-edit">Modifier</div>
+              </div>
+              <div class="schedule-row">
+                <div class="schedule-date">28 juil.</div>
+                <div class="schedule-action"><span>💬</span> WhatsApp — micro-relance</div>
+                <div class="schedule-edit">Modifier</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- ═══ TAB: HISTORY ═══ -->
+        <div id="tab-history" class="tab-content">
+          <div class="section-header">
+            <div class="section-title">Historique des interactions</div>
+            <span style="font-size: 10px; color: var(--text-lo);">12 total</span>
+          </div>
+
+          <!-- Channel stats -->
+          <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 20px;">
+            <div class="stat-card">
+              <div style="font-size: 16px;">📞</div>
+              <div class="stat-value" style="color: var(--warn); font-size: 14px;">40%</div>
+              <div class="stat-label">2/5 rép.</div>
+            </div>
+            <div class="stat-card" style="background: rgba(232,200,120,0.06); border-color: rgba(232,200,120,0.25);">
+              <div style="font-size: 16px;">✉️</div>
+              <div class="stat-value" style="color: var(--green); font-size: 14px;">67%</div>
+              <div class="stat-label">2/3 rép.</div>
+              <div style="font-size: 8px; color: var(--gold); font-weight: 700; margin-top: 2px;">MEILLEUR</div>
+            </div>
+            <div class="stat-card">
+              <div style="font-size: 16px;">💬</div>
+              <div class="stat-value" style="color: var(--text-mid); font-size: 14px;">33%</div>
+              <div class="stat-label">1/3 rép.</div>
+            </div>
+            <div class="stat-card">
+              <div style="font-size: 16px;">🔗</div>
+              <div class="stat-value" style="color: var(--text-lo); font-size: 14px;">0%</div>
+              <div class="stat-label">0/1</div>
+            </div>
+            <div class="stat-card">
+              <div style="font-size: 16px;">📱</div>
+              <div class="stat-value" style="color: var(--text-lo); font-size: 14px;">—</div>
+              <div class="stat-label">jamais</div>
+            </div>
+          </div>
+
+          <!-- Timeline -->
+          <div style="background: var(--surface1); border: 1px solid var(--line); border-radius: 12px; padding: 14px;">
+            <div class="history-item pending">
+              <span class="history-icon">📞</span>
+              <span class="history-channel">téléphone</span>
+              <span class="history-date">12 juil. 26</span>
+              <span class="history-note">Pas dispo cette semaine, rappeler lundi</span>
+              <span class="history-status">⏳</span>
+            </div>
+            <div class="history-item seen">
+              <span class="history-icon">✉️</span>
+              <span class="history-channel">email</span>
+              <span class="history-date">08 juil. 26</span>
+              <span class="history-note">Simulateur retraite envoyé — ouvert 2x</span>
+              <span class="history-status">👁️</span>
+            </div>
+            <div class="history-item replied">
+              <span class="history-icon">💬</span>
+              <span class="history-channel">whatsapp</span>
+              <span class="history-date">03 juil. 26</span>
+              <span class="history-note">"OK on se rappelle la semaine prochaine"</span>
+              <span class="history-status">✅</span>
+            </div>
+            <div class="history-item replied">
+              <span class="history-icon">✉️</span>
+              <span class="history-channel">email</span>
+              <span class="history-date">28 juin 26</span>
+              <span class="history-note">"Merci pour le document, je regarde ça"</span>
+              <span class="history-status">✅</span>
+            </div>
+            <div class="history-item pending">
+              <span class="history-icon">📞</span>
+              <span class="history-channel">téléphone</span>
+              <span class="history-date">25 juin 26</span>
+              <span class="history-note">Messagerie laissée</span>
+              <span class="history-status">⏳</span>
+            </div>
+            <div class="history-item replied">
+              <span class="history-icon">📅</span>
+              <span class="history-channel">rdv</span>
+              <span class="history-date">20 juin 26</span>
+              <span class="history-note">RDV 1 — Bilan patrimonial, intérêt retraite TNS</span>
+              <span class="history-status">✅</span>
+            </div>
+          </div>
+
+          <!-- Quick log -->
+          <div style="margin-top: 16px;">
+            <div style="font-size: 12px; font-weight: 600; color: var(--text-hi); margin-bottom: 8px;">Enregistrer une interaction</div>
+            <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+              <button class="btn btn-sm btn-outline">📞 Appel fait</button>
+              <button class="btn btn-sm btn-outline">✉️ Email envoyé</button>
+              <button class="btn btn-sm btn-outline">💬 WhatsApp envoyé</button>
+              <button class="btn btn-sm btn-outline">🔗 LinkedIn envoyé</button>
+              <button class="btn btn-sm btn-outline">📅 RDV pris</button>
+              <button class="btn btn-sm btn-outline" style="color: var(--red); border-color: rgba(255,100,112,0.3);">🚫 Refus</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══ TAB: CONFIG ═══ -->
+        <div id="tab-config" class="tab-content">
+          <div style="background: var(--surface1); border: 1px solid rgba(232,200,120,0.2); border-radius: 12px; padding: 18px;">
+            <div class="section-header" style="margin-bottom: 14px;">
+              <div class="section-title" style="color: var(--gold);">Configuration nurturing — Jean Dupont</div>
+              <button class="btn btn-sm btn-gold">💾 Sauvegarder</button>
+            </div>
+            <div class="config-grid">
+              <div>
+                <div class="config-label">Canal préféré</div>
+                <select class="config-select">
+                  <option>📞 Téléphone</option>
+                  <option>✉️ Email</option>
+                  <option>💬 WhatsApp</option>
+                  <option>🔗 LinkedIn</option>
+                </select>
+              </div>
+              <div>
+                <div class="config-label">Fréquence de relance</div>
+                <select class="config-select">
+                  <option>Hebdomadaire (7j)</option>
+                  <option selected>Bi-mensuel (14j)</option>
+                  <option>Mensuel (30j)</option>
+                </select>
+              </div>
+              <div>
+                <div class="config-label">Créneau préféré</div>
+                <select class="config-select">
+                  <option selected>Matin (8h-12h)</option>
+                  <option>Après-midi (14h-18h)</option>
+                  <option>Soir (18h-20h)</option>
+                </select>
+              </div>
+              <div>
+                <div class="config-label">Pression max</div>
+                <select class="config-select">
+                  <option>2 par mois</option>
+                  <option selected>4 par mois</option>
+                  <option>6 par mois</option>
+                </select>
+              </div>
+              <div style="grid-column: 1/-1;">
+                <div class="config-label">Canaux exclus</div>
+                <div style="display: flex; gap: 6px; margin-top: 4px;">
+                  <button class="btn btn-sm btn-outline">📞</button>
+                  <button class="btn btn-sm btn-outline">✉️</button>
+                  <button class="btn btn-sm btn-outline">💬</button>
+                  <button class="btn btn-sm btn-outline">🔗</button>
+                  <button class="btn btn-sm btn-outline" style="text-decoration: line-through; color: var(--red); border-color: rgba(255,100,112,0.3);">📬</button>
+                  <button class="btn btn-sm btn-outline">📱</button>
+                </div>
+              </div>
+              <div style="grid-column: 1/-1;">
+                <div class="config-label">Thèmes identifiés</div>
+                <div style="display: flex; gap: 6px; margin-top: 4px; flex-wrap: wrap;">
+                  <span style="padding: 5px 10px; border-radius: 6px; background: rgba(76,175,80,0.12); color: var(--green); font-size: 11px; font-weight: 600; border: 1px solid rgba(76,175,80,0.2);">📊 Retraite TNS</span>
+                  <span style="padding: 5px 10px; border-radius: 6px; background: rgba(167,139,250,0.12); color: var(--purple); font-size: 11px; font-weight: 600; border: 1px solid rgba(167,139,250,0.2);">🛡️ Prévoyance</span>
+                  <button class="btn btn-sm btn-outline" style="font-size: 10px;">+ Ajouter</button>
+                </div>
+              </div>
+              <div style="grid-column: 1/-1;">
+                <div class="config-label">Notes personnelles</div>
+                <textarea class="compose-textarea" style="min-height: 60px; margin-top: 4px;">Aime le golf, enfants en études sup, sensible défiscalisation. Préfère qu'on l'appelle le matin.</textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+// ─── STATE ───
+let currentProspectIdx = 0;
+let currentTab = 'sequence';
+let openMenuIdx = null;
+let currentChannel = 'call';
+
+// ─── PROSPECT SELECTION ───
+function selectProspect(idx) {
+  currentProspectIdx = idx;
+  document.querySelectorAll('.prospect-mini').forEach((el, i) => {
+    el.classList.toggle('active', i === idx);
+  });
+  closeAllMenus();
+}
+
+// ─── DROPDOWN MENUS ───
+function toggleMenu(idx) {
+  const menu = document.getElementById('menu-' + idx);
+  const wasOpen = menu.classList.contains('open');
+  closeAllMenus();
+  if (!wasOpen) {
+    menu.classList.add('open');
+    openMenuIdx = idx;
+  } else {
+    openMenuIdx = null;
+  }
+}
+
+function closeAllMenus() {
+  document.querySelectorAll('.dropdown-menu').forEach(m => m.classList.remove('open'));
+  openMenuIdx = null;
+}
+
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.prospect-menu-btn') && !e.target.closest('.dropdown-menu')) {
+    closeAllMenus();
+  }
+});
+
+// ─── TAB SWITCHING ───
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const tab = btn.dataset.tab;
+    currentTab = tab;
+
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.getElementById('tab-' + tab).classList.add('active');
+  });
+});
+
+// ─── LIBRARY PICKER ───
+function toggleLibrary() {
+  const picker = document.getElementById('library-picker');
+  picker.classList.toggle('open');
+}
+
+// ─── CHANNEL BUTTONS ───
+document.querySelectorAll('.channel-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    currentChannel = btn.dataset.channel;
+    document.querySelectorAll('.channel-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+// ─── FILTER CHIPS ───
+document.querySelectorAll('.filter-chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+  });
+});
+</script>
+
+</body>
+</html>
