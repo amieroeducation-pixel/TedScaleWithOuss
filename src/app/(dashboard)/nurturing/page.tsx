@@ -1,9 +1,83 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { createSupabaseBrowserClient } from '@/lib/supabase/client'
 import { saveLastSection } from '@/lib/navigation-state'
 
-// ─── VARIABLES CSS (thème PSG Cosmos) ───────────────────────────────────────
+// ─── TYPES ───────────────────────────────────────────────────────────────────
+type TempCategory = 'hot' | 'warm' | 'cold' | 'dead'
+type DetailTab = 'sequence' | 'history' | 'config'
+type Channel = 'call' | 'email' | 'whatsapp' | 'linkedin' | 'sms'
+type PressureBadge = 'normal' | 'vary' | 'stop'
+
+// ─── MÉTRIQUE DE PRESSION PROSPECT ──────────────────────────────────────────
+const PRESSURE_COEFS: Record<string, number> = {
+  email: 1,
+  appel: 3,
+  call: 3,
+  linkedin: 1.5,
+  linkedin_view: 0.5,
+  sms: 2,
+  whatsapp: 1.5,
+}
+
+function computePressure(interactions: { channel: string; date: string }[]): { score: number; badge: PressureBadge; label: string; color: string } {
+  const cutoff = new Date()
+  cutoff.setDate(cutoff.getDate() - 7)
+
+  const score = interactions
+    .filter(i => new Date(i.date) >= cutoff)
+    .reduce((sum, i) => sum + (PRESSURE_COEFS[i.channel] || 1), 0)
+
+  if (score > 6) return { score, badge: 'stop', label: '🛑 STOP — mettre en pause', color: '#ff6470' }
+  if (score >= 4) return { score, badge: 'vary', label: '⚡ Varier le canal ou laisser respirer', color: '#fbbf24' }
+  return { score, badge: 'normal', label: '✓ Normale', color: '#4caf50' }
+}
+
+interface Contact {
+  id: string
+  temp: TempCategory
+  name: string
+  job: string
+  badges: string[]
+  warning?: string
+  nextTime: string
+  nextChannel: string
+  urgent: boolean
+  icon: string
+  stage?: string
+  touchpoints: number
+  responses: number
+  no_responses: number
+  notes?: string
+  preferredChannel?: string
+  preferredTime?: string
+  frequency?: string
+  pressure?: string
+  themes?: string[]
+  excludedChannels?: string[]
+}
+
+interface Interaction {
+  id: string
+  channel: string
+  date: string // Now ISO string for pressure calculation
+  note: string
+  status: 'pending' | 'seen' | 'replied'
+  icon: string
+}
+
+interface SequenceStep {
+  id: string
+  channel: string
+  label: string
+  date: string
+  preview: string
+  status: 'done' | 'current' | 'upcoming'
+  icon: string
+}
+
+// ─── THEME PSG Cosmos ────────────────────────────────────────────────────────
 const V = {
   bgDeep: '#0a0e22',
   bgMid: '#0f1430',
@@ -27,145 +101,309 @@ const V = {
   cold: '#5b9bd5',
 }
 
-type DetailTab = 'sequence' | 'history' | 'config'
+const tempColors: Record<TempCategory, { border: string; bg: string; iconBg: string; iconBorder: string }> = {
+  hot: {
+    border: V.hot,
+    bg: 'linear-gradient(135deg, #2d0808, #4a1010 30%, #3d0808)',
+    iconBg: 'radial-gradient(circle,rgba(255,68,68,0.3),rgba(255,68,68,0.1))',
+    iconBorder: 'rgba(255,68,68,0.5)',
+  },
+  warm: {
+    border: V.warm,
+    bg: 'linear-gradient(135deg, #2d2208, #3d2e0a 30%, #2d2208)',
+    iconBg: 'radial-gradient(circle,rgba(212,160,32,0.25),rgba(212,160,32,0.08))',
+    iconBorder: 'rgba(212,160,32,0.45)',
+  },
+  cold: {
+    border: V.cold,
+    bg: 'linear-gradient(135deg, #081520, #0c2040 30%, #0a1a30)',
+    iconBg: 'radial-gradient(circle,rgba(91,155,213,0.25),rgba(91,155,213,0.08))',
+    iconBorder: 'rgba(91,155,213,0.45)',
+  },
+  dead: {
+    border: '#8B4513',
+    bg: 'linear-gradient(135deg, #1a1008, #25180a 30%, #1a1008)',
+    iconBg: 'radial-gradient(circle,rgba(139,69,19,0.2),rgba(139,69,19,0.05))',
+    iconBorder: 'rgba(139,69,19,0.4)',
+  },
+}
 
+const tempIcons: Record<TempCategory, string> = {
+  hot: '🔥',
+  warm: '☀️',
+  cold: '❄️',
+  dead: '🪨',
+}
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+function calculateTempCategory(
+  lastContactDays: number | null,
+  hasActiveSequence: boolean,
+  noResponseCount: number,
+  pressureScore: string | null
+): TempCategory {
+  if (pressureScore === 'a_stopper' || noResponseCount >= 5) return 'dead'
+  if (lastContactDays === null) return 'cold'
+  if (lastContactDays <= 3 || hasActiveSequence) return 'hot'
+  if (lastContactDays <= 7) return 'warm'
+  return 'cold'
+}
+
+function formatRelativeDate(date: Date): string {
+  const now = new Date()
+  const diff = date.getTime() - now.getTime()
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+
+  if (days === 0) return 'Aujourd\'hui'
+  if (days === 1) return 'Demain'
+  if (days < 0) {
+    const absDays = Math.abs(days)
+    return `il y a ${absDays}j`
+  }
+  return `dans ${days}j`
+}
+
+// ─── COMPOSANT PRINCIPAL ─────────────────────────────────────────────────────
 export default function NurturingPage() {
+  const [contacts, setContacts] = useState<Contact[]>([])
   const [selectedContactIdx, setSelectedContactIdx] = useState(0)
   const [detailTab, setDetailTab] = useState<DetailTab>('sequence')
   const [openMenuIdx, setOpenMenuIdx] = useState<number | null>(null)
-  const [selectedChannel, setSelectedChannel] = useState('📞 Appel')
+  const [selectedChannel, setSelectedChannel] = useState<Channel>('call')
   const [libraryOpen, setLibraryOpen] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [interactions, setInteractions] = useState<Interaction[]>([])
+  const [sequenceSteps, setSequenceSteps] = useState<SequenceStep[]>([])
+  const [messageText, setMessageText] = useState('')
+  const [pressure, setPressure] = useState<{ score: number; badge: PressureBadge; label: string; color: string }>({ score: 0, badge: 'normal', label: '✓ Normale', color: '#4caf50' })
 
-  useEffect(() => { saveLastSection('/nurturing') }, [])
+  const supabase = createSupabaseBrowserClient()
 
-  // Mock contact data
-  const contacts = [
-    {
-      temp: 'hot' as const,
-      icon: '🔥',
-      name: 'Jean Dupont',
-      job: 'Dentiste',
-      stage: 'RDV 1 fait',
-      stats: '5tp · 2 rép.',
-      warning: '⚠ 3 NR',
-      preferredChannel: '📞 préféré',
-      badges: ['▶ Seq.'],
-      nextTime: 'Aujourd\'hui',
-      nextChannel: '📞',
-      urgent: true,
-    },
-    {
-      temp: 'hot' as const,
-      icon: '🔥',
-      name: 'Pierre Martin',
-      job: 'Pharmacien',
-      stage: 'RDV 2',
-      stats: '7tp · 3 rép.',
-      nextTime: 'Demain',
-      nextChannel: '✉️',
-      urgent: false,
-    },
-    {
-      temp: 'warm' as const,
-      icon: '☀️',
-      name: 'Marie Laurent',
-      job: 'Avocate',
-      stage: 'RDV fait',
-      stats: '8tp · 5 rép.',
-      badges: ['▶ Seq.'],
-      nextTime: 'dans 2j',
-      nextChannel: '💬',
-      urgent: false,
-    },
-    {
-      temp: 'warm' as const,
-      icon: '☀️',
-      name: 'Claire Rousseau',
-      job: 'Architecte',
-      stage: 'Prospect tiède',
-      stats: '4tp · 1 rép.',
-      warning: '⚠ 2 NR',
-      nextTime: 'dans 3j',
-      nextChannel: '🔗',
-      urgent: false,
-    },
-    {
-      temp: 'cold' as const,
-      icon: '❄️',
-      name: 'Thomas Bernard',
-      job: 'Kinésithérapeute',
-      stage: 'Prospect froid',
-      stats: '2tp · 0 rép.',
-      nextTime: 'dans 5j',
-      nextChannel: '✉️',
-      urgent: false,
-    },
-    {
-      temp: 'cold' as const,
-      icon: '❄️',
-      name: 'Nathalie Petit',
-      job: 'Notaire',
-      stage: 'Interpro',
-      stats: '3tp · 1 rép.',
-      nextTime: 'dans 7j',
-      nextChannel: '📞',
-      urgent: false,
-    },
-    {
-      temp: 'dead' as const,
-      icon: '🪨',
-      name: 'Sophie Moreau',
-      job: 'Sage-femme',
-      stage: 'Perdu',
-      stats: '6tp · 1 rép.',
-      warning: '5 NR · Stop',
-      nextTime: 'il y a 45j',
-      urgent: false,
-    },
-  ]
+  useEffect(() => {
+    saveLastSection('/nurturing')
+    loadContacts()
+  }, [])
+
+  useEffect(() => {
+    if (contacts.length > 0) {
+      loadContactDetails(contacts[selectedContactIdx].id)
+    }
+  }, [selectedContactIdx, contacts])
+
+  async function loadContacts() {
+    setLoading(true)
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+
+    const { data: prospects } = await supabase
+      .from('prospects')
+      .select(`
+        id,
+        full_name,
+        profession,
+        nb_relances_sans_reponse,
+        next_action_channel,
+        next_action_date,
+        last_contact_at,
+        pressure_score,
+        nurturing_category,
+        notes
+      `)
+      .eq('user_id', user.id)
+      .order('next_action_date', { ascending: true })
+
+    if (!prospects) {
+      setLoading(false)
+      return
+    }
+
+    const contactList: Contact[] = prospects.map((p: any) => {
+      const lastContactDays = p.last_contact_at
+        ? Math.floor((Date.now() - new Date(p.last_contact_at).getTime()) / (1000 * 60 * 60 * 24))
+        : null
+
+      const temp = calculateTempCategory(
+        lastContactDays,
+        false, // TODO: vérifier si séquence active
+        p.nb_relances_sans_reponse || 0,
+        p.pressure_score
+      )
+
+      const nextTime = p.next_action_date ? formatRelativeDate(new Date(p.next_action_date)) : 'Non planifié'
+
+      const badges: string[] = []
+      if (p.nurturing_category === 'rdv_fait') badges.push('RDV fait')
+
+      const warning = p.nb_relances_sans_reponse > 0 ? `⚠ ${p.nb_relances_sans_reponse} NR` : undefined
+
+      return {
+        id: p.id,
+        temp,
+        name: p.full_name,
+        job: p.profession || 'Non renseigné',
+        badges,
+        warning,
+        nextTime,
+        nextChannel: channelToIcon(p.next_action_channel),
+        urgent: nextTime === 'Aujourd\'hui',
+        icon: tempIcons[temp],
+        stage: p.nurturing_category || undefined,
+        touchpoints: 0, // à calculer depuis interactions
+        responses: 0,
+        no_responses: p.nb_relances_sans_reponse || 0,
+        notes: p.notes || '',
+        pressure: p.pressure_score || 'normal',
+        themes: [],
+        excludedChannels: [],
+      }
+    })
+
+    setContacts(contactList)
+    setLoading(false)
+  }
+
+  async function loadContactDetails(contactId: string) {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+
+    // Charger les interactions
+    const { data: interactionData } = await supabase
+      .from('interactions')
+      .select('*')
+      .eq('prospect_id', contactId)
+      .order('occurred_at', { ascending: false })
+      .limit(12)
+
+    if (interactionData) {
+      const interactionList: Interaction[] = interactionData.map((i: any) => ({
+        id: i.id,
+        channel: i.type,
+        date: i.occurred_at,
+        note: i.notes || 'Aucune note',
+        status: i.responded_at ? 'replied' : i.seen_at ? 'seen' : 'pending',
+        icon: interactionTypeToIcon(i.type),
+      }))
+      setInteractions(interactionList)
+      setPressure(computePressure(interactionList))
+    }
+
+    // TODO: Charger les séquences actives
+    // Pour l'instant, on garde les données mockées de l'interface
+    loadMockSequence()
+  }
+
+  function loadMockSequence() {
+    setSequenceSteps([
+      {
+        id: '1',
+        channel: 'email',
+        label: 'Relance post-RDV retraite TNS',
+        date: '28 juin · Envoyé ✅',
+        preview: '"Bonjour {prenom}, suite à notre échange sur votre situation de retraite TNS, je vous transmets comme convenu le récapitulatif de notre discussion..."',
+        status: 'done',
+        icon: '✉️',
+      },
+      {
+        id: '2',
+        channel: 'whatsapp',
+        label: 'WhatsApp J+5 après envoi doc',
+        date: '3 juil · Répondu ✅',
+        preview: '"{prenom}, je reviens vers vous rapidement 👋 Avez-vous pu consulter le document que je vous ai transmis sur {theme} ?"',
+        status: 'done',
+        icon: '💬',
+      },
+      {
+        id: '3',
+        channel: 'call',
+        label: 'Appel relance après silence',
+        date: 'Aujourd\'hui',
+        preview: '"Bonjour {prenom}, c\'est [votre nom]. On s\'est échangé il y a quelques semaines sur {theme}. J\'ai finalisé la simulation qu\'on avait évoquée ensemble. Vous avez 5 minutes ?"',
+        status: 'current',
+        icon: '📞',
+      },
+      {
+        id: '4',
+        channel: 'email',
+        label: 'Email — envoi simulateur + relance douce',
+        date: 'dans 3j',
+        preview: '"Bonjour {prenom}, comme convenu, je vous transmets la simulation personnalisée concernant {theme}. Je peux me libérer jeudi matin ou vendredi après-midi..."',
+        status: 'upcoming',
+        icon: '✉️',
+      },
+      {
+        id: '5',
+        channel: 'linkedin',
+        label: 'LinkedIn — message de valeur',
+        date: 'dans 7j',
+        preview: '"{prenom}, je suis tombé sur cet article qui pourrait vous intéresser dans le cadre de votre activité de {metier}..."',
+        status: 'upcoming',
+        icon: '🔗',
+      },
+      {
+        id: '6',
+        channel: 'email',
+        label: 'Micro-relance après 3 NR',
+        date: 'dans 14j',
+        preview: '"Bonjour {prenom}, je vous ai relancé plusieurs fois ces dernières semaines sur {theme}. Souhaitez-vous qu\'on garde contact, ou préférez-vous que je vous recontacte dans quelques mois ?"',
+        status: 'upcoming',
+        icon: '✉️',
+      },
+    ])
+  }
+
+  function channelToIcon(channel: string | null): string {
+    const map: Record<string, string> = {
+      telephone: '📞',
+      email: '✉️',
+      whatsapp: '💬',
+      linkedin: '🔗',
+      sms: '📱',
+      courrier: '📬',
+    }
+    return channel && map[channel] ? map[channel] : '📞'
+  }
+
+  function interactionTypeToIcon(type: string): string {
+    const map: Record<string, string> = {
+      appel: '📞',
+      email: '✉️',
+      whatsapp: '💬',
+      linkedin: '🔗',
+      rdv1: '📅',
+      rdv2: '📅',
+      rdv3: '📅',
+    }
+    return map[type] || '📝'
+  }
 
   const selectedContact = contacts[selectedContactIdx]
-
-  const tempColors: Record<string, { border: string; bg: string; iconBg: string; iconBorder: string }> = {
-    hot: {
-      border: V.hot,
-      bg: 'linear-gradient(135deg, #2d0808, #4a1010 30%, #3d0808)',
-      iconBg: 'radial-gradient(circle,rgba(255,68,68,0.3),rgba(255,68,68,0.1))',
-      iconBorder: 'rgba(255,68,68,0.5)',
-    },
-    warm: {
-      border: V.warm,
-      bg: 'linear-gradient(135deg, #2d2208, #3d2e0a 30%, #2d2208)',
-      iconBg: 'radial-gradient(circle,rgba(212,160,32,0.25),rgba(212,160,32,0.08))',
-      iconBorder: 'rgba(212,160,32,0.45)',
-    },
-    cold: {
-      border: V.cold,
-      bg: 'linear-gradient(135deg, #081520, #0c2040 30%, #0a1a30)',
-      iconBg: 'radial-gradient(circle,rgba(91,155,213,0.25),rgba(91,155,213,0.08))',
-      iconBorder: 'rgba(91,155,213,0.45)',
-    },
-    dead: {
-      border: '#8B4513',
-      bg: 'linear-gradient(135deg, #1a1008, #25180a 30%, #1a1008)',
-      iconBg: 'radial-gradient(circle,rgba(139,69,19,0.2),rgba(139,69,19,0.05))',
-      iconBorder: 'rgba(139,69,19,0.4)',
-    },
-  }
+  const colors = selectedContact ? tempColors[selectedContact.temp] : tempColors.cold
 
   return (
     <div style={{ padding: '24px 32px', maxWidth: '1800px', margin: '0 auto' }}>
       {/* ═══ HEADER ═══ */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
         <div>
-          <h1 style={{ fontSize: '28px', color: V.textHi, fontWeight: 600, letterSpacing: '1px', fontFamily: 'Oswald, sans-serif' }}>NURTURING</h1>
-          <p style={{ fontSize: '12px', color: V.textMid, marginTop: '4px' }}>Maturation & relances multicanales · 47 contacts actifs · 5 séquences</p>
+          <h1 style={{ fontSize: '28px', color: V.textHi, fontWeight: 600, letterSpacing: '1px', fontFamily: 'Oswald, sans-serif' }}>
+            NURTURING
+          </h1>
+          <p style={{ fontSize: '12px', color: V.textMid, marginTop: '4px' }}>
+            Maturation & relances multicanales · {contacts.length} contacts actifs · 5 séquences
+          </p>
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: 600, background: 'rgba(232,200,120,0.1)', color: V.gold, border: `1px solid rgba(232,200,120,0.25)`, cursor: 'pointer' }}>Séquences <strong>5</strong></span>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: 600, background: 'rgba(78,205,196,0.1)', color: V.cyan, border: `1px solid rgba(78,205,196,0.25)`, cursor: 'pointer' }}>Today <strong>7</strong></span>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: 600, background: 'rgba(76,175,80,0.1)', color: V.green, border: `1px solid rgba(76,175,80,0.25)`, cursor: 'pointer' }}>Conversion <strong>23%</strong></span>
-          <button style={{ padding: '5px 10px', borderRadius: '6px', border: '1px solid rgba(232,200,120,0.25)', cursor: 'pointer', fontSize: '11px', fontFamily: 'inherit', color: V.gold, background: 'rgba(232,200,120,0.08)' }}>+ Nouveau contact</button>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: 600, background: 'rgba(232,200,120,0.1)', color: V.gold, border: '1px solid rgba(232,200,120,0.25)', cursor: 'pointer' }}>
+            Séquences <strong>5</strong>
+          </span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: 600, background: 'rgba(78,205,196,0.1)', color: V.cyan, border: '1px solid rgba(78,205,196,0.25)', cursor: 'pointer' }}>
+            Today <strong>{contacts.filter(c => c.urgent).length}</strong>
+          </span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: 600, background: 'rgba(76,175,80,0.1)', color: V.green, border: '1px solid rgba(76,175,80,0.25)', cursor: 'pointer' }}>
+            Conversion <strong>23%</strong>
+          </span>
+          <button style={{ padding: '5px 10px', borderRadius: '6px', border: '1px solid rgba(232,200,120,0.25)', cursor: 'pointer', fontSize: '11px', fontFamily: 'inherit', color: V.text, background: 'transparent' }}>
+            + Nouveau contact
+          </button>
         </div>
       </div>
 
@@ -174,39 +412,47 @@ export default function NurturingPage() {
 
         {/* ─── LEFT: PROSPECT LIST ─── */}
         <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          {/* Search + filters */}
-          <div style={{ marginBottom: '12px' }}>
-            <input
-              type="text"
-              placeholder="Rechercher un prospect..."
-              style={{
-                width: '100%',
-                padding: '8px 12px',
-                borderRadius: '8px',
-                border: `1px solid ${V.line}`,
-                background: V.surface2,
-                color: V.textHi,
-                fontSize: '12px',
-                fontFamily: 'inherit',
-                outline: 'none',
-                marginBottom: '8px',
-              }}
-            />
-            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-              <button style={{ padding: '5px 10px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '11px', fontFamily: 'inherit', color: V.textHi, background: 'rgba(232,200,120,0.15)', fontWeight: 600 }}>Tous (47)</button>
-              <button style={{ padding: '5px 10px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '11px', fontFamily: 'inherit', color: V.hot, background: V.surface2 }}>Chauds (9)</button>
-              <button style={{ padding: '5px 10px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '11px', fontFamily: 'inherit', color: V.warm, background: V.surface2 }}>Tièdes (18)</button>
-              <button style={{ padding: '5px 10px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '11px', fontFamily: 'inherit', color: V.cold, background: V.surface2 }}>Froids (14)</button>
-            </div>
+          <input
+            type="text"
+            placeholder="Rechercher un prospect..."
+            style={{
+              width: '100%',
+              padding: '8px 12px',
+              borderRadius: '8px',
+              border: `1px solid ${V.line}`,
+              background: V.surface2,
+              color: V.textHi,
+              fontSize: '12px',
+              fontFamily: 'inherit',
+              outline: 'none',
+              marginBottom: '8px',
+            }}
+          />
+
+          <div style={{ display: 'flex', gap: '6px', marginBottom: '12px', flexWrap: 'wrap' }}>
+            <button style={{ padding: '5px 10px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '11px', fontFamily: 'inherit', background: 'rgba(232,200,120,0.15)', color: V.gold, fontWeight: 600 }}>
+              Tous ({contacts.length})
+            </button>
+            <button style={{ padding: '5px 10px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '11px', fontFamily: 'inherit', background: V.surface2, color: V.hot }}>
+              Chauds ({contacts.filter(c => c.temp === 'hot').length})
+            </button>
+            <button style={{ padding: '5px 10px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '11px', fontFamily: 'inherit', background: V.surface2, color: V.warm }}>
+              Tièdes ({contacts.filter(c => c.temp === 'warm').length})
+            </button>
+            <button style={{ padding: '5px 10px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '11px', fontFamily: 'inherit', background: V.surface2, color: V.cold }}>
+              Froids ({contacts.filter(c => c.temp === 'cold').length})
+            </button>
           </div>
 
-          {/* Contact list */}
           <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px', paddingRight: '4px' }}>
-            {contacts.map((contact, idx) => {
+            {loading && (
+              <div style={{ padding: '20px', textAlign: 'center', color: V.textMid }}>Chargement...</div>
+            )}
+            {!loading && contacts.map((contact, idx) => {
               const colors = tempColors[contact.temp]
               return (
                 <div
-                  key={idx}
+                  key={contact.id}
                   onClick={() => {
                     setSelectedContactIdx(idx)
                     setOpenMenuIdx(null)
@@ -221,22 +467,14 @@ export default function NurturingPage() {
                     gap: '10px',
                     transition: 'all 0.15s',
                     borderLeft: `4px solid ${colors.border}`,
-                    background: selectedContactIdx === idx ? V.surface2 : 'transparent',
+                    background: idx === selectedContactIdx ? V.surface2 : 'transparent',
                   }}
-                  onMouseEnter={(e) => {
-                    if (selectedContactIdx !== idx) {
-                      e.currentTarget.style.background = V.surface1
-                      e.currentTarget.style.transform = 'translateX(2px)'
-                    }
-                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = V.surface1}
                   onMouseLeave={(e) => {
-                    if (selectedContactIdx !== idx) {
-                      e.currentTarget.style.background = 'transparent'
-                      e.currentTarget.style.transform = 'translateX(0)'
-                    }
+                    if (idx !== selectedContactIdx) e.currentTarget.style.background = 'transparent'
                   }}
                 >
-                  {/* Dropdown menu button */}
+                  {/* Menu button */}
                   <button
                     onClick={(e) => {
                       e.stopPropagation()
@@ -257,20 +495,8 @@ export default function NurturingPage() {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      opacity: selectedContactIdx === idx || openMenuIdx === idx ? 1 : 0,
+                      opacity: idx === selectedContactIdx || openMenuIdx === idx ? 1 : 0,
                       transition: 'opacity 0.15s',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = V.surface3
-                      e.currentTarget.style.color = V.textMid
-                      e.currentTarget.style.opacity = '1'
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'transparent'
-                      e.currentTarget.style.color = V.textLo
-                      if (selectedContactIdx !== idx && openMenuIdx !== idx) {
-                        e.currentTarget.style.opacity = '0'
-                      }
                     }}
                   >
                     ⋮
@@ -279,7 +505,6 @@ export default function NurturingPage() {
                   {/* Dropdown menu */}
                   {openMenuIdx === idx && (
                     <div
-                      onClick={(e) => e.stopPropagation()}
                       style={{
                         position: 'absolute',
                         top: '32px',
@@ -292,35 +517,17 @@ export default function NurturingPage() {
                         minWidth: '180px',
                         boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
                       }}
+                      onClick={(e) => e.stopPropagation()}
                     >
-                      {['📞 Appeler maintenant', '💬 WhatsApp rapide', '✉️ Envoyer un email', null, '▶ Lancer séquence', '📄 Envoyer document', null, '📅 Planifier relance', '🔗 Ouvrir CRM'].map((item, i) =>
-                        item === null ? (
-                          <div key={i} style={{ height: '1px', background: V.line, margin: '4px 0' }} />
-                        ) : (
-                          <div
-                            key={i}
-                            style={{
-                              padding: '8px 12px',
-                              borderRadius: '6px',
-                              fontSize: '11px',
-                              color: V.text,
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '8px',
-                              transition: 'background 0.1s',
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.background = V.surface2
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.background = 'transparent'
-                            }}
-                          >
-                            {item}
-                          </div>
-                        )
-                      )}
+                      <div style={{ padding: '8px 12px', borderRadius: '6px', fontSize: '11px', color: V.text, cursor: 'pointer' }}>📞 Appeler maintenant</div>
+                      <div style={{ padding: '8px 12px', borderRadius: '6px', fontSize: '11px', color: V.text, cursor: 'pointer' }}>💬 WhatsApp rapide</div>
+                      <div style={{ padding: '8px 12px', borderRadius: '6px', fontSize: '11px', color: V.text, cursor: 'pointer' }}>✉️ Envoyer un email</div>
+                      <div style={{ height: '1px', background: V.line, margin: '4px 0' }} />
+                      <div style={{ padding: '8px 12px', borderRadius: '6px', fontSize: '11px', color: V.text, cursor: 'pointer' }}>▶ Lancer séquence</div>
+                      <div style={{ padding: '8px 12px', borderRadius: '6px', fontSize: '11px', color: V.text, cursor: 'pointer' }}>📄 Envoyer document</div>
+                      <div style={{ height: '1px', background: V.line, margin: '4px 0' }} />
+                      <div style={{ padding: '8px 12px', borderRadius: '6px', fontSize: '11px', color: V.text, cursor: 'pointer' }}>📅 Planifier relance</div>
+                      <div style={{ padding: '8px 12px', borderRadius: '6px', fontSize: '11px', color: V.text, cursor: 'pointer' }}>🔗 Ouvrir CRM</div>
                     </div>
                   )}
 
@@ -334,9 +541,9 @@ export default function NurturingPage() {
                       alignItems: 'center',
                       justifyContent: 'center',
                       fontSize: '16px',
+                      flexShrink: 0,
                       background: colors.iconBg,
                       border: `2px solid ${colors.iconBorder}`,
-                      flexShrink: 0,
                     }}
                   >
                     {contact.icon}
@@ -349,25 +556,23 @@ export default function NurturingPage() {
                     </div>
                     <div style={{ fontSize: '10px', color: V.textMid, marginTop: '2px', display: 'flex', gap: '8px', alignItems: 'center' }}>
                       <span>{contact.job}</span>
-                      {contact.badges?.map((badge, i) => (
-                        <span key={i} style={{ color: V.green, fontWeight: 600 }}>{badge}</span>
+                      {contact.badges.map((b, i) => (
+                        <span key={i} style={{ color: V.gold, fontWeight: 600 }}>▶ Seq.</span>
                       ))}
-                      {contact.warning && <span style={{ color: V.warn, fontWeight: 600 }}>{contact.warning}</span>}
+                      {contact.warning && (
+                        <span style={{ color: V.warn, fontWeight: 600 }}>{contact.warning}</span>
+                      )}
                     </div>
                   </div>
 
-                  {/* Right: next action */}
+                  {/* Right */}
                   <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                    <div
-                      style={{
-                        fontSize: '10px',
-                        color: contact.urgent ? V.hot : V.textLo,
-                        fontWeight: contact.urgent ? 700 : 400,
-                      }}
-                    >
+                    <div style={{ fontSize: '10px', color: contact.urgent ? V.hot : V.textLo, fontWeight: contact.urgent ? 700 : 400 }}>
                       {contact.nextTime}
                     </div>
-                    {contact.nextChannel && <div style={{ fontSize: '14px', marginTop: '2px' }}>{contact.nextChannel}</div>}
+                    <div style={{ fontSize: '14px', marginTop: '2px' }}>
+                      {contact.nextChannel}
+                    </div>
                   </div>
                 </div>
               )
@@ -377,56 +582,88 @@ export default function NurturingPage() {
 
         {/* ─── RIGHT: DETAIL PANEL ─── */}
         <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          {/* Tab bar */}
+          {/* Tabs */}
           <div style={{ display: 'flex', gap: '4px', marginBottom: '16px', borderBottom: `1px solid ${V.line}`, paddingBottom: '8px' }}>
-            {[
-              { id: 'sequence', label: 'Séquence & Messages' },
-              { id: 'history', label: 'Historique', count: 12 },
-              { id: 'config', label: 'Config' },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setDetailTab(tab.id as DetailTab)}
+            <button
+              onClick={() => setDetailTab('sequence')}
+              style={{
+                padding: '8px 14px',
+                borderRadius: '8px 8px 0 0',
+                border: 'none',
+                cursor: 'pointer',
+                background: detailTab === 'sequence' ? V.surface2 : 'transparent',
+                color: detailTab === 'sequence' ? V.textHi : V.textMid,
+                fontSize: '12px',
+                fontFamily: 'inherit',
+                borderBottom: `2px solid ${detailTab === 'sequence' ? V.gold : 'transparent'}`,
+                fontWeight: detailTab === 'sequence' ? 700 : 400,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              Séquence & Messages
+            </button>
+            <button
+              onClick={() => setDetailTab('history')}
+              style={{
+                padding: '8px 14px',
+                borderRadius: '8px 8px 0 0',
+                border: 'none',
+                cursor: 'pointer',
+                background: detailTab === 'history' ? V.surface2 : 'transparent',
+                color: detailTab === 'history' ? V.textHi : V.textMid,
+                fontSize: '12px',
+                fontFamily: 'inherit',
+                borderBottom: `2px solid ${detailTab === 'history' ? V.gold : 'transparent'}`,
+                fontWeight: detailTab === 'history' ? 700 : 400,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              Historique{' '}
+              <span
                 style={{
-                  padding: '8px 14px',
-                  borderRadius: '8px 8px 0 0',
-                  border: 'none',
-                  cursor: 'pointer',
-                  background: detailTab === tab.id ? V.surface2 : 'transparent',
-                  color: detailTab === tab.id ? V.textHi : V.textMid,
-                  fontSize: '12px',
-                  fontFamily: 'inherit',
-                  borderBottom: detailTab === tab.id ? `2px solid ${V.gold}` : '2px solid transparent',
-                  fontWeight: detailTab === tab.id ? 700 : 400,
-                  transition: 'all 0.15s',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
+                  fontSize: '9px',
+                  padding: '1px 5px',
+                  borderRadius: '8px',
+                  background: detailTab === 'history' ? 'rgba(232,200,120,0.15)' : V.surface3,
+                  color: detailTab === 'history' ? V.gold : V.textLo,
+                  fontWeight: 700,
                 }}
               >
-                {tab.label}
-                {tab.count && (
-                  <span
-                    style={{
-                      fontSize: '9px',
-                      padding: '1px 5px',
-                      borderRadius: '8px',
-                      background: detailTab === tab.id ? 'rgba(232,200,120,0.15)' : V.surface3,
-                      color: detailTab === tab.id ? V.gold : V.textLo,
-                      fontWeight: 700,
-                    }}
-                  >
-                    {tab.count}
-                  </span>
-                )}
-              </button>
-            ))}
+                {interactions.length}
+              </span>
+            </button>
+            <button
+              onClick={() => setDetailTab('config')}
+              style={{
+                padding: '8px 14px',
+                borderRadius: '8px 8px 0 0',
+                border: 'none',
+                cursor: 'pointer',
+                background: detailTab === 'config' ? V.surface2 : 'transparent',
+                color: detailTab === 'config' ? V.textHi : V.textMid,
+                fontSize: '12px',
+                fontFamily: 'inherit',
+                borderBottom: `2px solid ${detailTab === 'config' ? V.gold : 'transparent'}`,
+                fontWeight: detailTab === 'config' ? 700 : 400,
+              }}
+            >
+              Config
+            </button>
           </div>
 
           {/* Panel content */}
           <div style={{ flex: 1, overflowY: 'auto', paddingRight: '4px' }}>
-            {/* ═══ TAB: SEQUENCE & MESSAGES ═══ */}
-            {detailTab === 'sequence' && (
+            {!selectedContact && (
+              <div style={{ padding: '40px', textAlign: 'center', color: V.textMid }}>
+                Sélectionnez un contact pour voir les détails
+              </div>
+            )}
+
+            {selectedContact && detailTab === 'sequence' && (
               <div>
                 {/* Prospect header */}
                 <div
@@ -436,58 +673,81 @@ export default function NurturingPage() {
                     gap: '12px',
                     marginBottom: '16px',
                     padding: '12px 16px',
-                    background: tempColors[selectedContact.temp].bg,
+                    background: colors.bg,
                     borderRadius: '12px',
-                    border: `1px solid ${tempColors[selectedContact.temp].border}`,
+                    border: `1px solid ${colors.border}`,
                   }}
                 >
                   <div style={{ fontSize: '24px' }}>{selectedContact.icon}</div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: '16px', fontWeight: 600, color: V.textHi }}>{selectedContact.name}</div>
                     <div style={{ fontSize: '11px', color: V.textMid, display: 'flex', gap: '10px', marginTop: '3px' }}>
-                      <span>{selectedContact.job} · {selectedContact.stage}</span>
+                      <span>{selectedContact.job} · {selectedContact.stage || 'Prospect'}</span>
                       <span style={{ color: V.gold }}>📊 Retraite TNS, Prévoyance</span>
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: '6px' }}>
-                    <span style={{ fontSize: '9px', padding: '2px 7px', borderRadius: '4px', background: 'rgba(232,200,120,0.12)', color: V.gold, border: '1px solid rgba(232,200,120,0.2)', fontWeight: 600 }}>📞 Préféré</span>
-                    <span style={{ fontSize: '9px', padding: '2px 7px', borderRadius: '4px', background: 'rgba(76,175,80,0.12)', color: V.green, border: '1px solid rgba(76,175,80,0.2)', fontWeight: 600 }}>Pression OK</span>
+                    <span style={{ fontSize: '9px', padding: '2px 7px', borderRadius: '4px', background: 'rgba(232,200,120,0.12)', color: V.gold, border: '1px solid rgba(232,200,120,0.2)', fontWeight: 600 }}>
+                      📞 Préféré
+                    </span>
+                    <span style={{ fontSize: '9px', padding: '2px 7px', borderRadius: '4px', background: `${pressure.color}20`, color: pressure.color, border: `1px solid ${pressure.color}40`, fontWeight: 600 }}>
+                      {pressure.label}
+                    </span>
                   </div>
                 </div>
 
                 {/* KPIs */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginBottom: '16px' }}>
-                  {[
-                    { icon: selectedContact.icon, label: selectedContact.temp === 'hot' ? 'Brûlant' : selectedContact.temp === 'warm' ? 'Tiède' : selectedContact.temp === 'cold' ? 'Froid' : 'Enterré', color: tempColors[selectedContact.temp].border },
-                    { value: '5', label: 'Touchpoints' },
-                    { value: '2', label: 'Réponses', color: V.green },
-                    { value: '3', label: 'Sans réponse', color: V.warn },
-                  ].map((stat, i) => (
-                    <div
-                      key={i}
-                      style={{
-                        background: V.surface1,
-                        border: `1px solid ${V.line}`,
-                        borderRadius: '10px',
-                        padding: '10px',
-                        textAlign: 'center',
-                      }}
-                    >
-                      <div style={{ fontSize: stat.icon ? '22px' : '18px', fontWeight: 700, color: stat.color || V.textHi }}>
-                        {stat.icon || stat.value}
-                      </div>
-                      <div style={{ fontSize: '9px', color: V.textMid, marginTop: '2px' }}>{stat.label}</div>
+                  <div style={{ background: V.surface1, border: `1px solid ${V.line}`, borderRadius: '10px', padding: '10px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '18px', fontWeight: 700, color: V.hot }}>{selectedContact.icon}</div>
+                    <div style={{ fontSize: '9px', color: V.textMid, marginTop: '2px' }}>
+                      {selectedContact.temp === 'hot' ? 'Brûlant' : selectedContact.temp === 'warm' ? 'Tiède' : selectedContact.temp === 'cold' ? 'Froid' : 'Enterré'}
                     </div>
-                  ))}
+                  </div>
+                  <div style={{ background: V.surface1, border: `1px solid ${V.line}`, borderRadius: '10px', padding: '10px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '18px', fontWeight: 700, color: V.textHi }}>{selectedContact.touchpoints}</div>
+                    <div style={{ fontSize: '9px', color: V.textMid, marginTop: '2px' }}>Touchpoints</div>
+                  </div>
+                  <div style={{ background: V.surface1, border: `1px solid ${V.line}`, borderRadius: '10px', padding: '10px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '18px', fontWeight: 700, color: V.green }}>{selectedContact.responses}</div>
+                    <div style={{ fontSize: '9px', color: V.textMid, marginTop: '2px' }}>Réponses</div>
+                  </div>
+                  <div style={{ background: V.surface1, border: `1px solid ${V.line}`, borderRadius: '10px', padding: '10px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '18px', fontWeight: 700, color: V.warn }}>{selectedContact.no_responses}</div>
+                    <div style={{ fontSize: '9px', color: V.textMid, marginTop: '2px' }}>Sans réponse</div>
+                  </div>
                 </div>
 
                 {/* Recommendation IA */}
-                <div style={{ background: 'rgba(232,200,120,0.05)', border: '1px solid rgba(232,200,120,0.18)', borderRadius: '10px', padding: '10px 14px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div
+                  style={{
+                    background: 'rgba(232,200,120,0.05)',
+                    border: '1px solid rgba(232,200,120,0.18)',
+                    borderRadius: '10px',
+                    padding: '10px 14px',
+                    marginBottom: '16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                  }}
+                >
                   <span style={{ fontSize: '16px' }}>💡</span>
                   <div style={{ fontSize: '11px', color: V.textMid, flex: 1 }}>
-                    Canal le plus efficace : <strong style={{ color: V.textHi }}>✉️ email</strong> (67% réponses). 3 relances sans réponse — envisager un changement de canal.
+                    Canal le plus efficace : <strong style={{ color: V.textHi }}>✉️ email</strong> (67% réponses). {selectedContact.no_responses} relances sans réponse — envisager un changement de canal.
                   </div>
-                  <button style={{ padding: '5px 10px', borderRadius: '6px', border: '1px solid rgba(232,200,120,0.3)', cursor: 'pointer', fontSize: '11px', fontFamily: 'inherit', color: V.gold, background: 'transparent' }}>Appliquer</button>
+                  <button
+                    style={{
+                      padding: '5px 10px',
+                      borderRadius: '6px',
+                      border: '1px solid rgba(232,200,120,0.3)',
+                      background: 'transparent',
+                      color: V.gold,
+                      fontSize: '11px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Appliquer
+                  </button>
                 </div>
 
                 {/* SEQUENCE TIMELINE */}
@@ -495,35 +755,31 @@ export default function NurturingPage() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                     <div style={{ fontSize: '13px', fontWeight: 600, color: V.textHi, display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <span>▶ Séquence active</span>
-                      <span style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '4px', background: 'rgba(76,175,80,0.12)', color: V.green }}>En cours · Étape 3/5</span>
+                      <span style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '4px', background: 'rgba(76,175,80,0.12)', color: V.green }}>
+                        En cours · Étape 3/6
+                      </span>
                     </div>
-                    <button style={{ padding: '5px 10px', borderRadius: '6px', border: `1px solid ${V.line}`, cursor: 'pointer', fontSize: '11px', fontFamily: 'inherit', color: V.text, background: 'transparent' }}>Modifier séquence</button>
+                    <button style={{ padding: '5px 10px', fontSize: '11px', borderRadius: '6px', border: `1px solid ${V.line}`, background: 'transparent', color: V.text, cursor: 'pointer' }}>
+                      Modifier séquence
+                    </button>
                   </div>
 
                   <div style={{ position: 'relative', paddingLeft: '20px' }}>
-                    {/* Vertical line */}
                     <div
                       style={{
+                        content: '',
                         position: 'absolute',
                         left: '8px',
                         top: '12px',
                         bottom: '12px',
                         width: '2px',
-                        background: 'linear-gradient(to bottom, #e8c878, #4ecdc4, #2a3470)',
+                        background: `linear-gradient(to bottom, ${V.gold}, ${V.cyan}, ${V.line})`,
                         borderRadius: '1px',
                       }}
                     />
-
-                    {/* Steps */}
-                    {[
-                      { label: '✉️ Email de suivi post-RDV', date: '28 juin · Envoyé ✅', preview: '"Jean, comme convenu voici le récapitulatif de notre échange sur votre retraite TNS..."', status: 'done' },
-                      { label: '💬 WhatsApp J+5', date: '3 juil · Répondu ✅', preview: '"Jean, je reviens vers vous — avez-vous pu consulter le document ?"', status: 'done' },
-                      { label: '📞 Appel de relance', date: 'Aujourd\'hui', preview: '"Jean, c\'est [nom]. On s\'est échangé sur la retraite TNS. J\'ai finalisé la simulation..."', status: 'current', actions: true },
-                      { label: '📄 Envoi document (Simulateur Retraite)', date: 'dans 3j', preview: 'Joint : Simulateur Retraite TNS (PDF)', status: 'upcoming' },
-                      { label: '🔗 LinkedIn — message de valeur', date: 'dans 7j', preview: 'Partager article pertinent + mention personnalisée', status: 'upcoming' },
-                    ].map((step, i) => (
+                    {sequenceSteps.map((step) => (
                       <div
-                        key={i}
+                        key={step.id}
                         style={{
                           position: 'relative',
                           padding: '10px 14px',
@@ -531,12 +787,11 @@ export default function NurturingPage() {
                           borderRadius: '10px',
                           background: V.surface1,
                           border: `1px solid ${V.line}`,
-                          transition: 'all 0.15s',
                         }}
                       >
-                        {/* Circle indicator */}
                         <div
                           style={{
+                            content: '',
                             position: 'absolute',
                             left: '-16px',
                             top: '14px',
@@ -548,23 +803,32 @@ export default function NurturingPage() {
                             boxShadow: step.status === 'current' ? '0 0 8px rgba(232,200,120,0.4)' : 'none',
                           }}
                         />
-
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <div style={{ fontSize: '12px', fontWeight: 500, color: V.textHi, display: 'flex', alignItems: 'center', gap: '6px' }}>{step.label}</div>
-                          <div style={{ fontSize: '10px', color: step.status === 'current' ? V.hot : V.textLo, fontWeight: step.status === 'current' ? 600 : 400 }}>{step.date}</div>
+                          <div style={{ fontSize: '12px', fontWeight: 500, color: step.status === 'upcoming' ? V.textMid : V.textHi, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span>{step.icon}</span> {step.label}
+                          </div>
+                          <div style={{ fontSize: '10px', color: step.status === 'current' ? V.hot : V.textLo, fontWeight: step.status === 'current' ? 600 : 400 }}>
+                            {step.date}
+                          </div>
                         </div>
-                        <div style={{ fontSize: '11px', color: V.textMid, marginTop: '4px', lineHeight: 1.4 }}>{step.preview}</div>
-                        {step.actions && (
+                        <div style={{ fontSize: '11px', color: step.status === 'upcoming' ? V.textLo : V.textMid, marginTop: '4px', lineHeight: '1.4' }}>
+                          {step.preview}
+                        </div>
+                        {step.status === 'current' && (
                           <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
-                            <button style={{ padding: '5px 12px', borderRadius: '6px', border: 'none', background: V.gold, color: V.bgDeep, fontSize: '11px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>📞 Exécuter maintenant</button>
-                            <button style={{ padding: '5px 10px', borderRadius: '6px', border: `1px solid ${V.line}`, cursor: 'pointer', fontSize: '11px', fontFamily: 'inherit', color: V.text, background: 'transparent' }}>Reporter +2j</button>
-                            <button style={{ padding: '5px 10px', borderRadius: '6px', border: `1px solid ${V.line}`, cursor: 'pointer', fontSize: '11px', fontFamily: 'inherit', color: V.text, background: 'transparent' }}>Changer canal</button>
+                            <button style={{ padding: '5px 10px', fontSize: '11px', borderRadius: '6px', border: 'none', background: V.gold, color: V.bgDeep, cursor: 'pointer', fontWeight: 600 }}>
+                              📞 Exécuter maintenant
+                            </button>
+                            <button style={{ padding: '5px 10px', fontSize: '11px', borderRadius: '6px', border: `1px solid ${V.line}`, background: 'transparent', color: V.text, cursor: 'pointer' }}>
+                              Reporter +2j
+                            </button>
+                            <button style={{ padding: '5px 10px', fontSize: '11px', borderRadius: '6px', border: `1px solid ${V.line}`, background: 'transparent', color: V.text, cursor: 'pointer' }}>
+                              Changer canal
+                            </button>
                           </div>
                         )}
                       </div>
                     ))}
-
-                    {/* Add step button */}
                     <button
                       style={{
                         width: '100%',
@@ -576,22 +840,11 @@ export default function NurturingPage() {
                         fontSize: '12px',
                         cursor: 'pointer',
                         fontFamily: 'inherit',
-                        transition: 'all 0.15s',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         gap: '6px',
                         marginTop: '4px',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.borderColor = V.gold
-                        e.currentTarget.style.color = V.gold
-                        e.currentTarget.style.background = 'rgba(232,200,120,0.04)'
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.borderColor = V.line
-                        e.currentTarget.style.color = V.textLo
-                        e.currentTarget.style.background = 'transparent'
                       }}
                     >
                       + Ajouter une étape à la séquence
@@ -599,19 +852,30 @@ export default function NurturingPage() {
                   </div>
                 </div>
 
-                {/* QUICK COMPOSE */}
-                <div style={{ position: 'relative', background: 'rgba(232,200,120,0.04)', border: '1px solid rgba(232,200,120,0.18)', borderRadius: '14px', padding: '18px', marginBottom: '20px' }}>
+                {/* QUICK COMPOSE (partie simplement affichée pour l'instant, l'envoi sera implémenté plus tard) */}
+                <div
+                  style={{
+                    position: 'relative',
+                    background: 'rgba(232,200,120,0.04)',
+                    border: '1px solid rgba(232,200,120,0.18)',
+                    borderRadius: '14px',
+                    padding: '18px',
+                    marginBottom: '20px',
+                  }}
+                >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-                    <div style={{ fontSize: '12px', fontWeight: 600, color: V.gold, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Composer un message</div>
-                    <span style={{ fontSize: '9px', color: V.textLo }}>Variables auto-remplies : {'{prenom}'}, {'{metier}'}, {'{theme}'}</span>
+                    <div style={{ fontSize: '12px', fontWeight: 600, color: V.gold, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      Composer un message
+                    </div>
+                    <span style={{ fontSize: '9px', color: V.textLo }}>Variables auto-remplies : {'{prenom}, {metier}, {theme}'}</span>
                   </div>
 
                   {/* Channel selector */}
                   <div style={{ display: 'flex', gap: '6px', marginBottom: '12px' }}>
-                    {['📞 Appel', '✉️ Email', '💬 WhatsApp', '🔗 LinkedIn', '📱 SMS'].map((ch) => (
+                    {['call', 'email', 'whatsapp', 'linkedin', 'sms'].map((ch) => (
                       <button
                         key={ch}
-                        onClick={() => setSelectedChannel(ch)}
+                        onClick={() => setSelectedChannel(ch as Channel)}
                         style={{
                           padding: '6px 12px',
                           borderRadius: '8px',
@@ -620,11 +884,10 @@ export default function NurturingPage() {
                           color: selectedChannel === ch ? V.gold : V.textMid,
                           fontSize: '12px',
                           cursor: 'pointer',
-                          transition: 'all 0.15s',
                           fontFamily: 'inherit',
                         }}
                       >
-                        {ch}
+                        {ch === 'call' ? '📞 Appel' : ch === 'email' ? '✉️ Email' : ch === 'whatsapp' ? '💬 WhatsApp' : ch === 'linkedin' ? '🔗 LinkedIn' : '📱 SMS'}
                       </button>
                     ))}
                   </div>
@@ -647,18 +910,19 @@ export default function NurturingPage() {
                       }}
                     >
                       <option value="">Choisir un template de la bibliothèque...</option>
-                      <optgroup label="📊 Retraite TNS">
-                        <option>Relance post-RDV retraite</option>
-                        <option>Envoi simulateur + relance</option>
-                        <option>Micro-relance après silence</option>
+                      <optgroup label="✉️ Email">
+                        <option>Relance post-RDV retraite TNS</option>
+                        <option>Email — envoi simulateur + relance douce</option>
+                        <option>Micro-relance après 3 NR</option>
                       </optgroup>
-                      <optgroup label="🏠 Immobilier">
-                        <option>Relance SCPI + guide PDF</option>
-                        <option>Suivi intérêt investissement</option>
+                      <optgroup label="💬 WhatsApp">
+                        <option>WhatsApp J+5 après envoi doc</option>
                       </optgroup>
-                      <optgroup label="💰 Défiscalisation">
-                        <option>Rappel fin d'année fiscale</option>
-                        <option>Partage infographie Girardin</option>
+                      <optgroup label="📞 Appel">
+                        <option>Appel relance après silence</option>
+                      </optgroup>
+                      <optgroup label="🔗 LinkedIn">
+                        <option>LinkedIn — message de valeur</option>
                       </optgroup>
                     </select>
                     <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: V.textLo, fontSize: '10px', pointerEvents: 'none' }}>▼</span>
@@ -666,6 +930,9 @@ export default function NurturingPage() {
 
                   {/* Textarea */}
                   <textarea
+                    value={messageText}
+                    onChange={(e) => setMessageText(e.target.value)}
+                    placeholder="Rédigez votre message ici ou sélectionnez un template..."
                     style={{
                       width: '100%',
                       minHeight: '90px',
@@ -677,14 +944,12 @@ export default function NurturingPage() {
                       fontSize: '12px',
                       fontFamily: 'inherit',
                       resize: 'vertical',
-                      lineHeight: 1.6,
+                      lineHeight: '1.6',
                       outline: 'none',
                     }}
-                    placeholder="Rédigez votre message ici ou sélectionnez un template..."
-                    defaultValue="Jean, c'est [votre_nom]. On s'est échangé lors de notre rendez-vous sur la retraite TNS. Je vous appelle parce que j'ai finalisé la simulation. Est-ce que vous avez 2 minutes ou je vous rappelle à un meilleur moment ?"
                   />
 
-                  {/* Library picker overlay */}
+                  {/* Library picker (simplified overlay) */}
                   {libraryOpen && (
                     <div
                       style={{
@@ -703,57 +968,57 @@ export default function NurturingPage() {
                         zIndex: 50,
                       }}
                     >
-                      <div style={{ fontSize: '11px', color: V.textMid, marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Bibliothèque de documents</div>
-                      {[
-                        { icon: '📊', name: 'Simulateur Retraite TNS', meta: 'PDF · email, whatsapp', tag: 'Retraite', tagColor: V.green },
-                        { icon: '📄', name: 'Guide SCPI 2026', meta: 'PDF · email, courrier', tag: 'Immobilier', tagColor: V.gold },
-                        { icon: '🖼️', name: 'Infographie Loi Girardin', meta: 'Image · email, linkedin', tag: 'Défiscalisation', tagColor: V.indigo },
-                        { icon: '📊', name: 'Comparatif Madelin/PER', meta: 'PDF · email', tag: 'Retraite', tagColor: V.green },
-                      ].map((doc, i) => (
-                        <div
-                          key={i}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '10px',
-                            padding: '8px 10px',
-                            borderRadius: '8px',
-                            cursor: 'pointer',
-                            transition: 'background 0.1s',
-                            marginBottom: '4px',
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.background = V.surface2
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.background = 'transparent'
-                          }}
-                        >
-                          <div style={{ fontSize: '18px', flexShrink: 0 }}>{doc.icon}</div>
-                          <div style={{ flex: 1 }}>
-                            <div style={{ fontSize: '12px', fontWeight: 500, color: V.textHi }}>{doc.name}</div>
-                            <div style={{ fontSize: '10px', color: V.textLo, marginTop: '2px' }}>{doc.meta}</div>
-                          </div>
-                          <span style={{ fontSize: '9px', padding: '2px 6px', borderRadius: '4px', background: `rgba(${doc.tagColor === V.green ? '76,175,80' : doc.tagColor === V.gold ? '232,200,120' : '129,140,248'},0.12)`, color: doc.tagColor }}>{doc.tag}</span>
+                      <div style={{ fontSize: '11px', color: V.textMid, marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        Bibliothèque de documents
+                      </div>
+                      {/* Document items */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 10px', borderRadius: '8px', cursor: 'pointer', marginBottom: '4px' }}>
+                        <div style={{ fontSize: '18px', flexShrink: 0 }}>📊</div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: '12px', fontWeight: 500, color: V.textHi }}>Simulateur Retraite TNS</div>
+                          <div style={{ fontSize: '10px', color: V.textLo, marginTop: '2px' }}>PDF · email, whatsapp</div>
                         </div>
-                      ))}
+                        <span style={{ fontSize: '9px', padding: '2px 6px', borderRadius: '4px', background: 'rgba(76,175,80,0.12)', color: V.green }}>Retraite</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 10px', borderRadius: '8px', cursor: 'pointer', marginBottom: '4px' }}>
+                        <div style={{ fontSize: '18px', flexShrink: 0 }}>📄</div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: '12px', fontWeight: 500, color: V.textHi }}>Guide SCPI 2026</div>
+                          <div style={{ fontSize: '10px', color: V.textLo, marginTop: '2px' }}>PDF · email, courrier</div>
+                        </div>
+                        <span style={{ fontSize: '9px', padding: '2px 6px', borderRadius: '4px', background: 'rgba(232,200,120,0.12)', color: V.gold }}>Immobilier</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 10px', borderRadius: '8px', cursor: 'pointer' }}>
+                        <div style={{ fontSize: '18px', flexShrink: 0 }}>🖼️</div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: '12px', fontWeight: 500, color: V.textHi }}>Infographie Loi Girardin</div>
+                          <div style={{ fontSize: '10px', color: V.textLo, marginTop: '2px' }}>Image · email, linkedin</div>
+                        </div>
+                        <span style={{ fontSize: '9px', padding: '2px 6px', borderRadius: '4px', background: 'rgba(129,140,248,0.12)', color: V.indigo }}>Défiscalisation</span>
+                      </div>
                     </div>
                   )}
 
                   {/* Footer */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px' }}>
                     <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                      <button style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', background: V.gold, color: V.bgDeep, fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>📞 Exécuter</button>
-                      <button style={{ padding: '5px 10px', borderRadius: '6px', border: `1px solid ${V.line}`, cursor: 'pointer', fontSize: '11px', fontFamily: 'inherit', color: V.text, background: 'transparent' }}>💾 Sauver template</button>
+                      <button style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', background: V.gold, color: V.bgDeep, fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>
+                        📞 Exécuter
+                      </button>
+                      <button style={{ padding: '5px 10px', fontSize: '11px', borderRadius: '6px', border: `1px solid ${V.line}`, background: 'transparent', color: V.text, cursor: 'pointer' }}>
+                        💾 Sauver template
+                      </button>
                       <button
                         onClick={() => setLibraryOpen(!libraryOpen)}
-                        style={{ padding: '5px 10px', borderRadius: '6px', border: `1px solid ${V.line}`, cursor: 'pointer', fontSize: '11px', fontFamily: 'inherit', color: V.text, background: 'transparent' }}
+                        style={{ padding: '5px 10px', fontSize: '11px', borderRadius: '6px', border: `1px solid ${V.line}`, background: 'transparent', color: V.text, cursor: 'pointer' }}
                       >
                         📄 Joindre document
                       </button>
                     </div>
                     <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                      <button style={{ padding: '5px 10px', borderRadius: '6px', border: `1px solid ${V.line}`, cursor: 'pointer', fontSize: '11px', fontFamily: 'inherit', color: V.text, background: 'transparent' }}>📅 Planifier</button>
+                      <button style={{ padding: '5px 10px', fontSize: '11px', borderRadius: '6px', border: `1px solid ${V.line}`, background: 'transparent', color: V.text, cursor: 'pointer' }}>
+                        📅 Planifier
+                      </button>
                       <span style={{ fontSize: '9px', color: V.textLo }}>ou ajouter à la séquence</span>
                     </div>
                   </div>
@@ -763,28 +1028,36 @@ export default function NurturingPage() {
                 <div style={{ marginBottom: '24px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                     <div style={{ fontSize: '13px', fontWeight: 600, color: V.textHi }}>📅 Prochaines actions planifiées</div>
-                    <button style={{ padding: '5px 10px', borderRadius: '6px', border: `1px solid ${V.line}`, cursor: 'pointer', fontSize: '11px', fontFamily: 'inherit', color: V.text, background: 'transparent' }}>+ Planifier</button>
+                    <button style={{ padding: '5px 10px', fontSize: '11px', borderRadius: '6px', border: `1px solid ${V.line}`, background: 'transparent', color: V.text, cursor: 'pointer' }}>
+                      + Planifier
+                    </button>
                   </div>
                   <div style={{ background: V.surface1, border: `1px solid ${V.line}`, borderRadius: '12px', padding: '14px' }}>
                     {[
-                      { date: 'Aujourd\'hui', action: '📞 Appel relance retraite TNS', urgent: true },
-                      { date: '20 juil.', action: '📄 Envoi Simulateur Retraite (PDF)' },
-                      { date: '24 juil.', action: '🔗 LinkedIn — partage article retraite' },
-                      { date: '28 juil.', action: '💬 WhatsApp — micro-relance' },
-                    ].map((item, i) => (
+                      { date: 'Aujourd\'hui', label: 'Appel relance retraite TNS', icon: '📞', urgent: true },
+                      { date: '20 juil.', label: 'Envoi Simulateur Retraite (PDF)', icon: '📄' },
+                      { date: '24 juil.', label: 'LinkedIn — partage article retraite', icon: '🔗' },
+                      { date: '28 juil.', label: 'WhatsApp — micro-relance', icon: '💬' },
+                    ].map((action, idx, arr) => (
                       <div
-                        key={i}
+                        key={idx}
                         style={{
                           display: 'flex',
                           alignItems: 'center',
                           gap: '10px',
                           padding: '8px 0',
-                          borderBottom: i < 3 ? `1px solid rgba(42,52,112,0.4)` : 'none',
+                          borderBottom: idx < arr.length - 1 ? '1px solid rgba(42,52,112,0.4)' : 'none',
                         }}
                       >
-                        <div style={{ fontSize: '11px', color: item.urgent ? V.hot : V.textMid, minWidth: '85px', fontWeight: item.urgent ? 600 : 500 }}>{item.date}</div>
-                        <div style={{ fontSize: '12px', color: V.textHi, flex: 1, display: 'flex', alignItems: 'center', gap: '6px' }}>{item.action}</div>
-                        <div style={{ fontSize: '10px', color: V.textLo, cursor: 'pointer', padding: '3px 8px', borderRadius: '4px', border: '1px solid transparent', transition: 'all 0.1s' }}>Modifier</div>
+                        <div style={{ fontSize: '11px', color: action.urgent ? V.hot : V.textMid, minWidth: '85px', fontWeight: action.urgent ? 600 : 500 }}>
+                          {action.date}
+                        </div>
+                        <div style={{ fontSize: '12px', color: V.textHi, flex: 1, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span>{action.icon}</span> {action.label}
+                        </div>
+                        <div style={{ fontSize: '10px', color: V.textLo, cursor: 'pointer', padding: '3px 8px', borderRadius: '4px', border: '1px solid transparent' }}>
+                          Modifier
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -792,75 +1065,72 @@ export default function NurturingPage() {
               </div>
             )}
 
-            {/* ═══ TAB: HISTORY ═══ */}
-            {detailTab === 'history' && (
+            {selectedContact && detailTab === 'history' && (
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                   <div style={{ fontSize: '13px', fontWeight: 600, color: V.textHi }}>Historique des interactions</div>
-                  <span style={{ fontSize: '10px', color: V.textLo }}>12 total</span>
+                  <span style={{ fontSize: '10px', color: V.textLo }}>{interactions.length} total</span>
                 </div>
 
                 {/* Channel stats */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px', marginBottom: '20px' }}>
-                  {[
-                    { icon: '📞', percent: '40%', ratio: '2/5 rép.', color: V.warn },
-                    { icon: '✉️', percent: '67%', ratio: '2/3 rép.', color: V.green, best: true },
-                    { icon: '💬', percent: '33%', ratio: '1/3 rép.', color: V.textMid },
-                    { icon: '🔗', percent: '0%', ratio: '0/1', color: V.textLo },
-                    { icon: '📱', percent: '—', ratio: 'jamais', color: V.textLo },
-                  ].map((ch, i) => (
-                    <div
-                      key={i}
-                      style={{
-                        background: ch.best ? 'rgba(232,200,120,0.06)' : V.surface1,
-                        border: ch.best ? '1px solid rgba(232,200,120,0.25)' : `1px solid ${V.line}`,
-                        borderRadius: '8px',
-                        padding: '10px',
-                        textAlign: 'center',
-                      }}
-                    >
-                      <div style={{ fontSize: '16px' }}>{ch.icon}</div>
-                      <div style={{ fontSize: '14px', fontWeight: 700, color: ch.color, marginTop: '4px' }}>{ch.percent}</div>
-                      <div style={{ fontSize: '9px', color: V.textLo }}>{ch.ratio}</div>
-                      {ch.best && <div style={{ fontSize: '8px', color: V.gold, fontWeight: 700, marginTop: '2px' }}>MEILLEUR</div>}
-                    </div>
-                  ))}
+                  <div style={{ background: V.surface1, border: `1px solid ${V.line}`, borderRadius: '8px', padding: '10px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '16px' }}>📞</div>
+                    <div style={{ fontSize: '14px', fontWeight: 700, color: V.warn, marginTop: '4px' }}>40%</div>
+                    <div style={{ fontSize: '9px', color: V.textLo }}>2/5 rép.</div>
+                  </div>
+                  <div style={{ background: 'rgba(232,200,120,0.06)', border: '1px solid rgba(232,200,120,0.25)', borderRadius: '8px', padding: '10px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '16px' }}>✉️</div>
+                    <div style={{ fontSize: '14px', fontWeight: 700, color: V.green, marginTop: '4px' }}>67%</div>
+                    <div style={{ fontSize: '9px', color: V.textLo }}>2/3 rép.</div>
+                    <div style={{ fontSize: '8px', color: V.gold, fontWeight: 700, marginTop: '2px' }}>MEILLEUR</div>
+                  </div>
+                  <div style={{ background: V.surface1, border: `1px solid ${V.line}`, borderRadius: '8px', padding: '10px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '16px' }}>💬</div>
+                    <div style={{ fontSize: '14px', fontWeight: 700, color: V.textMid, marginTop: '4px' }}>33%</div>
+                    <div style={{ fontSize: '9px', color: V.textLo }}>1/3 rép.</div>
+                  </div>
+                  <div style={{ background: V.surface1, border: `1px solid ${V.line}`, borderRadius: '8px', padding: '10px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '16px' }}>🔗</div>
+                    <div style={{ fontSize: '14px', fontWeight: 700, color: V.textLo, marginTop: '4px' }}>0%</div>
+                    <div style={{ fontSize: '9px', color: V.textLo }}>0/1</div>
+                  </div>
+                  <div style={{ background: V.surface1, border: `1px solid ${V.line}`, borderRadius: '8px', padding: '10px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '16px' }}>📱</div>
+                    <div style={{ fontSize: '14px', fontWeight: 700, color: V.textLo, marginTop: '4px' }}>—</div>
+                    <div style={{ fontSize: '9px', color: V.textLo }}>jamais</div>
+                  </div>
                 </div>
 
                 {/* Timeline */}
                 <div style={{ background: V.surface1, border: `1px solid ${V.line}`, borderRadius: '12px', padding: '14px' }}>
-                  {[
-                    { icon: '📞', channel: 'telephone', date: '12 juil. 26', note: 'Pas dispo cette semaine, rappeler lundi', status: '⏳', statusType: 'pending' },
-                    { icon: '✉️', channel: 'email', date: '08 juil. 26', note: 'Simulateur retraite envoyé — ouvert 2x', status: '👁️', statusType: 'seen' },
-                    { icon: '💬', channel: 'whatsapp', date: '03 juil. 26', note: '"OK on se rappelle la semaine prochaine"', status: '✅', statusType: 'replied' },
-                    { icon: '✉️', channel: 'email', date: '28 juin 26', note: '"Merci pour le document, je regarde ça"', status: '✅', statusType: 'replied' },
-                    { icon: '📞', channel: 'telephone', date: '25 juin 26', note: 'Messagerie laissée', status: '⏳', statusType: 'pending' },
-                    { icon: '📅', channel: 'rdv', date: '20 juin 26', note: 'RDV 1 — Bilan patrimonial, intérêt retraite TNS', status: '✅', statusType: 'replied' },
-                  ].map((h, i) => (
+                  {interactions.length === 0 && (
+                    <div style={{ padding: '20px', textAlign: 'center', color: V.textMid }}>Aucune interaction enregistrée</div>
+                  )}
+                  {interactions.map((interaction) => (
                     <div
-                      key={i}
+                      key={interaction.id}
                       style={{
                         display: 'flex',
                         alignItems: 'center',
                         gap: '10px',
                         padding: '8px 10px',
                         borderRadius: '8px',
-                        borderLeft: `3px solid ${h.statusType === 'replied' ? V.green : h.statusType === 'seen' ? V.gold : V.warn}`,
+                        borderLeft: `3px solid ${interaction.status === 'replied' ? V.green : interaction.status === 'seen' ? V.gold : V.warn}`,
                         marginBottom: '4px',
-                        transition: 'background 0.1s',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = 'rgba(232,200,120,0.03)'
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = 'transparent'
                       }}
                     >
-                      <span style={{ fontSize: '14px', flexShrink: 0 }}>{h.icon}</span>
-                      <span style={{ fontSize: '10px', color: V.textMid, minWidth: '65px' }}>{h.channel}</span>
-                      <span style={{ fontSize: '10px', color: V.textLo, minWidth: '75px' }}>{h.date}</span>
-                      <span style={{ fontSize: '10px', color: V.textLo, flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{h.note}</span>
-                      <span style={{ fontSize: '12px', flexShrink: 0 }}>{h.status}</span>
+                      <span style={{ fontSize: '14px', flexShrink: 0 }}>{interaction.icon}</span>
+                      <span style={{ fontSize: '10px', color: V.textMid, minWidth: '65px' }}>{interaction.channel}</span>
+                      <span style={{ fontSize: '10px', color: V.textLo, minWidth: '75px' }}>
+                        {new Date(interaction.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: '2-digit' })}
+                      </span>
+                      <span style={{ fontSize: '10px', color: V.textLo, flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {interaction.note}
+                      </span>
+                      <span style={{ fontSize: '12px', flexShrink: 0 }}>
+                        {interaction.status === 'replied' ? '✅' : interaction.status === 'seen' ? '👁️' : '⏳'}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -869,35 +1139,37 @@ export default function NurturingPage() {
                 <div style={{ marginTop: '16px' }}>
                   <div style={{ fontSize: '12px', fontWeight: 600, color: V.textHi, marginBottom: '8px' }}>Enregistrer une interaction</div>
                   <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                    {['📞 Appel fait', '✉️ Email envoyé', '💬 WhatsApp envoyé', '🔗 LinkedIn envoyé', '📅 RDV pris', '🚫 Refus'].map((action, i) => (
-                      <button
-                        key={i}
-                        style={{
-                          padding: '5px 10px',
-                          borderRadius: '6px',
-                          border: `1px solid ${action.includes('Refus') ? 'rgba(255,100,112,0.3)' : V.line}`,
-                          cursor: 'pointer',
-                          fontSize: '11px',
-                          fontFamily: 'inherit',
-                          color: action.includes('Refus') ? V.red : V.text,
-                          background: 'transparent',
-                        }}
-                      >
-                        {action}
-                      </button>
-                    ))}
+                    <button style={{ padding: '5px 10px', fontSize: '11px', borderRadius: '6px', border: `1px solid ${V.line}`, background: 'transparent', color: V.text, cursor: 'pointer' }}>
+                      📞 Appel fait
+                    </button>
+                    <button style={{ padding: '5px 10px', fontSize: '11px', borderRadius: '6px', border: `1px solid ${V.line}`, background: 'transparent', color: V.text, cursor: 'pointer' }}>
+                      ✉️ Email envoyé
+                    </button>
+                    <button style={{ padding: '5px 10px', fontSize: '11px', borderRadius: '6px', border: `1px solid ${V.line}`, background: 'transparent', color: V.text, cursor: 'pointer' }}>
+                      💬 WhatsApp envoyé
+                    </button>
+                    <button style={{ padding: '5px 10px', fontSize: '11px', borderRadius: '6px', border: `1px solid ${V.line}`, background: 'transparent', color: V.text, cursor: 'pointer' }}>
+                      🔗 LinkedIn envoyé
+                    </button>
+                    <button style={{ padding: '5px 10px', fontSize: '11px', borderRadius: '6px', border: `1px solid ${V.line}`, background: 'transparent', color: V.text, cursor: 'pointer' }}>
+                      📅 RDV pris
+                    </button>
+                    <button style={{ padding: '5px 10px', fontSize: '11px', borderRadius: '6px', border: '1px solid rgba(255,100,112,0.3)', background: 'transparent', color: V.red, cursor: 'pointer' }}>
+                      🚫 Refus
+                    </button>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* ═══ TAB: CONFIG ═══ */}
-            {detailTab === 'config' && (
+            {selectedContact && detailTab === 'config' && (
               <div>
-                <div style={{ background: V.surface1, border: '1px solid rgba(232,200,120,0.2)', borderRadius: '12px', padding: '18px', marginBottom: '20px' }}>
+                <div style={{ background: V.surface1, border: '1px solid rgba(232,200,120,0.2)', borderRadius: '12px', padding: '18px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
                     <div style={{ fontSize: '13px', fontWeight: 600, color: V.gold }}>Configuration nurturing — {selectedContact.name}</div>
-                    <button style={{ padding: '5px 12px', borderRadius: '6px', border: 'none', background: V.gold, color: V.bgDeep, fontSize: '11px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>💾 Sauvegarder</button>
+                    <button style={{ padding: '5px 10px', fontSize: '11px', borderRadius: '6px', border: 'none', background: V.gold, color: V.bgDeep, cursor: 'pointer', fontWeight: 600 }}>
+                      💾 Sauvegarder
+                    </button>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                     <div>
@@ -913,77 +1185,68 @@ export default function NurturingPage() {
                       <div style={{ fontSize: '10px', color: V.textMid, marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Fréquence de relance</div>
                       <select style={{ padding: '7px 10px', borderRadius: '8px', border: `1px solid ${V.line}`, background: V.surface2, color: V.text, fontSize: '12px', fontFamily: 'inherit', width: '100%', outline: 'none' }}>
                         <option>Hebdomadaire (7j)</option>
-                        <option>Bi-mensuel (14j)</option>
+                        <option selected>Bi-mensuel (14j)</option>
                         <option>Mensuel (30j)</option>
-                        <option>Personnalisé...</option>
                       </select>
                     </div>
                     <div>
                       <div style={{ fontSize: '10px', color: V.textMid, marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Créneau préféré</div>
                       <select style={{ padding: '7px 10px', borderRadius: '8px', border: `1px solid ${V.line}`, background: V.surface2, color: V.text, fontSize: '12px', fontFamily: 'inherit', width: '100%', outline: 'none' }}>
-                        <option>Matin (8h-12h)</option>
+                        <option selected>Matin (8h-12h)</option>
                         <option>Après-midi (14h-18h)</option>
                         <option>Soir (18h-20h)</option>
                       </select>
                     </div>
                     <div>
-                      <div style={{ fontSize: '10px', color: V.textMid, marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Pression max (relances/mois)</div>
+                      <div style={{ fontSize: '10px', color: V.textMid, marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Pression max</div>
                       <select style={{ padding: '7px 10px', borderRadius: '8px', border: `1px solid ${V.line}`, background: V.surface2, color: V.text, fontSize: '12px', fontFamily: 'inherit', width: '100%', outline: 'none' }}>
                         <option>2 par mois</option>
-                        <option>4 par mois</option>
+                        <option selected>4 par mois</option>
                         <option>6 par mois</option>
-                        <option>Illimité</option>
                       </select>
                     </div>
                     <div style={{ gridColumn: '1/-1' }}>
                       <div style={{ fontSize: '10px', color: V.textMid, marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Canaux exclus</div>
                       <div style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>
-                        {['📞', '✉️', '💬', '🔗', '📬', '📱'].map((ch, i) => (
-                          <button
-                            key={i}
-                            style={{
-                              padding: '5px 10px',
-                              borderRadius: '6px',
-                              border: `1px solid ${i === 4 ? 'rgba(255,100,112,0.3)' : V.line}`,
-                              cursor: 'pointer',
-                              fontSize: '11px',
-                              fontFamily: 'inherit',
-                              color: i === 4 ? V.red : V.text,
-                              background: 'transparent',
-                              textDecoration: i === 4 ? 'line-through' : 'none',
-                            }}
-                          >
-                            {ch}
-                          </button>
-                        ))}
+                        <button style={{ padding: '5px 10px', fontSize: '11px', borderRadius: '6px', border: `1px solid ${V.line}`, background: 'transparent', color: V.text, cursor: 'pointer' }}>📞</button>
+                        <button style={{ padding: '5px 10px', fontSize: '11px', borderRadius: '6px', border: `1px solid ${V.line}`, background: 'transparent', color: V.text, cursor: 'pointer' }}>✉️</button>
+                        <button style={{ padding: '5px 10px', fontSize: '11px', borderRadius: '6px', border: `1px solid ${V.line}`, background: 'transparent', color: V.text, cursor: 'pointer' }}>💬</button>
+                        <button style={{ padding: '5px 10px', fontSize: '11px', borderRadius: '6px', border: `1px solid ${V.line}`, background: 'transparent', color: V.text, cursor: 'pointer' }}>🔗</button>
+                        <button style={{ padding: '5px 10px', fontSize: '11px', borderRadius: '6px', border: '1px solid rgba(255,100,112,0.3)', background: 'transparent', color: V.red, cursor: 'pointer', textDecoration: 'line-through' }}>📬</button>
+                        <button style={{ padding: '5px 10px', fontSize: '11px', borderRadius: '6px', border: `1px solid ${V.line}`, background: 'transparent', color: V.text, cursor: 'pointer' }}>📱</button>
                       </div>
                     </div>
                     <div style={{ gridColumn: '1/-1' }}>
-                      <div style={{ fontSize: '10px', color: V.textMid, marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Thèmes / Besoins identifiés</div>
+                      <div style={{ fontSize: '10px', color: V.textMid, marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Thèmes identifiés</div>
                       <div style={{ display: 'flex', gap: '6px', marginTop: '4px', flexWrap: 'wrap' }}>
-                        <span style={{ padding: '5px 10px', borderRadius: '6px', background: 'rgba(52,211,153,0.12)', color: V.green, fontSize: '11px', fontWeight: 600, border: '1px solid rgba(52,211,153,0.2)' }}>📊 Retraite TNS</span>
-                        <span style={{ padding: '5px 10px', borderRadius: '6px', background: 'rgba(167,139,250,0.12)', color: V.purple, fontSize: '11px', fontWeight: 600, border: '1px solid rgba(167,139,250,0.2)' }}>🛡️ Prévoyance</span>
-                        <button style={{ padding: '5px 10px', borderRadius: '6px', border: `1px solid ${V.line}`, cursor: 'pointer', fontSize: '10px', fontFamily: 'inherit', color: V.text, background: 'transparent' }}>+ Ajouter thème</button>
+                        <span style={{ padding: '5px 10px', borderRadius: '6px', background: 'rgba(76,175,80,0.12)', color: V.green, fontSize: '11px', fontWeight: 600, border: '1px solid rgba(76,175,80,0.2)' }}>
+                          📊 Retraite TNS
+                        </span>
+                        <span style={{ padding: '5px 10px', borderRadius: '6px', background: 'rgba(167,139,250,0.12)', color: V.purple, fontSize: '11px', fontWeight: 600, border: '1px solid rgba(167,139,250,0.2)' }}>
+                          🛡️ Prévoyance
+                        </span>
+                        <button style={{ padding: '5px 10px', fontSize: '10px', borderRadius: '6px', border: `1px solid ${V.line}`, background: 'transparent', color: V.text, cursor: 'pointer' }}>+ Ajouter</button>
                       </div>
                     </div>
                     <div style={{ gridColumn: '1/-1' }}>
                       <div style={{ fontSize: '10px', color: V.textMid, marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Notes personnelles</div>
                       <textarea
+                        defaultValue={selectedContact.notes}
                         style={{
                           width: '100%',
                           minHeight: '60px',
-                          padding: '8px 12px',
-                          borderRadius: '8px',
+                          padding: '12px 14px',
+                          borderRadius: '10px',
                           border: `1px solid ${V.line}`,
-                          background: V.surface2,
+                          background: V.surface1,
                           color: V.textHi,
                           fontSize: '12px',
                           fontFamily: 'inherit',
                           resize: 'vertical',
+                          lineHeight: '1.6',
                           outline: 'none',
                           marginTop: '4px',
                         }}
-                        defaultValue="Aime le golf, enfants en études sup, sensible défiscalisation. Préfère qu'on l'appelle le matin. Ne pas envoyer de courrier postal."
                       />
                     </div>
                   </div>
