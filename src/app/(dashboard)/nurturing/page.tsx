@@ -218,6 +218,8 @@ export default function NurturingPage() {
   const [sending, setSending] = useState(false)
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null)
   const [uploadOpen, setUploadOpen] = useState(false)
+  const [newContactOpen, setNewContactOpen] = useState(false)
+  const [newContact, setNewContact] = useState({ full_name: '', email: '', phone: '', profession: '', company: '', city: '', linkedin_url: '', notes: '', nurturing_category: 'prospect_froid', preferred_channel: 'email', contact_frequency_days: 14, next_action_channel: 'email', source: 'autre' as string })
   const [filterTemp, setFilterTemp] = useState<TempCategory | 'all'>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [attachedDoc, setAttachedDoc] = useState<NurturingDoc | null>(null)
@@ -230,7 +232,11 @@ export default function NurturingPage() {
 
   useEffect(() => {
     saveLastSection('/nurturing')
-    loadContacts()
+    loadContacts().then(count => {
+      if (count === 0) {
+        fetch('/api/nurturing/seed', { method: 'POST' }).then(() => loadContacts())
+      }
+    })
     loadMessages()
 
     const scheduledInterval = setInterval(checkScheduledMessages, 30000)
@@ -249,12 +255,12 @@ export default function NurturingPage() {
   }
 
   // ─── DATA LOADING ────────────────────────────────────────────────────────────
-  async function loadContacts() {
+  async function loadContacts(): Promise<number> {
     setLoading(true)
     try {
       const res = await fetch('/api/nurturing/contacts')
       const json = await res.json()
-      if (!json.data) { setLoading(false); return }
+      if (!json.data) { setLoading(false); return 0 }
 
       const contactList: Contact[] = json.data.map((p: any) => {
         const lastContactDays = p.last_contact_at
@@ -299,10 +305,13 @@ export default function NurturingPage() {
       })
 
       setContacts(contactList)
+      setLoading(false)
+      return contactList.length
     } catch (e) {
       console.error('loadContacts error:', e)
     }
     setLoading(false)
+    return 0
   }
 
   async function loadMessages() {
@@ -616,16 +625,7 @@ export default function NurturingPage() {
             Today <strong>{contacts.filter(c => c.urgent).length}</strong>
           </span>
           <button
-            onClick={async () => {
-              const res = await fetch('/api/nurturing/seed', { method: 'POST' })
-              const json = await res.json()
-              if (res.ok) {
-                showToast(`${json.data.prospects} prospects créés`)
-                loadContacts()
-              } else {
-                showToast('Erreur seed', 'error')
-              }
-            }}
+            onClick={() => setNewContactOpen(true)}
             style={{ padding: '5px 10px', borderRadius: '6px', border: '1px solid rgba(232,200,120,0.25)', cursor: 'pointer', fontSize: '11px', fontFamily: 'inherit', color: V.text, background: 'transparent' }}
           >
             + Nouveau contact
@@ -658,6 +658,154 @@ export default function NurturingPage() {
             <button onClick={() => setUploadOpen(false)} style={{ marginTop: '12px', padding: '6px 14px', borderRadius: '6px', border: `1px solid ${V.line}`, background: 'transparent', color: V.text, fontSize: '12px', cursor: 'pointer' }}>
               Annuler
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Nouveau Contact */}
+      {newContactOpen && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setNewContactOpen(false)}>
+          <div style={{ background: V.bgMid, border: `1px solid ${V.line}`, borderRadius: '16px', padding: '28px', width: '560px', maxWidth: '90vw', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ fontSize: '18px', color: V.textHi, marginBottom: '6px', fontFamily: 'Oswald, sans-serif', letterSpacing: '0.5px' }}>Nouveau contact nurturing</h3>
+            <p style={{ fontSize: '11px', color: V.textMid, marginBottom: '20px' }}>Remplissez les informations du prospect. Il apparaîtra dans votre liste nurturing.</p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              {/* Identité */}
+              <div style={{ fontSize: '10px', fontWeight: 700, color: V.gold, textTransform: 'uppercase', letterSpacing: '1px' }}>Identité</div>
+              <div>
+                <label style={{ fontSize: '11px', color: V.textMid, display: 'block', marginBottom: '4px' }}>Nom complet *</label>
+                <input value={newContact.full_name} onChange={e => setNewContact(p => ({ ...p, full_name: e.target.value }))} placeholder="Ex: Jean Dupont" style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: `1px solid ${V.line}`, background: V.surface2, color: V.textHi, fontSize: '13px', fontFamily: 'inherit', outline: 'none' }} />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '11px', color: V.textMid, display: 'block', marginBottom: '4px' }}>Téléphone</label>
+                  <input value={newContact.phone} onChange={e => setNewContact(p => ({ ...p, phone: e.target.value }))} placeholder="06 12 34 56 78" style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: `1px solid ${V.line}`, background: V.surface2, color: V.textHi, fontSize: '13px', fontFamily: 'inherit', outline: 'none' }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: '11px', color: V.textMid, display: 'block', marginBottom: '4px' }}>Email</label>
+                  <input value={newContact.email} onChange={e => setNewContact(p => ({ ...p, email: e.target.value }))} placeholder="jean@exemple.fr" style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: `1px solid ${V.line}`, background: V.surface2, color: V.textHi, fontSize: '13px', fontFamily: 'inherit', outline: 'none' }} />
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '11px', color: V.textMid, display: 'block', marginBottom: '4px' }}>Profession</label>
+                  <input value={newContact.profession} onChange={e => setNewContact(p => ({ ...p, profession: e.target.value }))} placeholder="Dentiste, Pharmacien, Avocat..." style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: `1px solid ${V.line}`, background: V.surface2, color: V.textHi, fontSize: '13px', fontFamily: 'inherit', outline: 'none' }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: '11px', color: V.textMid, display: 'block', marginBottom: '4px' }}>Entreprise / Cabinet</label>
+                  <input value={newContact.company} onChange={e => setNewContact(p => ({ ...p, company: e.target.value }))} placeholder="Cabinet Dupont & Associés" style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: `1px solid ${V.line}`, background: V.surface2, color: V.textHi, fontSize: '13px', fontFamily: 'inherit', outline: 'none' }} />
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '11px', color: V.textMid, display: 'block', marginBottom: '4px' }}>Ville</label>
+                  <input value={newContact.city} onChange={e => setNewContact(p => ({ ...p, city: e.target.value }))} placeholder="Paris, Lyon, Marseille..." style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: `1px solid ${V.line}`, background: V.surface2, color: V.textHi, fontSize: '13px', fontFamily: 'inherit', outline: 'none' }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: '11px', color: V.textMid, display: 'block', marginBottom: '4px' }}>Profil LinkedIn</label>
+                  <input value={newContact.linkedin_url} onChange={e => setNewContact(p => ({ ...p, linkedin_url: e.target.value }))} placeholder="https://linkedin.com/in/..." style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: `1px solid ${V.line}`, background: V.surface2, color: V.textHi, fontSize: '13px', fontFamily: 'inherit', outline: 'none' }} />
+                </div>
+              </div>
+
+              {/* Nurturing config */}
+              <div style={{ fontSize: '10px', fontWeight: 700, color: V.gold, textTransform: 'uppercase', letterSpacing: '1px', marginTop: '6px' }}>Configuration nurturing</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '11px', color: V.textMid, display: 'block', marginBottom: '4px' }}>Catégorie</label>
+                  <select value={newContact.nurturing_category} onChange={e => setNewContact(p => ({ ...p, nurturing_category: e.target.value }))} style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: `1px solid ${V.line}`, background: V.surface2, color: V.textHi, fontSize: '13px', fontFamily: 'inherit', outline: 'none' }}>
+                    <option value="prospect_froid">Prospect froid</option>
+                    <option value="prospect_tiede">Prospect tiède</option>
+                    <option value="rdv_fait">RDV fait</option>
+                    <option value="client_existant">Client existant</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: '11px', color: V.textMid, display: 'block', marginBottom: '4px' }}>Source</label>
+                  <select value={newContact.source} onChange={e => setNewContact(p => ({ ...p, source: e.target.value }))} style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: `1px solid ${V.line}`, background: V.surface2, color: V.textHi, fontSize: '13px', fontFamily: 'inherit', outline: 'none' }}>
+                    <option value="autre">Autre</option>
+                    <option value="recommandation">Recommandation</option>
+                    <option value="linkedin">LinkedIn</option>
+                    <option value="tns">TNS (prospection)</option>
+                    <option value="chefs_entreprise">Chefs d&apos;entreprise</option>
+                    <option value="particuliers">Particuliers</option>
+                  </select>
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '11px', color: V.textMid, display: 'block', marginBottom: '4px' }}>Canal préféré</label>
+                  <select value={newContact.preferred_channel} onChange={e => setNewContact(p => ({ ...p, preferred_channel: e.target.value }))} style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: `1px solid ${V.line}`, background: V.surface2, color: V.textHi, fontSize: '13px', fontFamily: 'inherit', outline: 'none' }}>
+                    <option value="email">Email</option>
+                    <option value="whatsapp">WhatsApp</option>
+                    <option value="telephone">Téléphone</option>
+                    <option value="linkedin">LinkedIn</option>
+                    <option value="sms">SMS</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: '11px', color: V.textMid, display: 'block', marginBottom: '4px' }}>Prochaine action via</label>
+                  <select value={newContact.next_action_channel} onChange={e => setNewContact(p => ({ ...p, next_action_channel: e.target.value }))} style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: `1px solid ${V.line}`, background: V.surface2, color: V.textHi, fontSize: '13px', fontFamily: 'inherit', outline: 'none' }}>
+                    <option value="email">Email</option>
+                    <option value="whatsapp">WhatsApp</option>
+                    <option value="telephone">Téléphone</option>
+                    <option value="linkedin">LinkedIn</option>
+                    <option value="sms">SMS</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: '11px', color: V.textMid, display: 'block', marginBottom: '4px' }}>Fréquence (jours)</label>
+                  <input type="number" min={1} max={90} value={newContact.contact_frequency_days} onChange={e => setNewContact(p => ({ ...p, contact_frequency_days: parseInt(e.target.value) || 14 }))} style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: `1px solid ${V.line}`, background: V.surface2, color: V.textHi, fontSize: '13px', fontFamily: 'inherit', outline: 'none' }} />
+                </div>
+              </div>
+
+              {/* Notes */}
+              <div style={{ fontSize: '10px', fontWeight: 700, color: V.gold, textTransform: 'uppercase', letterSpacing: '1px', marginTop: '6px' }}>Notes</div>
+              <div>
+                <textarea value={newContact.notes} onChange={e => setNewContact(p => ({ ...p, notes: e.target.value }))} placeholder="Contexte de rencontre, besoins détectés, points d'attention..." rows={3} style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: `1px solid ${V.line}`, background: V.surface2, color: V.textHi, fontSize: '12px', fontFamily: 'inherit', outline: 'none', resize: 'vertical' }} />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', marginTop: '20px', justifyContent: 'flex-end' }}>
+              <button onClick={() => setNewContactOpen(false)} style={{ padding: '8px 16px', borderRadius: '8px', border: `1px solid ${V.line}`, background: 'transparent', color: V.text, fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit' }}>
+                Annuler
+              </button>
+              <button
+                disabled={!newContact.full_name.trim()}
+                onClick={async () => {
+                  const res = await fetch('/api/nurturing/contacts', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      full_name: newContact.full_name,
+                      email: newContact.email || null,
+                      phone: newContact.phone || null,
+                      profession: newContact.profession || null,
+                      company: newContact.company || null,
+                      city: newContact.city || null,
+                      linkedin_url: newContact.linkedin_url || null,
+                      notes: newContact.notes || null,
+                      nurturing_category: newContact.nurturing_category,
+                      source: newContact.source,
+                      preferred_channel: newContact.preferred_channel,
+                      contact_frequency_days: newContact.contact_frequency_days,
+                      next_action_channel: newContact.next_action_channel,
+                    }),
+                  })
+                  if (res.ok) {
+                    showToast('Contact créé — il apparaît dans la liste')
+                    setNewContactOpen(false)
+                    setNewContact({ full_name: '', email: '', phone: '', profession: '', company: '', city: '', linkedin_url: '', notes: '', nurturing_category: 'prospect_froid', preferred_channel: 'email', contact_frequency_days: 14, next_action_channel: 'email', source: 'autre' })
+                    loadContacts()
+                  } else {
+                    const json = await res.json()
+                    showToast(json.error || 'Erreur création', 'error')
+                  }
+                }}
+                style={{ padding: '8px 20px', borderRadius: '8px', border: 'none', background: !newContact.full_name.trim() ? V.surface3 : 'linear-gradient(135deg, #e8c878, #d4a020)', color: !newContact.full_name.trim() ? V.textLo : '#0a0e22', fontSize: '12px', fontWeight: 600, cursor: newContact.full_name.trim() ? 'pointer' : 'not-allowed', fontFamily: 'inherit' }}
+              >
+                Enregistrer le contact
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -862,6 +1010,82 @@ export default function NurturingPage() {
                   </div>
                 </div>
 
+                {/* CONSEIL CANAL */}
+                {selectedContact.touchpoints > 0 && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', borderRadius: '10px', background: 'rgba(232,200,120,0.05)', border: '1px solid rgba(232,200,120,0.18)', marginBottom: '16px' }}>
+                    <span style={{ fontSize: '16px' }}>💡</span>
+                    <div style={{ fontSize: '11px', color: V.textMid }}>
+                      Canal le plus efficace : <strong style={{ color: V.textHi }}>✉️ email</strong> (67% réponses).
+                      {selectedContact.no_responses > 2 && <span> {selectedContact.no_responses} relances sans réponse — envisager un changement de canal.</span>}
+                    </div>
+                  </div>
+                )}
+
+                {/* SÉQUENCE ACTIVE */}
+                <div style={{ background: V.surface1, border: `1px solid ${V.line}`, borderRadius: '12px', padding: '14px', marginBottom: '16px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '10px', padding: '3px 8px', borderRadius: '6px', background: 'rgba(76,175,80,0.12)', color: V.green, fontWeight: 600 }}>▶ Séquence active</span>
+                      <span style={{ fontSize: '10px', color: V.textLo }}>En cours · Étape 3/5</span>
+                    </div>
+                    <button style={{ padding: '4px 8px', fontSize: '10px', borderRadius: '5px', border: `1px solid ${V.line}`, background: 'transparent', color: V.textMid, cursor: 'pointer' }}>Modifier séquence</button>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {/* Étape 1 - done */}
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '8px 10px', borderRadius: '8px', borderLeft: `3px solid ${V.green}`, opacity: 0.7 }}>
+                      <span style={{ fontSize: '14px' }}>✉️</span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '11px', fontWeight: 600, color: V.textHi }}>Email de suivi post-RDV</div>
+                        <div style={{ fontSize: '10px', color: V.textLo, marginTop: '2px' }}>28 juin · Envoyé ✅</div>
+                        <div style={{ fontSize: '10px', color: V.textMid, fontStyle: 'italic', marginTop: '3px' }}>&quot;Jean, comme convenu voici le récapitulatif de notre échange sur votre retraite TNS...&quot;</div>
+                      </div>
+                    </div>
+                    {/* Étape 2 - replied */}
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '8px 10px', borderRadius: '8px', borderLeft: `3px solid ${V.green}`, opacity: 0.7 }}>
+                      <span style={{ fontSize: '14px' }}>💬</span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '11px', fontWeight: 600, color: V.textHi }}>WhatsApp J+5</div>
+                        <div style={{ fontSize: '10px', color: V.textLo, marginTop: '2px' }}>3 juil · Répondu ✅</div>
+                        <div style={{ fontSize: '10px', color: V.textMid, fontStyle: 'italic', marginTop: '3px' }}>&quot;Jean, je reviens vers vous — avez-vous pu consulter le document ?&quot;</div>
+                      </div>
+                    </div>
+                    {/* Étape 3 - current */}
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '10px 12px', borderRadius: '8px', borderLeft: `3px solid ${V.gold}`, background: 'rgba(232,200,120,0.05)' }}>
+                      <span style={{ fontSize: '14px' }}>📞</span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '11px', fontWeight: 600, color: V.textHi }}>Appel de relance</div>
+                        <div style={{ fontSize: '10px', color: V.hot, fontWeight: 600, marginTop: '2px' }}>Aujourd&apos;hui</div>
+                        <div style={{ fontSize: '10px', color: V.textMid, fontStyle: 'italic', marginTop: '3px' }}>&quot;Jean, c&apos;est [nom]. On s&apos;est échangé sur la retraite TNS. J&apos;ai finalisé la simulation...&quot;</div>
+                        <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
+                          <button style={{ padding: '4px 10px', fontSize: '10px', borderRadius: '5px', border: 'none', background: V.gold, color: V.bgDeep, fontWeight: 600, cursor: 'pointer' }}>📞 Exécuter maintenant</button>
+                          <button style={{ padding: '4px 10px', fontSize: '10px', borderRadius: '5px', border: `1px solid ${V.line}`, background: 'transparent', color: V.textMid, cursor: 'pointer' }}>Reporter +2j</button>
+                          <button style={{ padding: '4px 10px', fontSize: '10px', borderRadius: '5px', border: `1px solid ${V.line}`, background: 'transparent', color: V.textMid, cursor: 'pointer' }}>Changer canal</button>
+                        </div>
+                      </div>
+                    </div>
+                    {/* Étape 4 - upcoming */}
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '8px 10px', borderRadius: '8px', borderLeft: `3px solid ${V.line}`, opacity: 0.5 }}>
+                      <span style={{ fontSize: '14px' }}>📄</span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '11px', fontWeight: 600, color: V.textHi }}>Envoi document (Simulateur Retraite)</div>
+                        <div style={{ fontSize: '10px', color: V.textLo, marginTop: '2px' }}>dans 3j</div>
+                        <div style={{ fontSize: '10px', color: V.textMid, marginTop: '3px' }}>Joint : Simulateur Retraite TNS (PDF)</div>
+                      </div>
+                    </div>
+                    {/* Étape 5 - upcoming */}
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '8px 10px', borderRadius: '8px', borderLeft: `3px solid ${V.line}`, opacity: 0.5 }}>
+                      <span style={{ fontSize: '14px' }}>🔗</span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '11px', fontWeight: 600, color: V.textHi }}>LinkedIn — message de valeur</div>
+                        <div style={{ fontSize: '10px', color: V.textLo, marginTop: '2px' }}>dans 7j</div>
+                        <div style={{ fontSize: '10px', color: V.textMid, marginTop: '3px' }}>Partager article pertinent + mention personnalisée</div>
+                      </div>
+                    </div>
+                  </div>
+                  <button style={{ marginTop: '10px', padding: '5px 10px', fontSize: '10px', borderRadius: '6px', border: `1px dashed ${V.line}`, background: 'transparent', color: V.textLo, cursor: 'pointer', width: '100%' }}>+ Ajouter une étape à la séquence</button>
+                </div>
+
                 {/* QUICK COMPOSE */}
                 <div style={{ position: 'relative', background: 'rgba(232,200,120,0.04)', border: '1px solid rgba(232,200,120,0.18)', borderRadius: '14px', padding: '18px', marginBottom: '20px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
@@ -1062,6 +1286,40 @@ export default function NurturingPage() {
                       </div>
                     </div>
                   )}
+                </div>
+
+                {/* PROCHAINES ACTIONS PLANIFIÉES */}
+                <div style={{ background: V.surface1, border: `1px solid ${V.line}`, borderRadius: '12px', padding: '14px', marginBottom: '20px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                    <div style={{ fontSize: '11px', fontWeight: 600, color: V.textHi, textTransform: 'uppercase', letterSpacing: '0.5px' }}>📅 Prochaines actions planifiées</div>
+                    <button style={{ padding: '3px 8px', fontSize: '10px', borderRadius: '5px', border: `1px solid ${V.line}`, background: 'transparent', color: V.textMid, cursor: 'pointer' }}>+ Planifier</button>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 10px', borderRadius: '6px', background: 'rgba(255,68,68,0.05)', border: '1px solid rgba(255,68,68,0.15)' }}>
+                      <span style={{ fontSize: '10px', color: V.hot, fontWeight: 600, minWidth: '70px' }}>Aujourd&apos;hui</span>
+                      <span style={{ fontSize: '13px' }}>📞</span>
+                      <span style={{ fontSize: '11px', color: V.textHi, flex: 1 }}>Appel relance retraite TNS</span>
+                      <button style={{ padding: '2px 6px', fontSize: '9px', borderRadius: '4px', border: `1px solid ${V.line}`, background: 'transparent', color: V.textLo, cursor: 'pointer' }}>Modifier</button>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 10px', borderRadius: '6px' }}>
+                      <span style={{ fontSize: '10px', color: V.textLo, minWidth: '70px' }}>20 juil.</span>
+                      <span style={{ fontSize: '13px' }}>📄</span>
+                      <span style={{ fontSize: '11px', color: V.textHi, flex: 1 }}>Envoi Simulateur Retraite (PDF)</span>
+                      <button style={{ padding: '2px 6px', fontSize: '9px', borderRadius: '4px', border: `1px solid ${V.line}`, background: 'transparent', color: V.textLo, cursor: 'pointer' }}>Modifier</button>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 10px', borderRadius: '6px' }}>
+                      <span style={{ fontSize: '10px', color: V.textLo, minWidth: '70px' }}>24 juil.</span>
+                      <span style={{ fontSize: '13px' }}>🔗</span>
+                      <span style={{ fontSize: '11px', color: V.textHi, flex: 1 }}>LinkedIn — partage article retraite</span>
+                      <button style={{ padding: '2px 6px', fontSize: '9px', borderRadius: '4px', border: `1px solid ${V.line}`, background: 'transparent', color: V.textLo, cursor: 'pointer' }}>Modifier</button>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 10px', borderRadius: '6px' }}>
+                      <span style={{ fontSize: '10px', color: V.textLo, minWidth: '70px' }}>28 juil.</span>
+                      <span style={{ fontSize: '13px' }}>💬</span>
+                      <span style={{ fontSize: '11px', color: V.textHi, flex: 1 }}>WhatsApp — micro-relance</span>
+                      <button style={{ padding: '2px 6px', fontSize: '9px', borderRadius: '4px', border: `1px solid ${V.line}`, background: 'transparent', color: V.textLo, cursor: 'pointer' }}>Modifier</button>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Documents envoyés */}
