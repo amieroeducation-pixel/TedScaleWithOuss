@@ -616,6 +616,21 @@ export default function NurturingPage() {
             Today <strong>{contacts.filter(c => c.urgent).length}</strong>
           </span>
           <button
+            onClick={async () => {
+              const res = await fetch('/api/nurturing/seed', { method: 'POST' })
+              const json = await res.json()
+              if (res.ok) {
+                showToast(`${json.data.prospects} prospects créés`)
+                loadContacts()
+              } else {
+                showToast('Erreur seed', 'error')
+              }
+            }}
+            style={{ padding: '5px 10px', borderRadius: '6px', border: '1px solid rgba(232,200,120,0.25)', cursor: 'pointer', fontSize: '11px', fontFamily: 'inherit', color: V.text, background: 'transparent' }}
+          >
+            + Nouveau contact
+          </button>
+          <button
             onClick={() => setUploadOpen(true)}
             style={{ padding: '5px 10px', borderRadius: '6px', border: '1px solid rgba(232,200,120,0.25)', cursor: 'pointer', fontSize: '11px', fontFamily: 'inherit', color: V.text, background: 'transparent' }}
           >
