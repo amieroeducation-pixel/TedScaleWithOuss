@@ -73,6 +73,7 @@ export default function DashboardLayout({
   const router = useRouter()
   const [search, setSearch] = useState('')
   const [recentCount, setRecentCount] = useState<number>(0)
+  const [sidebarOpen, setSidebarOpen] = useState(true)
 
   useEffect(() => {
     fetch('/api/achievements')
@@ -146,11 +147,12 @@ export default function DashboardLayout({
           flexDirection: 'column',
           flexShrink: 0,
           position: 'fixed',
-          left: 0,
+          left: sidebarOpen ? 0 : -185,
           top: 0,
           height: '100vh',
           zIndex: 10,
           overflowY: 'auto',
+          transition: 'left 0.2s ease',
         }}>
 
           {/* Prismatic ribbon top */}
@@ -348,6 +350,31 @@ export default function DashboardLayout({
           </div>
         </aside>
 
+        {/* Sidebar toggle button */}
+        <button
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+          style={{
+            position: 'fixed',
+            left: sidebarOpen ? 188 : 6,
+            top: 12,
+            zIndex: 100,
+            width: 24,
+            height: 24,
+            borderRadius: 6,
+            border: '1px solid #3a4690',
+            background: 'rgba(17,22,58,0.95)',
+            color: '#8ea0d9',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 12,
+            transition: 'left 0.2s ease',
+          }}
+        >
+          {sidebarOpen ? '◀' : '▶'}
+        </button>
+
         {/* MAIN */}
         <main style={{
           flex: 1,
@@ -356,7 +383,8 @@ export default function DashboardLayout({
           minWidth: 0,
           position: 'relative',
           zIndex: 1,
-          marginLeft: 185,
+          marginLeft: sidebarOpen ? 185 : 0,
+          transition: 'margin-left 0.2s ease',
         }}>
 
           {/* Prismatic ribbon at very top */}

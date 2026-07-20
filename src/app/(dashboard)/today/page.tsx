@@ -1587,18 +1587,6 @@ function TodayPageContent() {
           </div>
         </div>
       )}
-
-      {/* Footer liens transversaux */}
-      <div style={{ marginTop: 24, paddingTop: 16, borderTop: `1px solid ${C.line}` }}>
-        <div style={{ fontSize: 9, color: C.textLo, marginBottom: 10, fontWeight: 600 }}>NAVIGATION RAPIDE</div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <LinkButton href="/crm" label="CRM Kanban" color="gold" />
-          <LinkButton href="/pipeline" label="Pipeline" color="indigo" />
-          <LinkButton href="/revenue" label="Revenue" color="gold" />
-          <LinkButton href="/analytics" label="Analytics" color="green" />
-          <LinkButton href="/global" label="Vue globale" color="indigo" />
-        </div>
-      </div>
     </div>
   )
 }

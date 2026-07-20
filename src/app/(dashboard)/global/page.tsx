@@ -950,20 +950,6 @@ export default function GlobalPage() {
 
       {/* ─── SUIVI ─── */}
       {tab === 'suivi' && <SuiviTabContent />}
-
-      {/* Footer liens transversaux */}
-      <div style={{ marginTop: 24, paddingTop: 16, borderTop: `1px solid ${C.line}` }}>
-        <div style={{ fontSize: 9, color: C.textLo, marginBottom: 10, fontWeight: 600 }}>NAVIGATION RAPIDE</div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <LinkButton href="/today" label="Aujourd'hui" color="cyan" />
-          <LinkButton href="/revenue" label="Revenue" color="gold" />
-          <LinkButton href="/pipeline" label="Pipeline" color="indigo" />
-          <LinkButton href="/analytics" label="Analytics" color="green" />
-          <LinkButton href="/crm" label="CRM" color="gold" />
-          <LinkButton href="/donnees" label="Données" color="indigo" />
-          <LinkButton href="/scoring" label="Scoring" color="purple" />
-        </div>
-      </div>
     </div>
   )
 }
