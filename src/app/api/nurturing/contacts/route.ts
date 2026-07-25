@@ -16,13 +16,27 @@ export async function GET() {
 
   if (error) return apiError(error.message)
 
-  const enriched = await Promise.all((data || []).map(async (p) => {
-    const { data: themes } = await supabase
-      .from('nurturing_themes')
-      .select('id, name, color, icon')
-      .eq('user_id', user.id)
+  const prospectIds = (data || []).map(p => p.id)
 
-    return { ...p, themes: themes || [] }
+  let themesMap: Record<string, Array<{ id: string; name: string; color: string; icon: string }>> = {}
+
+  if (prospectIds.length > 0) {
+    const { data: pivotRows } = await supabase
+      .from('prospect_themes')
+      .select('prospect_id, nurturing_themes(id, name, color, icon)')
+      .in('prospect_id', prospectIds)
+
+    for (const row of (pivotRows || []) as any[]) {
+      const pid = row.prospect_id as string
+      const theme = row.nurturing_themes
+      if (!themesMap[pid]) themesMap[pid] = []
+      if (theme) themesMap[pid].push(theme)
+    }
+  }
+
+  const enriched = (data || []).map(p => ({
+    ...p,
+    themes: themesMap[p.id] || [],
   }))
 
   return apiSuccess(enriched)

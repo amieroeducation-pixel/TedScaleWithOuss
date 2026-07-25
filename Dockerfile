@@ -10,9 +10,9 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Build args transmis au moment du docker build
-ARG NEXT_PUBLIC_SUPABASE_URL
-ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
+# Build args — defaults permettent le build sans --build-arg (SSR pages utilisent env runtime)
+ARG NEXT_PUBLIC_SUPABASE_URL=https://vqtzcxvmzznbepyvlcut.supabase.co
+ARG NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZxdHpjeHZtenpuYmVweXZsY3V0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzOTU0NzcsImV4cCI6MjA5Mzk3MTQ3N30.8p2-9Sw_BGaO8Ig03rSr5R63Wmph-DRE3QurA7Hq38o
 ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
 ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
 

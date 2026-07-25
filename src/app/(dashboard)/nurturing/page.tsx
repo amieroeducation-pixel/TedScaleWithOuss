@@ -114,8 +114,8 @@ const V = {
   textLo: '#5a6a9a',
   gold: '#e8c878',
   goldDim: '#b89f5f',
-  green: '#34d399',
-  cyan: '#22d3ee',
+  green: '#4caf50',
+  cyan: '#4ecdc4',
   purple: '#a78bfa',
   indigo: '#818cf8',
   warn: '#fbbf24',
@@ -208,7 +208,10 @@ export default function NurturingPage() {
   const [detailTab, setDetailTab] = useState<DetailTab>('sequence')
   const [openMenuIdx, setOpenMenuIdx] = useState<number | null>(null)
   const [selectedChannel, setSelectedChannel] = useState<Channel>('email')
+  const [showTips, setShowTips] = useState(false)
   const [libraryOpen, setLibraryOpen] = useState(false)
+  const [sequencePanelOpen, setSequencePanelOpen] = useState(false)
+  const [sequencePanelView, setSequencePanelView] = useState<'list' | 'create'>('list')
   const [loading, setLoading] = useState(true)
   const [interactions, setInteractions] = useState<Interaction[]>([])
   const [messageText, setMessageText] = useState('')
@@ -228,6 +231,11 @@ export default function NurturingPage() {
   const [scheduleOpen, setScheduleOpen] = useState(false)
   const [scheduleDate, setScheduleDate] = useState('')
   const [scheduleTime, setScheduleTime] = useState('09:00')
+  const [sequenceSteps, setSequenceSteps] = useState<Array<{ id: string; step_order: number; channel: string; status: string; scheduled_at: string; executed_at: string | null; message_sent: string | null; error_message: string | null }>>([])
+  const [sequenceLoading, setSequenceLoading] = useState(false)
+  const [upcomingActions, setUpcomingActions] = useState<Array<{ id: string; type: 'scheduled' | 'sequence'; channel: string; date: string; label: string; prospectId: string }>>([])
+  const [sequenceTemplates, setSequenceTemplates] = useState<Array<{ id: string; name: string; description: string }>>([])
+  const [newSequence, setNewSequence] = useState({ name: '', description: '', steps: [{ channel: 'email', delay_days: 0, message_template: '' }] })
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const supabase = createSupabaseBrowserClient()
@@ -240,6 +248,7 @@ export default function NurturingPage() {
       }
     })
     loadMessages()
+    loadSequenceTemplates()
 
     const scheduledInterval = setInterval(checkScheduledMessages, 30000)
     return () => clearInterval(scheduledInterval)
@@ -248,6 +257,7 @@ export default function NurturingPage() {
   useEffect(() => {
     if (contacts.length > 0) {
       loadContactDetails(contacts[selectedContactIdx].id)
+      loadUpcomingActions(contacts[selectedContactIdx].id)
     }
   }, [selectedContactIdx, contacts.length])
 
@@ -326,7 +336,57 @@ export default function NurturingPage() {
     }
   }
 
+  async function loadSequenceTemplates() {
+    try {
+      const res = await fetch('/api/crm/sequences/templates')
+      const json = await res.json()
+      if (json.data) setSequenceTemplates(json.data)
+    } catch (e) {
+      console.error('loadSequenceTemplates error:', e)
+    }
+  }
+
+  async function loadUpcomingActions(contactId: string) {
+    try {
+      const [scheduledRes, seqRes] = await Promise.all([
+        fetch(`/api/nurturing/scheduled?prospect_id=${contactId}`),
+        supabase
+          .from('sequence_instance_steps')
+          .select('id, step_order, channel, scheduled_at, message_sent, sequence_instances!inner(prospect_id, status)')
+          .eq('sequence_instances.prospect_id', contactId)
+          .eq('sequence_instances.status', 'active')
+          .eq('status', 'pending')
+          .order('scheduled_at', { ascending: true })
+      ])
+
+      const scheduledJson = await scheduledRes.json()
+      const scheduled = (scheduledJson.data || []).map((s: any) => ({
+        id: s.id,
+        type: 'scheduled' as const,
+        channel: s.channel,
+        date: s.scheduled_at,
+        label: s.message?.slice(0, 50) || `Message ${s.channel}`,
+        prospectId: contactId,
+      }))
+
+      const seqSteps = (seqRes.data || []).map((s: any) => ({
+        id: s.id,
+        type: 'sequence' as const,
+        channel: s.channel,
+        date: s.scheduled_at,
+        label: s.message_sent?.slice(0, 50) || `Étape ${s.step_order}`,
+        prospectId: contactId,
+      }))
+
+      const all = [...scheduled, ...seqSteps].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+      setUpcomingActions(all)
+    } catch (e) {
+      console.error('loadUpcomingActions error:', e)
+    }
+  }
+
   async function loadContactDetails(contactId: string) {
+    setSequenceLoading(true)
     const [interRes, docRes, configRes] = await Promise.all([
       fetch(`/api/nurturing/interactions?prospect_id=${contactId}`),
       fetch(`/api/nurturing/documents?prospect_id=${contactId}`),
@@ -352,6 +412,26 @@ export default function NurturingPage() {
 
     if (docJson.data) setDocuments(docJson.data)
     if (configJson.data) setContactConfig(configJson.data)
+
+    // Charger les étapes de séquence active
+    const { data: seqData } = await supabase
+      .from('sequence_instance_steps')
+      .select('id, step_order, channel, status, scheduled_at, executed_at, message_sent, error_message, sequence_instances!inner(prospect_id, status)')
+      .eq('sequence_instances.prospect_id', contactId)
+      .eq('sequence_instances.status', 'active')
+      .order('step_order', { ascending: true })
+
+    setSequenceSteps((seqData || []).map((s: any) => ({
+      id: s.id,
+      step_order: s.step_order,
+      channel: s.channel,
+      status: s.status,
+      scheduled_at: s.scheduled_at,
+      executed_at: s.executed_at,
+      message_sent: s.message_sent,
+      error_message: s.error_message,
+    })))
+    setSequenceLoading(false)
   }
 
   // ─── SCHEDULED MESSAGES CHECK ─────────────────────────────────────────────────
@@ -404,9 +484,11 @@ export default function NurturingPage() {
     const contact = contacts[selectedContactIdx]
     if (!contact || !messageText.trim()) return
 
+    const sendChannel: Channel = selectedChannel
+
     setSending(true)
     try {
-      if (selectedChannel === 'email') {
+      if (sendChannel === 'email') {
         if (!contact.email) {
           showToast('Pas d\'email pour ce prospect', 'error')
           setSending(false)
@@ -426,7 +508,7 @@ export default function NurturingPage() {
         const json = await res.json()
         if (!res.ok) throw new Error(json.error || 'Erreur envoi')
         showToast('Email envoyé avec succès')
-      } else if (selectedChannel === 'whatsapp') {
+      } else if (sendChannel === 'whatsapp') {
         if (!contact.phone) {
           showToast('Pas de numéro pour ce prospect', 'error')
           setSending(false)
@@ -449,11 +531,11 @@ export default function NurturingPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             prospect_id: contact.id,
-            type: selectedChannel === 'call' ? 'appel' : selectedChannel,
+            type: sendChannel === 'call' ? 'appel' : sendChannel,
             notes: messageText,
           }),
         })
-        showToast(`${selectedChannel === 'call' ? 'Appel' : selectedChannel} enregistré`)
+        showToast(`${sendChannel === 'call' ? 'Appel' : sendChannel} enregistré`)
       }
 
       if (attachedDoc) {
@@ -463,7 +545,7 @@ export default function NurturingPage() {
           body: JSON.stringify({
             prospect_id: contact.id,
             document_id: attachedDoc.id,
-            channel: selectedChannel === 'call' ? 'telephone' : selectedChannel,
+            channel: sendChannel === 'call' ? 'telephone' : sendChannel,
           }),
         })
       }
@@ -582,6 +664,79 @@ export default function NurturingPage() {
     if (channelMap[msg.channel]) setSelectedChannel(channelMap[msg.channel])
   }
 
+  async function handleAssignSequence(templateId: string) {
+    const contact = contacts[selectedContactIdx]
+    if (!contact) return
+
+    try {
+      const res = await fetch('/api/crm/sequences/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prospect_id: contact.id,
+          template_id: templateId,
+        }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Erreur assignation')
+      showToast('Séquence lancée avec succès')
+      setSequencePanelOpen(false)
+      loadContacts()
+      loadContactDetails(contact.id)
+      loadUpcomingActions(contact.id)
+    } catch (e: any) {
+      showToast(e.message || 'Erreur assignation', 'error')
+    }
+  }
+
+  async function handleCreateSequence(assignNow: boolean) {
+    if (!newSequence.name.trim()) {
+      showToast('Nom de séquence requis', 'error')
+      return
+    }
+
+    try {
+      const resTemplate = await fetch('/api/crm/sequences/templates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: newSequence.name,
+          description: newSequence.description,
+        }),
+      })
+      const jsonTemplate = await resTemplate.json()
+      if (!resTemplate.ok) throw new Error(jsonTemplate.error || 'Erreur création template')
+
+      const templateId = jsonTemplate.data.id
+
+      for (let i = 0; i < newSequence.steps.length; i++) {
+        const step = newSequence.steps[i]
+        await fetch(`/api/crm/sequences/templates/${templateId}/steps`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            step_order: i + 1,
+            channel: step.channel,
+            delay_days: step.delay_days,
+            message_template: step.message_template,
+          }),
+        })
+      }
+
+      showToast('Séquence créée avec succès')
+      setSequencePanelOpen(false)
+      setSequencePanelView('list')
+      setNewSequence({ name: '', description: '', steps: [{ channel: 'email', delay_days: 0, message_template: '' }] })
+      loadSequenceTemplates()
+
+      if (assignNow) {
+        handleAssignSequence(templateId)
+      }
+    } catch (e: any) {
+      showToast(e.message || 'Erreur création', 'error')
+    }
+  }
+
   // ─── RENDER ────────────────────────────────────────────────────────────────
   const selectedContact = contacts[selectedContactIdx]
   const colors = selectedContact ? tempColors[selectedContact.temp] : tempColors.cold
@@ -593,7 +748,7 @@ export default function NurturingPage() {
   })
 
   const channelMessages = messages.filter(m => {
-    const map: Record<Channel, string> = { email: 'email', whatsapp: 'whatsapp', linkedin: 'linkedin', call: 'telephone', sms: 'sms' }
+    const map: Record<string, string> = { email: 'email', whatsapp: 'whatsapp', linkedin: 'linkedin', call: 'telephone', sms: 'sms' }
     return m.channel === map[selectedChannel]
   })
 
@@ -619,12 +774,18 @@ export default function NurturingPage() {
             NURTURING
           </h1>
           <p style={{ fontSize: '12px', color: V.textMid, marginTop: '4px' }}>
-            Maturation & relances multicanales · {contacts.length} contacts actifs
+            Maturation & relances multicanales PP1/PP2 · {contacts.length} contacts actifs
           </p>
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: 600, background: 'rgba(232,200,120,0.1)', color: V.gold, border: '1px solid rgba(232,200,120,0.25)' }}>
+            Séquences <strong>{contacts.filter(c => c.sequenceActive).length}</strong>
+          </span>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: 600, background: 'rgba(78,205,196,0.1)', color: V.cyan, border: '1px solid rgba(78,205,196,0.25)' }}>
             Today <strong>{contacts.filter(c => c.urgent).length}</strong>
+          </span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: 600, background: 'rgba(76,175,80,0.1)', color: V.green, border: '1px solid rgba(76,175,80,0.25)' }}>
+            Conversion <strong>{contacts.length > 0 ? Math.round((contacts.filter(c => c.stage === 'rdv_fait').length / contacts.length) * 100) : 0}%</strong>
           </span>
           <button
             onClick={() => setNewContactOpen(true)}
@@ -772,40 +933,46 @@ export default function NurturingPage() {
                 Annuler
               </button>
               <button
-                disabled={!newContact.full_name.trim()}
+                disabled={!newContact.full_name.trim() || sending}
                 onClick={async () => {
-                  const res = await fetch('/api/nurturing/contacts', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                      full_name: newContact.full_name,
-                      email: newContact.email || null,
-                      phone: newContact.phone || null,
-                      profession: newContact.profession || null,
-                      company: newContact.company || null,
-                      city: newContact.city || null,
-                      linkedin_url: newContact.linkedin_url || null,
-                      notes: newContact.notes || null,
-                      nurturing_category: newContact.nurturing_category,
-                      source: newContact.source,
-                      preferred_channel: newContact.preferred_channel,
-                      contact_frequency_days: newContact.contact_frequency_days,
-                      next_action_channel: newContact.next_action_channel,
-                    }),
-                  })
-                  if (res.ok) {
-                    showToast('Contact créé — il apparaît dans la liste')
-                    setNewContactOpen(false)
-                    setNewContact({ full_name: '', email: '', phone: '', profession: '', company: '', city: '', linkedin_url: '', notes: '', nurturing_category: 'prospect_froid', preferred_channel: 'email', contact_frequency_days: 14, next_action_channel: 'email', source: 'autre' })
-                    loadContacts()
-                  } else {
-                    const json = await res.json()
-                    showToast(json.error || 'Erreur création', 'error')
+                  if (sending) return
+                  setSending(true)
+                  try {
+                    const res = await fetch('/api/nurturing/contacts', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        full_name: newContact.full_name,
+                        email: newContact.email || null,
+                        phone: newContact.phone || null,
+                        profession: newContact.profession || null,
+                        company: newContact.company || null,
+                        city: newContact.city || null,
+                        linkedin_url: newContact.linkedin_url || null,
+                        notes: newContact.notes || null,
+                        nurturing_category: newContact.nurturing_category,
+                        source: newContact.source,
+                        preferred_channel: newContact.preferred_channel,
+                        contact_frequency_days: newContact.contact_frequency_days,
+                        next_action_channel: newContact.next_action_channel,
+                      }),
+                    })
+                    if (res.ok) {
+                      showToast('Contact créé — il apparaît dans la liste')
+                      setNewContactOpen(false)
+                      setNewContact({ full_name: '', email: '', phone: '', profession: '', company: '', city: '', linkedin_url: '', notes: '', nurturing_category: 'prospect_froid', preferred_channel: 'email', contact_frequency_days: 14, next_action_channel: 'email', source: 'autre' })
+                      loadContacts()
+                    } else {
+                      const json = await res.json()
+                      showToast(json.error || 'Erreur création', 'error')
+                    }
+                  } finally {
+                    setSending(false)
                   }
                 }}
-                style={{ padding: '8px 20px', borderRadius: '8px', border: 'none', background: !newContact.full_name.trim() ? V.surface3 : 'linear-gradient(135deg, #e8c878, #d4a020)', color: !newContact.full_name.trim() ? V.textLo : '#0a0e22', fontSize: '12px', fontWeight: 600, cursor: newContact.full_name.trim() ? 'pointer' : 'not-allowed', fontFamily: 'inherit' }}
+                style={{ padding: '8px 20px', borderRadius: '8px', border: 'none', background: (!newContact.full_name.trim() || sending) ? V.surface3 : 'linear-gradient(135deg, #e8c878, #d4a020)', color: (!newContact.full_name.trim() || sending) ? V.textLo : '#0a0e22', fontSize: '12px', fontWeight: 600, cursor: (newContact.full_name.trim() && !sending) ? 'pointer' : 'not-allowed', fontFamily: 'inherit' }}
               >
-                Enregistrer le contact
+                {sending ? 'Création...' : 'Enregistrer le contact'}
               </button>
             </div>
           </div>
@@ -813,7 +980,7 @@ export default function NurturingPage() {
       )}
 
       {/* ═══ MAIN 2-COL LAYOUT ═══ */}
-      <div style={{ display: 'grid', gridTemplateColumns: '340px 1fr', gap: '20px', minHeight: 'calc(100vh - 160px)' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '340px 1fr', gap: '20px', height: 'calc(100vh - 160px)' }}>
 
         {/* ─── LEFT: PROSPECT LIST ─── */}
         <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -928,7 +1095,7 @@ export default function NurturingPage() {
         {/* ─── RIGHT: DETAIL PANEL ─── */}
         <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           {/* Tabs */}
-          <div style={{ display: 'flex', gap: '4px', marginBottom: '16px', borderBottom: `1px solid ${V.line}`, paddingBottom: '8px' }}>
+          <div style={{ display: 'flex', gap: '4px', marginBottom: '16px', borderBottom: `1px solid ${V.line}`, paddingBottom: '8px', flexShrink: 0 }}>
             {(['sequence', 'history', 'config'] as const).map((tab) => (
               <button
                 key={tab}
@@ -953,7 +1120,35 @@ export default function NurturingPage() {
             ))}
           </div>
 
-          {/* Panel content */}
+          {/* Prospect header — sticky */}
+          {selectedContact && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', background: colors.bg, borderRadius: '12px', border: `1px solid ${colors.border}`, marginBottom: '12px', flexShrink: 0 }}>
+              <div style={{ fontSize: '24px' }}>{selectedContact.icon}</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: '16px', fontWeight: 600, color: V.textHi }}>{selectedContact.name}</div>
+                <div style={{ fontSize: '11px', color: V.textMid, display: 'flex', gap: '10px', marginTop: '3px' }}>
+                  <span>{selectedContact.job} · {selectedContact.stage || 'Prospect'}</span>
+                  {selectedContact.themes && selectedContact.themes.length > 0 && (
+                    <span style={{ color: V.gold }}>
+                      {selectedContact.themes.map(t => `${t.icon} ${t.name}`).join(', ')}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '6px' }}>
+                {selectedContact.preferredChannel && (
+                  <span style={{ fontSize: '9px', padding: '2px 7px', borderRadius: '4px', background: 'rgba(232,200,120,0.12)', color: V.gold, border: '1px solid rgba(232,200,120,0.2)', fontWeight: 600 }}>
+                    {channelToIcon(selectedContact.preferredChannel)} Préféré
+                  </span>
+                )}
+                <span style={{ fontSize: '9px', padding: '2px 7px', borderRadius: '4px', background: `${pressure.color}20`, color: pressure.color, border: `1px solid ${pressure.color}40`, fontWeight: 600 }}>
+                  {pressure.label}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Panel content — scrollable */}
           <div style={{ flex: 1, overflowY: 'auto', paddingRight: '4px' }}>
             {!selectedContact && (
               <div style={{ padding: '40px', textAlign: 'center', color: V.textMid }}>
@@ -964,31 +1159,6 @@ export default function NurturingPage() {
             {/* ═══ TAB: SEQUENCE & MESSAGES ═══ */}
             {selectedContact && detailTab === 'sequence' && (
               <div>
-                {/* Prospect header */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px', padding: '12px 16px', background: colors.bg, borderRadius: '12px', border: `1px solid ${colors.border}` }}>
-                  <div style={{ fontSize: '24px' }}>{selectedContact.icon}</div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '16px', fontWeight: 600, color: V.textHi }}>{selectedContact.name}</div>
-                    <div style={{ fontSize: '11px', color: V.textMid, display: 'flex', gap: '10px', marginTop: '3px' }}>
-                      <span>{selectedContact.job} · {selectedContact.stage || 'Prospect'}</span>
-                      {selectedContact.themes && selectedContact.themes.length > 0 && (
-                        <span style={{ color: V.gold }}>
-                          {selectedContact.themes.map(t => `${t.icon} ${t.name}`).join(', ')}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', gap: '6px' }}>
-                    {selectedContact.preferredChannel && (
-                      <span style={{ fontSize: '9px', padding: '2px 7px', borderRadius: '4px', background: 'rgba(232,200,120,0.12)', color: V.gold, border: '1px solid rgba(232,200,120,0.2)', fontWeight: 600 }}>
-                        {channelToIcon(selectedContact.preferredChannel)} Préféré
-                      </span>
-                    )}
-                    <span style={{ fontSize: '9px', padding: '2px 7px', borderRadius: '4px', background: `${pressure.color}20`, color: pressure.color, border: `1px solid ${pressure.color}40`, fontWeight: 600 }}>
-                      {pressure.label}
-                    </span>
-                  </div>
-                </div>
 
                 {/* KPIs */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginBottom: '16px' }}>
@@ -1012,81 +1182,83 @@ export default function NurturingPage() {
                   </div>
                 </div>
 
-                {/* CONSEIL CANAL */}
-                {selectedContact.touchpoints > 0 && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', borderRadius: '10px', background: 'rgba(232,200,120,0.05)', border: '1px solid rgba(232,200,120,0.18)', marginBottom: '16px' }}>
-                    <span style={{ fontSize: '16px' }}>💡</span>
-                    <div style={{ fontSize: '11px', color: V.textMid }}>
-                      Canal le plus efficace : <strong style={{ color: V.textHi }}>✉️ email</strong> (67% réponses).
-                      {selectedContact.no_responses > 2 && <span> {selectedContact.no_responses} relances sans réponse — envisager un changement de canal.</span>}
-                    </div>
-                  </div>
-                )}
-
                 {/* SÉQUENCE ACTIVE */}
+                {sequenceSteps.length > 0 ? (
                 <div style={{ background: V.surface1, border: `1px solid ${V.line}`, borderRadius: '12px', padding: '14px', marginBottom: '16px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <span style={{ fontSize: '10px', padding: '3px 8px', borderRadius: '6px', background: 'rgba(76,175,80,0.12)', color: V.green, fontWeight: 600 }}>▶ Séquence active</span>
-                      <span style={{ fontSize: '10px', color: V.textLo }}>En cours · Étape 3/5</span>
+                      <span style={{ fontSize: '10px', color: V.textLo }}>
+                        Étape {sequenceSteps.filter(s => s.status === 'sent' || s.status === 'skipped').length + 1}/{sequenceSteps.length}
+                      </span>
                     </div>
-                    <button style={{ padding: '4px 8px', fontSize: '10px', borderRadius: '5px', border: `1px solid ${V.line}`, background: 'transparent', color: V.textMid, cursor: 'pointer' }}>Modifier séquence</button>
+                    <button onClick={() => { setSequencePanelOpen(true); setSequencePanelView('list') }} style={{ padding: '4px 8px', fontSize: '10px', borderRadius: '5px', border: `1px solid ${V.line}`, background: 'transparent', color: V.textMid, cursor: 'pointer' }}>Modifier séquence</button>
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {/* Étape 1 - done */}
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '8px 10px', borderRadius: '8px', borderLeft: `3px solid ${V.green}`, opacity: 0.7 }}>
-                      <span style={{ fontSize: '14px' }}>✉️</span>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: '11px', fontWeight: 600, color: V.textHi }}>Email de suivi post-RDV</div>
-                        <div style={{ fontSize: '10px', color: V.textLo, marginTop: '2px' }}>28 juin · Envoyé ✅</div>
-                        <div style={{ fontSize: '10px', color: V.textMid, fontStyle: 'italic', marginTop: '3px' }}>&quot;Jean, comme convenu voici le récapitulatif de notre échange sur votre retraite TNS...&quot;</div>
-                      </div>
-                    </div>
-                    {/* Étape 2 - replied */}
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '8px 10px', borderRadius: '8px', borderLeft: `3px solid ${V.green}`, opacity: 0.7 }}>
-                      <span style={{ fontSize: '14px' }}>💬</span>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: '11px', fontWeight: 600, color: V.textHi }}>WhatsApp J+5</div>
-                        <div style={{ fontSize: '10px', color: V.textLo, marginTop: '2px' }}>3 juil · Répondu ✅</div>
-                        <div style={{ fontSize: '10px', color: V.textMid, fontStyle: 'italic', marginTop: '3px' }}>&quot;Jean, je reviens vers vous — avez-vous pu consulter le document ?&quot;</div>
-                      </div>
-                    </div>
-                    {/* Étape 3 - current */}
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '10px 12px', borderRadius: '8px', borderLeft: `3px solid ${V.gold}`, background: 'rgba(232,200,120,0.05)' }}>
-                      <span style={{ fontSize: '14px' }}>📞</span>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: '11px', fontWeight: 600, color: V.textHi }}>Appel de relance</div>
-                        <div style={{ fontSize: '10px', color: V.hot, fontWeight: 600, marginTop: '2px' }}>Aujourd&apos;hui</div>
-                        <div style={{ fontSize: '10px', color: V.textMid, fontStyle: 'italic', marginTop: '3px' }}>&quot;Jean, c&apos;est [nom]. On s&apos;est échangé sur la retraite TNS. J&apos;ai finalisé la simulation...&quot;</div>
-                        <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
-                          <button style={{ padding: '4px 10px', fontSize: '10px', borderRadius: '5px', border: 'none', background: V.gold, color: V.bgDeep, fontWeight: 600, cursor: 'pointer' }}>📞 Exécuter maintenant</button>
-                          <button style={{ padding: '4px 10px', fontSize: '10px', borderRadius: '5px', border: `1px solid ${V.line}`, background: 'transparent', color: V.textMid, cursor: 'pointer' }}>Reporter +2j</button>
-                          <button style={{ padding: '4px 10px', fontSize: '10px', borderRadius: '5px', border: `1px solid ${V.line}`, background: 'transparent', color: V.textMid, cursor: 'pointer' }}>Changer canal</button>
+                    {sequenceSteps.map((step) => {
+                      const isDone = step.status === 'sent' || step.status === 'skipped'
+                      const isCurrent = step.status === 'pending' && !sequenceSteps.some(s => s.status === 'pending' && s.step_order < step.step_order)
+                      const channelIcon = ({ email: '✉️', whatsapp: '💬', sms: '📱', call_reminder: '📞', linkedin: '🔗' } as Record<string, string>)[step.channel] || '📝'
+                      const channelLabel = ({ email: 'Email', whatsapp: 'WhatsApp', sms: 'SMS', call_reminder: 'Appel', linkedin: 'LinkedIn' } as Record<string, string>)[step.channel] || step.channel
+
+                      return (
+                        <div key={step.id} style={{
+                          display: 'flex', alignItems: 'flex-start', gap: '10px',
+                          padding: isCurrent ? '10px 12px' : '8px 10px',
+                          borderRadius: '8px',
+                          borderLeft: `3px solid ${isDone ? V.green : isCurrent ? V.gold : V.line}`,
+                          background: isCurrent ? 'rgba(232,200,120,0.05)' : 'transparent',
+                          opacity: isDone ? 0.7 : isCurrent ? 1 : 0.5,
+                        }}>
+                          <span style={{ fontSize: '14px' }}>{channelIcon}</span>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: '11px', fontWeight: 600, color: V.textHi }}>{channelLabel} — Étape {step.step_order}</div>
+                            <div style={{ fontSize: '10px', color: isDone ? V.textLo : isCurrent ? V.hot : V.textLo, fontWeight: isCurrent ? 600 : 400, marginTop: '2px' }}>
+                              {isDone ? `${new Date(step.executed_at!).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} · ${step.status === 'sent' ? 'Envoyé ✅' : 'Ignoré'}` :
+                               isCurrent ? 'Maintenant' :
+                               formatRelativeDate(new Date(step.scheduled_at))}
+                            </div>
+                            {step.message_sent && (
+                              <div style={{ fontSize: '10px', color: V.textMid, fontStyle: 'italic', marginTop: '3px' }}>
+                                &quot;{step.message_sent.slice(0, 100)}{step.message_sent.length > 100 ? '...' : ''}&quot;
+                              </div>
+                            )}
+                            {isCurrent && (
+                              <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
+                                <button onClick={async () => {
+                                  const contact = contacts[selectedContactIdx]
+                                  if (!contact) return
+                                  if (step.channel === 'call_reminder') {
+                                    handleLogInteraction('appel')
+                                  } else if (step.channel === 'whatsapp') {
+                                    if (contact.phone) openWhatsApp(contact.phone, '')
+                                  } else if (step.channel === 'email') {
+                                    setSelectedChannel('email')
+                                    showToast('Composez et envoyez le message ci-dessous')
+                                    return
+                                  }
+                                  await fetch('/api/cron/sequences-process', { headers: { 'x-cron-secret': '' } })
+                                  showToast('Étape exécutée')
+                                  loadContactDetails(contact.id)
+                                }} style={{ padding: '4px 10px', fontSize: '10px', borderRadius: '5px', border: 'none', background: V.gold, color: V.bgDeep, fontWeight: 600, cursor: 'pointer' }}>{channelIcon} Exécuter maintenant</button>
+                                <button onClick={async () => { const contact = contacts[selectedContactIdx]; if (!contact) return; const d = new Date(); d.setDate(d.getDate() + 2); await fetch('/api/nurturing/contact-config', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prospect_id: contact.id, next_action_date: d.toISOString().split('T')[0] }) }); showToast('Reporté de 2 jours') }} style={{ padding: '4px 10px', fontSize: '10px', borderRadius: '5px', border: `1px solid ${V.line}`, background: 'transparent', color: V.textMid, cursor: 'pointer' }}>Reporter +2j</button>
+                                <button onClick={() => { setSelectedChannel('whatsapp'); showToast('Canal changé — compose en WhatsApp') }} style={{ padding: '4px 10px', fontSize: '10px', borderRadius: '5px', border: `1px solid ${V.line}`, background: 'transparent', color: V.textMid, cursor: 'pointer' }}>Changer canal</button>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                    {/* Étape 4 - upcoming */}
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '8px 10px', borderRadius: '8px', borderLeft: `3px solid ${V.line}`, opacity: 0.5 }}>
-                      <span style={{ fontSize: '14px' }}>📄</span>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: '11px', fontWeight: 600, color: V.textHi }}>Envoi document (Simulateur Retraite)</div>
-                        <div style={{ fontSize: '10px', color: V.textLo, marginTop: '2px' }}>dans 3j</div>
-                        <div style={{ fontSize: '10px', color: V.textMid, marginTop: '3px' }}>Joint : Simulateur Retraite TNS (PDF)</div>
-                      </div>
-                    </div>
-                    {/* Étape 5 - upcoming */}
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '8px 10px', borderRadius: '8px', borderLeft: `3px solid ${V.line}`, opacity: 0.5 }}>
-                      <span style={{ fontSize: '14px' }}>🔗</span>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: '11px', fontWeight: 600, color: V.textHi }}>LinkedIn — message de valeur</div>
-                        <div style={{ fontSize: '10px', color: V.textLo, marginTop: '2px' }}>dans 7j</div>
-                        <div style={{ fontSize: '10px', color: V.textMid, marginTop: '3px' }}>Partager article pertinent + mention personnalisée</div>
-                      </div>
-                    </div>
+                      )
+                    })}
                   </div>
-                  <button style={{ marginTop: '10px', padding: '5px 10px', fontSize: '10px', borderRadius: '6px', border: `1px dashed ${V.line}`, background: 'transparent', color: V.textLo, cursor: 'pointer', width: '100%' }}>+ Ajouter une étape à la séquence</button>
+                  <button onClick={() => { setScheduleOpen(true); showToast('Planifiez la prochaine étape ci-dessous') }} style={{ marginTop: '10px', padding: '5px 10px', fontSize: '10px', borderRadius: '6px', border: `1px dashed ${V.line}`, background: 'transparent', color: V.textLo, cursor: 'pointer', width: '100%' }}>+ Ajouter une étape à la séquence</button>
                 </div>
+                ) : (
+                <div style={{ background: V.surface1, border: `1px dashed ${V.line}`, borderRadius: '12px', padding: '20px', marginBottom: '16px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '11px', color: V.textLo, marginBottom: '8px' }}>Aucune séquence active</div>
+                  <button onClick={() => { setSequencePanelOpen(true); setSequencePanelView('list') }} style={{ padding: '6px 14px', fontSize: '11px', borderRadius: '6px', border: `1px solid ${V.gold}`, background: 'rgba(232,200,120,0.08)', color: V.gold, cursor: 'pointer', fontWeight: 600 }}>Lancer une séquence</button>
+                </div>
+                )}
 
                 {/* QUICK COMPOSE */}
                 <div style={{ position: 'relative', background: 'rgba(232,200,120,0.04)', border: '1px solid rgba(232,200,120,0.18)', borderRadius: '14px', padding: '18px', marginBottom: '20px' }}>
@@ -1097,25 +1269,69 @@ export default function NurturingPage() {
                     <span style={{ fontSize: '9px', color: V.textLo }}>Variables : {'{prenom}, {metier}, {theme}'}</span>
                   </div>
 
-                  {/* Channel selector */}
-                  <div style={{ display: 'flex', gap: '6px', marginBottom: '12px' }}>
+                  {/* Channel selector + TIPS toggle */}
+                  <div style={{ display: 'flex', gap: '6px', marginBottom: '8px', alignItems: 'center' }}>
                     {(['email', 'call', 'whatsapp', 'linkedin', 'sms'] as Channel[]).map((ch) => (
                       <button
                         key={ch}
-                        onClick={() => setSelectedChannel(ch)}
+                        onClick={() => { setSelectedChannel(ch); setShowTips(false) }}
                         style={{
                           padding: '6px 12px', borderRadius: '8px',
-                          border: `1px solid ${selectedChannel === ch ? V.gold : V.line}`,
-                          background: selectedChannel === ch ? 'rgba(232,200,120,0.12)' : V.surface2,
-                          color: selectedChannel === ch ? V.gold : V.textMid,
+                          border: `1px solid ${selectedChannel === ch && !showTips ? V.gold : V.line}`,
+                          background: selectedChannel === ch && !showTips ? 'rgba(232,200,120,0.12)' : V.surface2,
+                          color: selectedChannel === ch && !showTips ? V.gold : V.textMid,
                           fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit',
                         }}
                       >
                         {ch === 'call' ? '📞 Appel' : ch === 'email' ? '✉️ Email' : ch === 'whatsapp' ? '💬 WhatsApp' : ch === 'linkedin' ? '🔗 LinkedIn' : '📱 SMS'}
                       </button>
                     ))}
+                    <div style={{ width: '1px', height: '24px', background: V.line, margin: '0 4px' }} />
+                    <button
+                      onClick={() => setShowTips(!showTips)}
+                      style={{
+                        padding: '6px 12px', borderRadius: '8px',
+                        border: `1px solid ${showTips ? V.gold : V.line}`,
+                        background: showTips ? 'rgba(232,200,120,0.12)' : V.surface2,
+                        color: showTips ? V.gold : V.textMid,
+                        fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit', fontWeight: showTips ? 700 : 400,
+                      }}
+                    >
+                      💡 TIPS
+                    </button>
                   </div>
 
+                  {/* TIPS panel OR compose form */}
+                  {showTips ? (
+                    <div style={{ fontSize: '10px', color: V.text, lineHeight: '1.5', padding: '4px 0' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                        {/* PP1 */}
+                        <div style={{ padding: '10px 12px', borderRadius: '10px', background: 'rgba(232,200,120,0.04)', border: `1px solid rgba(232,200,120,0.2)` }}>
+                          <div style={{ fontWeight: 700, color: V.gold, fontSize: '11px', marginBottom: '8px' }}>📋 RÈGLES PP1 — PROSPECTION PRIME</div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '10px', color: V.textMid }}>
+                            <div><strong style={{ color: V.text }}>Accroche contextualisée</strong> : Les 2 premières lignes sont décisives. Ancrez dans un contexte réel partagé.</div>
+                            <div><strong style={{ color: V.text }}>Pas de pitch dans la connexion</strong> : LinkedIn = reconnaissance + curiosité uniquement.</div>
+                            <div><strong style={{ color: V.text }}>Email premier contact</strong> : 60% de préférence, taux d&apos;ouverture optimal mardi-jeudi 9h-11h30.</div>
+                            <div><strong style={{ color: V.text }}>WhatsApp micro-relance</strong> : Court, pas intrusif, offre une porte de sortie. Un vocal 30s vaut 10 messages écrits.</div>
+                            <div><strong style={{ color: V.text }}>Téléphone</strong> : Identifiez-vous + contexte en 10s. UNE question ouverte. 2 min max si non qualifié.</div>
+                          </div>
+                        </div>
+                        {/* PP2 */}
+                        <div style={{ padding: '10px 12px', borderRadius: '10px', background: 'rgba(255,100,112,0.04)', border: '1px solid rgba(255,100,112,0.2)' }}>
+                          <div style={{ fontWeight: 700, color: '#ff6470', fontSize: '11px', marginBottom: '8px' }}>🛑 RÈGLES PP2 — ANTI-PRESSION</div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '10px', color: V.textMid }}>
+                            <div><strong style={{ color: V.text }}>Max 2 touchpoints/semaine</strong> : Jamais 2 canaux le même jour.</div>
+                            <div><strong style={{ color: V.text }}>STOP après 6 tentatives sans interaction</strong> (prospect froid) — Préserver la relation long terme.</div>
+                            <div><strong style={{ color: V.text }}>STOP après 3 non-réponses consécutives</strong> (prospect tiède) — Email de rupture bienveillant obligatoire.</div>
+                            <div><strong style={{ color: V.text }}>Si 3 messages sans vue</strong> → STOP et changer de canal. Le prospect ne lit pas ce canal.</div>
+                            <div><strong style={{ color: V.text }}>Ré-engagement après 60-90j</strong> + événement déclencheur (actualité secteur, nouveau produit).</div>
+                            <div><strong style={{ color: V.text }}>WhatsApp 97% ouverture</strong> mais ne JAMAIS spammer. Utiliser en J+5 ou J+10 uniquement.</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
                   {/* Template dropdown */}
                   {channelMessages.length > 0 && (
                     <div style={{ marginBottom: '12px' }}>
@@ -1219,6 +1435,177 @@ export default function NurturingPage() {
                     </div>
                   )}
 
+                  {/* Sequence panel overlay */}
+                  {sequencePanelOpen && (
+                    <div style={{
+                      position: 'absolute', bottom: '100%', left: 0, right: 0, marginBottom: '6px',
+                      background: V.bgMid, border: `1px solid ${V.line}`, borderRadius: '12px',
+                      padding: '14px', maxHeight: '400px', overflowY: 'auto',
+                      boxShadow: '0 -8px 32px rgba(0,0,0,0.5)', zIndex: 50,
+                    }}>
+                      {sequencePanelView === 'list' ? (
+                        <>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                            <div style={{ fontSize: '11px', color: V.textMid, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                              Séquences disponibles ({sequenceTemplates.length})
+                            </div>
+                            <button onClick={() => setSequencePanelOpen(false)} style={{ border: 'none', background: 'transparent', color: V.textLo, cursor: 'pointer', fontSize: '16px' }}>×</button>
+                          </div>
+
+                          {sequenceTemplates.length === 0 ? (
+                            <div style={{ padding: '20px', textAlign: 'center', color: V.textLo, fontSize: '12px' }}>
+                              Aucune séquence disponible
+                            </div>
+                          ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
+                              {sequenceTemplates.map(tpl => (
+                                <div
+                                  key={tpl.id}
+                                  onClick={() => { handleAssignSequence(tpl.id); setSequencePanelOpen(false) }}
+                                  style={{
+                                    padding: '10px 12px',
+                                    borderRadius: '8px',
+                                    border: `1px solid ${V.line}`,
+                                    background: V.surface1,
+                                    cursor: 'pointer',
+                                  }}
+                                  onMouseEnter={e => { e.currentTarget.style.borderColor = V.gold; e.currentTarget.style.background = V.surface2 }}
+                                  onMouseLeave={e => { e.currentTarget.style.borderColor = V.line; e.currentTarget.style.background = V.surface1 }}
+                                >
+                                  <div style={{ fontSize: '12px', fontWeight: 600, color: V.textHi, marginBottom: '3px' }}>{tpl.name}</div>
+                                  <div style={{ fontSize: '10px', color: V.textMid }}>{tpl.description || 'Séquence multicanale'}</div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          <button
+                            onClick={() => setSequencePanelView('create')}
+                            style={{
+                              width: '100%',
+                              padding: '8px 14px',
+                              borderRadius: '8px',
+                              border: `1px solid ${V.gold}`,
+                              background: 'rgba(232,200,120,0.08)',
+                              color: V.gold,
+                              fontSize: '11px',
+                              cursor: 'pointer',
+                              fontWeight: 600,
+                            }}
+                          >
+                            + Nouvelle séquence
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                            <button onClick={() => setSequencePanelView('list')} style={{ border: 'none', background: 'transparent', color: V.textMid, cursor: 'pointer', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              ← Retour
+                            </button>
+                            <button onClick={() => setSequencePanelOpen(false)} style={{ border: 'none', background: 'transparent', color: V.textLo, cursor: 'pointer', fontSize: '16px' }}>×</button>
+                          </div>
+
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            <input
+                              value={newSequence.name}
+                              onChange={e => setNewSequence(p => ({ ...p, name: e.target.value }))}
+                              placeholder="Nom de la séquence *"
+                              style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: `1px solid ${V.line}`, background: V.surface2, color: V.textHi, fontSize: '11px', fontFamily: 'inherit', outline: 'none' }}
+                            />
+                            <input
+                              value={newSequence.description}
+                              onChange={e => setNewSequence(p => ({ ...p, description: e.target.value }))}
+                              placeholder="Description"
+                              style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: `1px solid ${V.line}`, background: V.surface2, color: V.textHi, fontSize: '11px', fontFamily: 'inherit', outline: 'none' }}
+                            />
+
+                            <div style={{ borderTop: `1px solid ${V.line}`, paddingTop: '10px', marginTop: '4px' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                <div style={{ fontSize: '10px', color: V.textMid, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Étapes ({newSequence.steps.length})</div>
+                                <button
+                                  onClick={() => setNewSequence(p => ({ ...p, steps: [...p.steps, { channel: 'email', delay_days: p.steps.length, message_template: '' }] }))}
+                                  style={{ padding: '3px 8px', fontSize: '9px', borderRadius: '4px', border: `1px solid ${V.gold}`, background: 'rgba(232,200,120,0.08)', color: V.gold, cursor: 'pointer', fontWeight: 600 }}
+                                >
+                                  + Étape
+                                </button>
+                              </div>
+
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '180px', overflowY: 'auto' }}>
+                                {newSequence.steps.map((step, idx) => (
+                                  <div key={idx} style={{ padding: '10px', borderRadius: '8px', background: V.surface1, border: `1px solid ${V.line}` }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                      <div style={{ fontSize: '10px', fontWeight: 600, color: V.textHi }}>Étape {idx + 1}</div>
+                                      {newSequence.steps.length > 1 && (
+                                        <button
+                                          onClick={() => setNewSequence(p => ({ ...p, steps: p.steps.filter((_, i) => i !== idx) }))}
+                                          style={{ padding: '2px 6px', fontSize: '9px', borderRadius: '3px', border: `1px solid ${V.line}`, background: 'transparent', color: V.red, cursor: 'pointer' }}
+                                        >
+                                          Suppr.
+                                        </button>
+                                      )}
+                                    </div>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px', gap: '6px', marginBottom: '6px' }}>
+                                      <select
+                                        value={step.channel}
+                                        onChange={e => {
+                                          const updated = [...newSequence.steps]
+                                          updated[idx].channel = e.target.value
+                                          setNewSequence(p => ({ ...p, steps: updated }))
+                                        }}
+                                        style={{ padding: '5px 8px', borderRadius: '5px', border: `1px solid ${V.line}`, background: V.surface2, color: V.text, fontSize: '10px', fontFamily: 'inherit', outline: 'none' }}
+                                      >
+                                        <option value="email">✉️ Email</option>
+                                        <option value="whatsapp">💬 WhatsApp</option>
+                                        <option value="sms">📱 SMS</option>
+                                        <option value="call_reminder">📞 Appel</option>
+                                        <option value="linkedin">🔗 LinkedIn</option>
+                                      </select>
+                                      <input
+                                        type="number"
+                                        value={step.delay_days}
+                                        onChange={e => {
+                                          const updated = [...newSequence.steps]
+                                          updated[idx].delay_days = parseInt(e.target.value) || 0
+                                          setNewSequence(p => ({ ...p, steps: updated }))
+                                        }}
+                                        placeholder="J+"
+                                        style={{ padding: '5px 8px', borderRadius: '5px', border: `1px solid ${V.line}`, background: V.surface2, color: V.text, fontSize: '10px', fontFamily: 'inherit', outline: 'none' }}
+                                      />
+                                    </div>
+                                    <textarea
+                                      value={step.message_template}
+                                      onChange={e => {
+                                        const updated = [...newSequence.steps]
+                                        updated[idx].message_template = e.target.value
+                                        setNewSequence(p => ({ ...p, steps: updated }))
+                                      }}
+                                      placeholder="Message avec {{nom}}, {{prenom}}..."
+                                      style={{
+                                        width: '100%', minHeight: '50px', padding: '6px 8px', borderRadius: '5px',
+                                        border: `1px solid ${V.line}`, background: V.surface2, color: V.textHi,
+                                        fontSize: '10px', fontFamily: 'inherit', resize: 'vertical', lineHeight: '1.4',
+                                        outline: 'none',
+                                      }}
+                                    />
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
+                              <button onClick={() => handleCreateSequence(true)} style={{ flex: 1, padding: '8px 12px', borderRadius: '6px', border: 'none', background: V.gold, color: V.bgDeep, fontSize: '11px', cursor: 'pointer', fontWeight: 600 }}>
+                                Créer et assigner
+                              </button>
+                              <button onClick={() => handleCreateSequence(false)} style={{ padding: '8px 12px', borderRadius: '6px', border: `1px solid ${V.line}`, background: 'transparent', color: V.text, fontSize: '10px', cursor: 'pointer' }}>
+                                Créer
+                              </button>
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
+
                   {/* Footer */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px' }}>
                     <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -1252,7 +1639,7 @@ export default function NurturingPage() {
                   {/* Schedule panel */}
                   {scheduleOpen && (
                     <div style={{ marginTop: '10px', padding: '12px', borderRadius: '10px', background: V.surface1, border: `1px solid ${V.line}` }}>
-                      <div style={{ fontSize: '11px', fontWeight: 600, color: V.gold, marginBottom: '8px' }}>📅 Planifier l'envoi</div>
+                      <div style={{ fontSize: '11px', fontWeight: 600, color: V.gold, marginBottom: '8px' }}>📅 Planifier l&apos;envoi</div>
                       <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                         <input
                           type="date"
@@ -1288,39 +1675,51 @@ export default function NurturingPage() {
                       </div>
                     </div>
                   )}
+                    </>
+                  )}
                 </div>
 
                 {/* PROCHAINES ACTIONS PLANIFIÉES */}
                 <div style={{ background: V.surface1, border: `1px solid ${V.line}`, borderRadius: '12px', padding: '14px', marginBottom: '20px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                     <div style={{ fontSize: '11px', fontWeight: 600, color: V.textHi, textTransform: 'uppercase', letterSpacing: '0.5px' }}>📅 Prochaines actions planifiées</div>
-                    <button style={{ padding: '3px 8px', fontSize: '10px', borderRadius: '5px', border: `1px solid ${V.line}`, background: 'transparent', color: V.textMid, cursor: 'pointer' }}>+ Planifier</button>
+                    <button onClick={() => setScheduleOpen(true)} style={{ padding: '3px 8px', fontSize: '10px', borderRadius: '5px', border: `1px solid ${V.line}`, background: 'transparent', color: V.textMid, cursor: 'pointer' }}>+ Planifier</button>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 10px', borderRadius: '6px', background: 'rgba(255,68,68,0.05)', border: '1px solid rgba(255,68,68,0.15)' }}>
-                      <span style={{ fontSize: '10px', color: V.hot, fontWeight: 600, minWidth: '70px' }}>Aujourd&apos;hui</span>
-                      <span style={{ fontSize: '13px' }}>📞</span>
-                      <span style={{ fontSize: '11px', color: V.textHi, flex: 1 }}>Appel relance retraite TNS</span>
-                      <button style={{ padding: '2px 6px', fontSize: '9px', borderRadius: '4px', border: `1px solid ${V.line}`, background: 'transparent', color: V.textLo, cursor: 'pointer' }}>Modifier</button>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 10px', borderRadius: '6px' }}>
-                      <span style={{ fontSize: '10px', color: V.textLo, minWidth: '70px' }}>20 juil.</span>
-                      <span style={{ fontSize: '13px' }}>📄</span>
-                      <span style={{ fontSize: '11px', color: V.textHi, flex: 1 }}>Envoi Simulateur Retraite (PDF)</span>
-                      <button style={{ padding: '2px 6px', fontSize: '9px', borderRadius: '4px', border: `1px solid ${V.line}`, background: 'transparent', color: V.textLo, cursor: 'pointer' }}>Modifier</button>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 10px', borderRadius: '6px' }}>
-                      <span style={{ fontSize: '10px', color: V.textLo, minWidth: '70px' }}>24 juil.</span>
-                      <span style={{ fontSize: '13px' }}>🔗</span>
-                      <span style={{ fontSize: '11px', color: V.textHi, flex: 1 }}>LinkedIn — partage article retraite</span>
-                      <button style={{ padding: '2px 6px', fontSize: '9px', borderRadius: '4px', border: `1px solid ${V.line}`, background: 'transparent', color: V.textLo, cursor: 'pointer' }}>Modifier</button>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 10px', borderRadius: '6px' }}>
-                      <span style={{ fontSize: '10px', color: V.textLo, minWidth: '70px' }}>28 juil.</span>
-                      <span style={{ fontSize: '13px' }}>💬</span>
-                      <span style={{ fontSize: '11px', color: V.textHi, flex: 1 }}>WhatsApp — micro-relance</span>
-                      <button style={{ padding: '2px 6px', fontSize: '9px', borderRadius: '4px', border: `1px solid ${V.line}`, background: 'transparent', color: V.textLo, cursor: 'pointer' }}>Modifier</button>
-                    </div>
+                    {upcomingActions.length === 0 ? (
+                      <div style={{ padding: '16px', textAlign: 'center', fontSize: '11px', color: V.textLo }}>
+                        Aucune action planifiée · Cliquez &quot;+ Planifier&quot;
+                      </div>
+                    ) : (
+                      upcomingActions.slice(0, 4).map(action => {
+                        const channelIcon = ({ email: '✉️', whatsapp: '💬', sms: '📱', telephone: '📞', call_reminder: '📞', linkedin: '🔗' } as Record<string, string>)[action.channel] || '📝'
+                        const actionDate = new Date(action.date)
+                        const isToday = actionDate.toDateString() === new Date().toDateString()
+                        const dateLabel = isToday ? "Aujourd'hui" : actionDate.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+
+                        return (
+                          <div key={action.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 10px', borderRadius: '6px', background: isToday ? 'rgba(255,68,68,0.05)' : 'transparent', border: isToday ? '1px solid rgba(255,68,68,0.15)' : 'none' }}>
+                            <span style={{ fontSize: '10px', color: isToday ? V.hot : V.textLo, fontWeight: isToday ? 600 : 400, minWidth: '70px' }}>{dateLabel}</span>
+                            <span style={{ fontSize: '13px' }}>{channelIcon}</span>
+                            <span style={{ fontSize: '11px', color: V.textHi, flex: 1 }}>{action.label}</span>
+                            <button onClick={async () => {
+                              if (action.type === 'scheduled') {
+                                const channelMap: Record<string, Channel> = { email: 'email', whatsapp: 'whatsapp', linkedin: 'linkedin', telephone: 'call', sms: 'sms' }
+                                if (channelMap[action.channel]) setSelectedChannel(channelMap[action.channel])
+                                showToast('Canal sélectionné — composez votre message')
+                              } else {
+                                await fetch('/api/cron/sequences-process', { headers: { 'x-cron-secret': '' } })
+                                showToast('Étape exécutée')
+                                loadContactDetails(action.prospectId)
+                                loadUpcomingActions(action.prospectId)
+                              }
+                            }} style={{ padding: '2px 6px', fontSize: '9px', borderRadius: '4px', border: `1px solid ${V.line}`, background: 'transparent', color: V.textLo, cursor: 'pointer' }}>
+                              {action.type === 'scheduled' ? 'Composer' : 'Fait ✓'}
+                            </button>
+                          </div>
+                        )
+                      })
+                    )}
                   </div>
                 </div>
 
@@ -1565,6 +1964,7 @@ export default function NurturingPage() {
           </div>
         </div>
       </div>
+
     </div>
   )
 }

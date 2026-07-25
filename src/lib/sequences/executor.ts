@@ -81,15 +81,20 @@ export async function executeStep(args: {
     ? interpolateTemplate(messageTemplate, prospect, prospectExtra)
     : ''
 
-  // Marquer 'processing' pour éviter doublon si deux crons se chevauchent
-  const { error: lockErr } = await supabase
+  // Atomic lock : WHERE status='pending' + RETURNING pour détecter si un autre process a déjà pris ce step
+  const { data: locked, error: lockErr } = await supabase
     .from('sequence_instance_steps')
     .update({ status: 'sent', executed_at: new Date().toISOString() })
     .eq('id', step.id)
     .eq('status', 'pending')
+    .select('id')
 
   if (lockErr) {
     return { status: 'failed', error: `Lock failed: ${lockErr.message}` }
+  }
+
+  if (!locked || locked.length === 0) {
+    return { status: 'skipped', error: 'Step already claimed by another process' }
   }
 
   if (step.channel === 'email') {

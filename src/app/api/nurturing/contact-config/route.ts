@@ -28,7 +28,7 @@ export async function PATCH(request: NextRequest) {
   if (!user) return apiUnauthorized()
 
   const body = await request.json()
-  const { prospect_id, preferred_channel, contact_frequency_days, excluded_channels, preferred_time_slot, notes } = body
+  const { prospect_id, preferred_channel, contact_frequency_days, excluded_channels, preferred_time_slot, notes, next_action_date } = body
 
   if (!prospect_id) return apiError('prospect_id requis', 400)
 
@@ -38,6 +38,7 @@ export async function PATCH(request: NextRequest) {
   if (excluded_channels !== undefined) updates.excluded_channels = excluded_channels
   if (preferred_time_slot !== undefined) updates.preferred_time_slot = preferred_time_slot
   if (notes !== undefined) updates.notes = notes
+  if (next_action_date !== undefined) updates.next_action_date = next_action_date
 
   const { data, error } = await supabase
     .from('prospects')
