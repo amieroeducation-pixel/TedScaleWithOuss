@@ -58,7 +58,7 @@ export async function POST() {
         type: 'rdv1',
         notes: 'RDV cabinet 45min — retraite TNS + prévoyance. Très réceptif.',
         occurred_at: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
-        responded_at: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
+        is_honored: true,
       },
       {
         user_id: user.id,

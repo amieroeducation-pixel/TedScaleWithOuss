@@ -2,17 +2,26 @@ import { NextRequest } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { apiSuccess, apiError, apiUnauthorized } from '@/lib/api'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const supabase = await createSupabaseServerClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return apiUnauthorized()
 
-  const { data, error } = await supabase
+  const { searchParams } = new URL(request.url)
+  const prospectId = searchParams.get('prospect_id')
+
+  let query = supabase
     .from('scheduled_messages')
     .select('*')
     .eq('user_id', user.id)
     .eq('status', 'pending')
     .order('scheduled_at', { ascending: true })
+
+  if (prospectId) {
+    query = query.eq('prospect_id', prospectId)
+  }
+
+  const { data, error } = await query
 
   if (error) return apiError(error.message)
   return apiSuccess(data)

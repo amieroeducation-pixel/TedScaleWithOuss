@@ -46,9 +46,19 @@ export async function POST(request: NextRequest) {
 
   if (error) return apiError(error.message)
 
+  const { data: prospect } = await supabase
+    .from('prospects')
+    .select('total_touchpoints')
+    .eq('id', prospect_id)
+    .eq('user_id', user.id)
+    .single()
+
   await supabase
     .from('prospects')
-    .update({ last_contact_at: new Date().toISOString() })
+    .update({
+      last_contact_at: new Date().toISOString(),
+      total_touchpoints: (prospect?.total_touchpoints || 0) + 1,
+    })
     .eq('id', prospect_id)
     .eq('user_id', user.id)
 

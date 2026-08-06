@@ -7,6 +7,7 @@ const PIPELINE_STAGES = ['a_contacter', 'rdv1', 'rdv2', 'rdv3', 'converti', 'per
 
 const PostTemplateSchema = z.object({
   name: z.string().min(1),
+  description: z.string().optional(),
   pipeline_stage: z.enum(PIPELINE_STAGES).nullable().optional(),
 })
 
@@ -17,7 +18,7 @@ export async function GET(_req: NextRequest) {
 
   const { data: templates, error } = await supabase
     .from('sequence_templates')
-    .select('id, name, pipeline_stage, auto_trigger')
+    .select('id, name, description, pipeline_stage, auto_trigger')
     .eq('user_id', user.id)
     .order('name', { ascending: true })
 
@@ -34,11 +35,11 @@ export async function POST(req: NextRequest) {
   const parsed = PostTemplateSchema.safeParse(body)
   if (!parsed.success) return apiError(parsed.error.issues[0].message, 400)
 
-  const { name, pipeline_stage } = parsed.data
+  const { name, description, pipeline_stage } = parsed.data
 
   const { data, error } = await supabase
     .from('sequence_templates')
-    .insert({ user_id: user.id, name, pipeline_stage: pipeline_stage ?? null })
+    .insert({ user_id: user.id, name, description: description ?? null, pipeline_stage: pipeline_stage ?? null })
     .select()
     .single()
 
