@@ -158,7 +158,7 @@ export default function ContactList({
                 </div>
                 <div style={{ fontSize: '10px', color: V.textMid, marginTop: '2px', display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
                   <span>{contact.job}</span>
-                  {(contact.pressureScore ?? 0) > 0 && (
+                  {(contact.pressureScore ?? 0) >= 1 && (
                     <span style={{ letterSpacing: '-1px', fontSize: '9px' }} title={`Pression : ${contact.pressureScore}/5`}>
                       {Array.from({ length: 5 }, (_, i) => {
                         const score = contact.pressureScore ?? 0

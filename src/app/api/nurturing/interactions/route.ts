@@ -40,6 +40,7 @@ export async function POST(request: NextRequest) {
       type,
       notes: notes || null,
       occurred_at: new Date().toISOString(),
+      is_honored: false,
     })
     .select()
     .single()
@@ -90,6 +91,7 @@ export async function PATCH(request: NextRequest) {
       .from('interactions')
       .select('prospect_id')
       .eq('id', interaction_id)
+      .eq('user_id', user.id)
       .single()
 
     if (interaction) {

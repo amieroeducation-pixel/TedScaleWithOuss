@@ -133,10 +133,10 @@ export default function NurturingPage() {
           themes: p.themes || [],
           pressure: (p.computed_pressure || 0) > 6 ? 'stop' : (p.computed_pressure || 0) >= 4 ? 'vary' : undefined,
           pressureScore: (p.computed_pressure || 0) > 6 ? 5
-            : (p.computed_pressure || 0) >= 5 ? 4
-            : (p.computed_pressure || 0) >= 3 ? 3
-            : (p.computed_pressure || 0) >= 1.5 ? 2
-            : (p.computed_pressure || 0) > 0 ? 1 : 0,
+            : (p.computed_pressure || 0) >= 4 ? 4
+            : (p.computed_pressure || 0) >= 2 ? 3
+            : (p.computed_pressure || 0) >= 1 ? 2
+            : 0,
           excludedChannels: [],
           sequenceActive: p.sequence_active || null,
           archived: p.nurturing_archived || false,
