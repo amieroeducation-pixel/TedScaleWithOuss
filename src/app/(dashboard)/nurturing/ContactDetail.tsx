@@ -66,6 +66,7 @@ interface ContactDetailProps {
   showToast: (msg: string, type?: 'success' | 'error') => void
   onLoadContactDetails: (id: string) => void
   onLoadUpcomingActions: (id: string) => void
+  onMarkHonored: (interactionId: string) => void
 }
 
 export default function ContactDetail(props: ContactDetailProps) {
@@ -83,7 +84,7 @@ export default function ContactDetail(props: ContactDetailProps) {
     onSetSequencePanelView, onSetSequencePanelOpen, onAssignSequence,
     onCreateSequence, onLoadTemplateDetail, onSetNewSequence,
     onOpenWhatsApp, onSelectTemplate, contacts, selectedContactIdx,
-    showToast, onLoadContactDetails, onLoadUpcomingActions,
+    showToast, onLoadContactDetails, onLoadUpcomingActions, onMarkHonored,
   } = props
 
   const colors = selectedContact ? tempColors[selectedContact.temp] : tempColors.cold
@@ -364,9 +365,17 @@ export default function ContactDetail(props: ContactDetailProps) {
                   <span style={{ fontSize: '10px', color: V.textLo, flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {interaction.note}
                   </span>
-                  <span style={{ fontSize: '12px', flexShrink: 0 }}>
-                    {interaction.status === 'replied' ? '✅' : interaction.status === 'seen' ? '👁️' : '⏳'}
-                  </span>
+                  {interaction.status === 'pending' ? (
+                    <button
+                      onClick={() => onMarkHonored(interaction.id)}
+                      title="Marquer comme répondu"
+                      style={{ padding: '2px 6px', fontSize: '9px', borderRadius: '4px', border: `1px solid ${V.green}`, background: 'rgba(76,175,80,0.1)', color: V.green, cursor: 'pointer', flexShrink: 0, fontWeight: 600 }}
+                    >
+                      ✓ Répondu
+                    </button>
+                  ) : (
+                    <span style={{ fontSize: '12px', flexShrink: 0 }}>✅</span>
+                  )}
                 </div>
               ))}
             </div>
@@ -515,6 +524,7 @@ export default function ContactDetail(props: ContactDetailProps) {
                 </div>
               </div>
             </div>
+
           </div>
         )}
       </div>

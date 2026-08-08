@@ -25,6 +25,7 @@ export interface Contact {
   preferredTime?: string
   frequency?: number
   pressure?: string
+  pressureScore?: number
   themes?: { id: string; name: string; color: string; icon: string }[]
   excludedChannels?: string[]
   sequenceActive?: string | null

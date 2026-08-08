@@ -131,6 +131,12 @@ export default function NurturingPage() {
           notes: '',
           preferredChannel: p.preferred_channel || null,
           themes: p.themes || [],
+          pressure: (p.computed_pressure || 0) > 6 ? 'stop' : (p.computed_pressure || 0) >= 4 ? 'vary' : undefined,
+          pressureScore: (p.computed_pressure || 0) > 6 ? 5
+            : (p.computed_pressure || 0) >= 5 ? 4
+            : (p.computed_pressure || 0) >= 3 ? 3
+            : (p.computed_pressure || 0) >= 1.5 ? 2
+            : (p.computed_pressure || 0) > 0 ? 1 : 0,
           excludedChannels: [],
           sequenceActive: p.sequence_active || null,
           archived: p.nurturing_archived || false,
@@ -354,25 +360,23 @@ export default function NurturingPage() {
     setSending(true)
     try {
       if (sendChannel === 'email') {
-        if (!contact.email) {
-          showToast('Pas d\'email pour ce prospect', 'error')
-          setSending(false)
-          return
-        }
-        const res = await fetch('/api/crm/actions/email-manual', {
+        const myEmail = 'tcaboste@conservateur-conseil.fr'
+        const subjectLine = messageSubject || 'Suivi - ' + contact.name
+        const prospectEmail = contact.email || '(pas d\'email renseigné)'
+        const fullBody = `➡️ À transférer à : ${contact.name} <${prospectEmail}>\n\n---\n\n${messageText}${attachedDoc?.url ? `\n\n📎 Document : ${attachedDoc.url}` : ''}`
+        const subject = encodeURIComponent(`[Nurturing] ${subjectLine}`)
+        const body = encodeURIComponent(fullBody)
+        window.open(`mailto:${myEmail}?subject=${subject}&body=${body}`, '_self')
+        await fetch('/api/nurturing/interactions', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             prospect_id: contact.id,
-            to_email: contact.email,
-            to_name: contact.name,
-            subject: messageSubject || 'Suivi - ' + contact.name,
-            body: messageText + (attachedDoc?.url ? `\n\n📎 Document joint : ${attachedDoc.url}` : ''),
+            type: 'email',
+            notes: `Email préparé : ${subjectLine}`,
           }),
         })
-        const json = await res.json()
-        if (!res.ok) throw new Error(json.error || 'Erreur envoi')
-        showToast('Email envoyé avec succès')
+        showToast('Email préparé → vérifie dans Outlook puis transfère')
       } else if (sendChannel === 'whatsapp') {
         if (!contact.phone) {
           showToast('Pas de numéro pour ce prospect', 'error')
@@ -519,6 +523,40 @@ export default function NurturingPage() {
       if (contact) loadContactDetails(contact.id)
     } catch (e: any) {
       showToast(e.message || 'Erreur upload', 'error')
+    }
+  }
+
+  async function handleDeleteContact(contactId: string) {
+    try {
+      const res = await fetch('/api/nurturing/contacts/delete', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prospect_id: contactId }),
+      })
+      if (!res.ok) throw new Error('Erreur suppression')
+      showToast('Contact supprimé définitivement')
+      loadContacts()
+    } catch {
+      showToast('Erreur suppression', 'error')
+    }
+  }
+
+  async function handleMarkHonored(interactionId: string) {
+    const contact = contacts[selectedContactIdx]
+    if (!contact) return
+
+    try {
+      const res = await fetch('/api/nurturing/interactions', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ interaction_id: interactionId, is_honored: true }),
+      })
+      if (!res.ok) throw new Error('Erreur mise à jour')
+      showToast('Retour prospect enregistré')
+      loadContactDetails(contact.id)
+      loadContacts()
+    } catch {
+      showToast('Erreur enregistrement retour', 'error')
     }
   }
 
@@ -868,6 +906,7 @@ export default function NurturingPage() {
           onSetShowArchived={setShowArchived}
           onLogInteraction={handleLogInteraction}
           onArchiveContact={handleArchiveContact}
+          onDeleteContact={handleDeleteContact}
           onSetSelectedChannel={setSelectedChannel}
           onSetDetailTab={setDetailTab}
           onSetLibraryOpen={setLibraryOpen}
@@ -931,6 +970,7 @@ export default function NurturingPage() {
           showToast={showToast}
           onLoadContactDetails={loadContactDetails}
           onLoadUpcomingActions={loadUpcomingActions}
+          onMarkHonored={handleMarkHonored}
         />
       </div>
     </div>

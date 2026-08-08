@@ -27,9 +27,13 @@ export async function GET(request: NextRequest) {
 
   let themesMap: Record<string, Array<{ id: string; name: string; color: string; icon: string }>> = {}
   let activeSeqMap: Record<string, string> = {}
+  let pressureMap: Record<string, number> = {}
 
   if (prospectIds.length > 0) {
-    const [{ data: pivotRows }, { data: activeSeqs }] = await Promise.all([
+    const cutoff = new Date()
+    cutoff.setDate(cutoff.getDate() - 7)
+
+    const [{ data: pivotRows }, { data: activeSeqs }, { data: recentInteractions }] = await Promise.all([
       supabase
         .from('prospect_themes')
         .select('prospect_id, nurturing_themes(id, name, color, icon)')
@@ -39,7 +43,22 @@ export async function GET(request: NextRequest) {
         .select('prospect_id, template_id, sequence_templates(name)')
         .eq('status', 'active')
         .in('prospect_id', prospectIds),
+      supabase
+        .from('interactions')
+        .select('prospect_id, type, occurred_at')
+        .in('prospect_id', prospectIds)
+        .gte('occurred_at', cutoff.toISOString()),
     ])
+
+    const PRESSURE_COEFS: Record<string, number> = {
+      email: 1, appel: 3, call: 3, linkedin: 1.5,
+      linkedin_view: 0.5, sms: 2, whatsapp: 1.5,
+    }
+
+    for (const i of (recentInteractions || []) as any[]) {
+      const coef = PRESSURE_COEFS[i.type] || 1
+      pressureMap[i.prospect_id] = (pressureMap[i.prospect_id] || 0) + coef
+    }
 
     for (const row of (pivotRows || []) as any[]) {
       const pid = row.prospect_id as string
@@ -57,6 +76,7 @@ export async function GET(request: NextRequest) {
     ...p,
     themes: themesMap[p.id] || [],
     sequence_active: activeSeqMap[p.id] || p.sequence_active || null,
+    computed_pressure: pressureMap[p.id] || 0,
   }))
 
   return apiSuccess(enriched)

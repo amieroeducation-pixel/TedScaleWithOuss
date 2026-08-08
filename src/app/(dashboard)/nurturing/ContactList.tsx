@@ -18,6 +18,7 @@ interface ContactListProps {
   onSetShowArchived: (v: boolean) => void
   onLogInteraction: (type: string) => void
   onArchiveContact: (contactId: string, archived: boolean) => void
+  onDeleteContact: (contactId: string) => void
   onSetSelectedChannel: (channel: 'call' | 'email' | 'whatsapp' | 'linkedin' | 'sms') => void
   onSetDetailTab: (tab: 'sequence' | 'history' | 'config') => void
   onSetLibraryOpen: (open: boolean) => void
@@ -39,6 +40,7 @@ export default function ContactList({
   onSetShowArchived,
   onLogInteraction,
   onArchiveContact,
+  onDeleteContact,
   onSetSelectedChannel,
   onSetDetailTab,
   onSetLibraryOpen,
@@ -137,8 +139,11 @@ export default function ContactList({
                   <div style={{ height: '1px', background: V.line, margin: '4px 0' }} />
                   <div onClick={() => { onSetLibraryOpen(true); onSetOpenMenuIdx(null) }} style={{ padding: '8px 12px', borderRadius: '6px', fontSize: '11px', color: V.text, cursor: 'pointer' }}>📄 Envoyer document</div>
                   <div style={{ height: '1px', background: V.line, margin: '4px 0' }} />
-                  <div onClick={() => { onArchiveContact(contact.id, !(contact as any).archived); onSetOpenMenuIdx(null) }} style={{ padding: '8px 12px', borderRadius: '6px', fontSize: '11px', color: (contact as any).archived ? V.green : V.textLo, cursor: 'pointer' }}>
-                    {(contact as any).archived ? '📤 Désarchiver' : '📦 Archiver'}
+                  <div onClick={() => { onArchiveContact(contact.id, !contact.archived); onSetOpenMenuIdx(null) }} style={{ padding: '8px 12px', borderRadius: '6px', fontSize: '11px', color: contact.archived ? V.green : V.textLo, cursor: 'pointer' }}>
+                    {contact.archived ? '📤 Désarchiver' : '📦 Archiver'}
+                  </div>
+                  <div onClick={() => { if (confirm(`Supprimer définitivement ${contact.name} ?`)) { onDeleteContact(contact.id); onSetOpenMenuIdx(null) } }} style={{ padding: '8px 12px', borderRadius: '6px', fontSize: '11px', color: V.red, cursor: 'pointer' }}>
+                    🗑️ Supprimer
                   </div>
                 </div>
               )}
@@ -151,8 +156,17 @@ export default function ContactList({
                 <div style={{ fontSize: '13px', fontWeight: 600, color: V.textHi, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {contact.name}
                 </div>
-                <div style={{ fontSize: '10px', color: V.textMid, marginTop: '2px', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <div style={{ fontSize: '10px', color: V.textMid, marginTop: '2px', display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
                   <span>{contact.job}</span>
+                  {(contact.pressureScore ?? 0) > 0 && (
+                    <span style={{ letterSpacing: '-1px', fontSize: '9px' }} title={`Pression : ${contact.pressureScore}/5`}>
+                      {Array.from({ length: 5 }, (_, i) => {
+                        const score = contact.pressureScore ?? 0
+                        const activeColor = score <= 2 ? '#4caf50' : score <= 3 ? '#ff9800' : '#ff6470'
+                        return <span key={i} style={{ color: i < score ? activeColor : V.surface3 }}>●</span>
+                      })}
+                    </span>
+                  )}
                   {contact.sequenceActive && <span style={{ color: V.gold, fontWeight: 600 }}>▶ Seq.</span>}
                   {contact.warning && <span style={{ color: V.warn, fontWeight: 600 }}>{contact.warning}</span>}
                 </div>
