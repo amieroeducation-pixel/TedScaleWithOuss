@@ -4,6 +4,8 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getPlaybook } from '@/lib/playbooks/config'
+import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { apiUnauthorized } from '@/lib/api'
 
 function getSupabase() {
   return createClient(
@@ -13,6 +15,10 @@ function getSupabase() {
 }
 
 export async function POST(req: NextRequest) {
+  const supabaseAuth = await createSupabaseServerClient()
+  const { data: { user } } = await supabaseAuth.auth.getUser()
+  if (!user) return apiUnauthorized()
+
   const { prospectIds, action, variant = 'a', runId } = await req.json()
 
   if (!prospectIds?.length || !action) {

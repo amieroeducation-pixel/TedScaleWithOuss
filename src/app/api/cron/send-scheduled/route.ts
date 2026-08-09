@@ -1,8 +1,13 @@
+import { NextRequest } from 'next/server'
+import { verifyCronSecret } from '@/lib/cron/auth'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { apiSuccess, apiError } from '@/lib/api'
 import { sendBrevoEmail } from '@/lib/sequences/brevo'
 
-export async function POST() {
+export async function POST(req: NextRequest) {
+  const authError = verifyCronSecret(req)
+  if (authError) return authError
+
   const supabase = await createSupabaseServerClient()
 
   const now = new Date().toISOString()
