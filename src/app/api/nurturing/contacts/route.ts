@@ -99,3 +99,38 @@ export async function POST(request: NextRequest) {
   if (error) return apiError(error.message)
   return apiSuccess(data, 201)
 }
+
+export async function PATCH(request: NextRequest) {
+  const supabase = await createSupabaseServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return apiUnauthorized()
+
+  const body = await request.json()
+  const { prospect_id, full_name, email, phone, profession, company, city, linkedin_url } = body
+
+  if (!prospect_id) return apiError('prospect_id requis', 400)
+
+  const updates: any = {}
+  if (full_name !== undefined) updates.full_name = full_name
+  if (email !== undefined) updates.email = email || null
+  if (phone !== undefined) updates.phone = phone || null
+  if (profession !== undefined) updates.profession = profession || null
+  if (company !== undefined) updates.company = company || null
+  if (city !== undefined) updates.city = city || null
+  if (linkedin_url !== undefined) updates.linkedin_url = linkedin_url || null
+
+  if (Object.keys(updates).length === 0) {
+    return apiError('Aucune modification fournie', 400)
+  }
+
+  const { data, error } = await supabase
+    .from('prospects')
+    .update(updates)
+    .eq('id', prospect_id)
+    .eq('user_id', user.id)
+    .select()
+    .single()
+
+  if (error) return apiError(error.message)
+  return apiSuccess(data)
+}

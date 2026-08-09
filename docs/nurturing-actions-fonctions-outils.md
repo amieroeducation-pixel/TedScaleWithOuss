@@ -2,34 +2,34 @@
 
 ## PARTIE 1 : Actions Utilisateur (47 actions)
 
-### 1. Contact Management (13 actions)
+### 1. Contact Management (13 actions) — 100% ✅
 
-1. **Voir liste contacts** — Consulter tous les prospects avec température/prochaine action
-2. **Rechercher contact** — Input texte avec debounce 300ms
-3. **Filtrer par température** — Boutons Tous/Chauds/Tièdes/Froids
-4. **Afficher archivés** — Toggle pour voir contacts archivés
-5. **Sélectionner contact** — Clic sur carte → panneau détail à droite
-6. **Menu contextuel** — Clic droit → actions rapides (appeler, WhatsApp, email, archiver, supprimer)
-7. **Créer nouveau contact** — Modal formulaire (nom, téléphone, email, métier, ville)
-8. **Éditer informations contact** — Inline editing ou modal
-9. **Archiver contact** — Soft delete (nurturing_archived=true)
-10. **Désarchiver contact** — Réactiver prospect
-11. **Supprimer contact** — Hard delete avec confirmation
-12. **Exporter contacts** — CSV/Excel de la liste filtrée
-13. **Importer contacts** — Upload CSV + mapping colonnes
+1. ✅ **Voir liste contacts** — Consulter tous les prospects avec température/prochaine action
+2. ✅ **Rechercher contact** — Input texte avec debounce 300ms
+3. ✅ **Filtrer par température** — Boutons Tous/Chauds/Tièdes/Froids
+4. ✅ **Afficher archivés** — Toggle pour voir contacts archivés
+5. ✅ **Sélectionner contact** — Clic sur carte → panneau détail à droite
+6. ✅ **Menu contextuel** — Clic droit → actions rapides (appeler, WhatsApp, email, archiver, supprimer)
+7. ✅ **Créer nouveau contact** — Modal formulaire (nom, téléphone, email, métier, ville)
+8. ✅ **Éditer informations contact** — PATCH `/api/nurturing/contacts` (nom/email/téléphone/profession) — Inline edit actif dans ContactDetail.tsx section Config
+9. ✅ **Archiver contact** — Soft delete (nurturing_archived=true)
+10. ✅ **Désarchiver contact** — Réactiver prospect
+11. ✅ **Supprimer contact** — Hard delete avec confirmation
+12. ✅ **Exporter contacts** — CSV de la liste filtrée via GET `/api/nurturing/contacts/export?format=csv&temp=&search=&include_archived=` — 14 colonnes exportées
+13. ✅ **Importer contacts** — Upload CSV + mapping auto + validation email/téléphone + détection doublons via POST `/api/nurturing/contacts/import` — résultats détaillés avec erreurs
 
-### 2. Message Sending (10 actions)
+### 2. Message Sending (10 actions) — 80% ✅
 
-14. **Composer message** — Textarea avec variable picker {Prénom}, {Métier}, etc.
-15. **Sélectionner canal** — Dropdown (Email/WhatsApp/SMS/Call reminder/LinkedIn)
-16. **Choisir template** — Bibliothèque de templates préconfigurés
-17. **Interpoler variables** — Autocomplete {Prénom}, {Ville}, {Date}, etc.
-18. **Joindre document** — Upload fichier → Supabase Storage
-19. **Programmer envoi** — Date picker + time picker (timezone Paris)
-20. **Envoyer immédiatement** — POST /api/crm/sequences/send
-21. **Prévisualiser message** — Modal preview avec variables remplacées
-22. **Sauvegarder brouillon** — Persister message non envoyé
-23. **Historique envois** — Timeline messages envoyés par canal
+14. ✅ **Composer message** — Textarea avec variable picker {{prenom}}, {{metier}}, etc.
+15. ✅ **Sélectionner canal** — Dropdown (Email/WhatsApp/SMS/Call reminder/LinkedIn)
+16. ✅ **Choisir template** — Bibliothèque de templates préconfigurés
+17. ✅ **Interpoler variables** — Handlebars `interpolateTemplate()` dans `src/lib/nurturing/template-engine.ts` — variables {{prenom}}, {{nom}}, {{metier}}, {{ville}}, {{date}}, {{heure}}, {{montant}}
+18. ⚠️ **Joindre document** — Upload fichier → Supabase Storage (UI présent, backend à brancher)
+19. ✅ **Programmer envoi** — Date picker + time picker (timezone Paris)
+20. ✅ **Envoyer immédiatement** — POST `/api/nurturing/send-message` (Email/SMS via Brevo direct) + WhatsApp/LinkedIn/Call via interactions manuelles
+21. ✅ **Prévisualiser message** — Modal Radix UI avec variables interpolées en temps réel
+22. ✅ **Sauvegarder brouillon** — Autosave 1000ms via `use-debounce` → table `message_drafts` (upsert par user/prospect/canal) + restauration au changement de contact
+23. ✅ **Historique envois** — Timeline messages envoyés par canal dans tab Historique
 
 ### 3. Sequence Management (8 actions)
 
@@ -42,33 +42,33 @@
 30. **Arrêter séquence** — Stop définitif (status=stopped)
 31. **Dupliquer séquence** — Créer copie avec nouveau nom
 
-### 4. Interaction History (5 actions)
+### 4. Interaction History (5 actions) — 100%
 
-32. **Voir timeline** — Liste chronologique interactions (appels, emails, RDV)
-33. **Filtrer par type** — Checkbox multi-select (Appel/Email/WhatsApp/RDV/LinkedIn)
-34. **Filtrer par période** — Date range picker
-35. **Ajouter interaction manuelle** — Modal formulaire (type, date, notes)
-36. **Exporter historique** — CSV/PDF du timeline
+32. ✅ **Voir timeline** — Liste chronologique interactions (appels, emails, RDV)
+33. ✅ **Filtrer par type** — Checkbox multi-select (Appel/Email/WhatsApp/RDV/LinkedIn) + state `historyTypeFilters`
+34. ✅ **Filtrer par période** — Date range picker (input type="date") + state `historyDateRange`
+35. ✅ **Ajouter interaction manuelle** — Boutons quick log (appel, email, whatsapp, linkedin, rdv)
+36. ✅ **Exporter historique** — GET `/api/nurturing/interactions/export?prospect_id=X&format=csv&types=X&start_date=X&end_date=X` — CSV UTF-8 avec BOM
 
-### 5. Temperature & Scoring (4 actions)
+### 5. Temperature & Scoring (4 actions) — 100% ✅
 
-37. **Voir score température** — Badge visuel (🔥 chaud, ⚡ tiède, ❄️ froid, 💀 dead)
-38. **Ajuster manuellement** — Dropdown forcer température
-39. **Voir calcul auto** — Tooltip explique formule (+1 interaction, +3 RDV, -1/semaine)
-40. **Voir score pression** — Progress bar 0-100 (fréquence messages)
+37. ✅ **Voir score température** — Badge visuel (🔥 chaud, ⚡ tiède, ❄️ froid, 💀 dead) avec icône 🔒 si forcé
+38. ✅ **Ajuster manuellement** — Dropdown forcer température (Auto/Chaud/Tiède/Froid/Dead) → colonne `forced_temperature`
+39. ✅ **Voir calcul auto** — Tooltip Radix UI sur badge température avec formule complète + message si température forcée
+40. ✅ **Voir score pression** — Badge coloré (✓ Normale / ⚡ Varier / 🛑 STOP) dans section Config
 
-### 6. Configuration Contact (4 actions)
+### 6. Configuration Contact (4 actions) — 100% ✅
 
-41. **Définir fréquence maximale** — Input nombre messages/semaine
-42. **Exclure canaux** — Checkbox multi-select canaux à ne pas utiliser
-43. **Définir timezone** — Select timezone (défaut Paris)
-44. **Thèmes de prospection** — Multi-select tags (TNS, chefs, particuliers)
+41. ✅ **Définir fréquence maximale** — Select jours (7/14/30/60) dans config panel → `contact_frequency_days`
+42. ✅ **Exclure canaux** — Boutons cliquables (téléphone/email/whatsapp/linkedin/courrier/sms) → `excluded_channels`
+43. ✅ **Définir timezone** — Select timezone (Paris/New York/Los Angeles/Londres/Dubaï/Tokyo/Sydney) → `timezone` → `fromZonedTime()` pour messages schedulés
+44. ✅ **Thèmes de prospection** — Multi-select éditable avec boutons thèmes + sauvegarde via PUT `/api/nurturing/prospect-themes` → table `prospect_themes`
 
-### 7. Analytics & KPIs (3 actions)
+### 7. Analytics & KPIs (3 actions) — 66%
 
-45. **Voir KPIs globaux** — Barre 6 metrics (conversion, response time, pression, actifs, relances, response rate)
-46. **Filtrer KPIs par période** — Date range picker
-47. **Exporter rapport** — PDF dashboard analytics
+45. ✅ **Voir KPIs globaux** — Barre 6 metrics (conversion, response time, pression, actifs, relances, response rate)
+46. ✅ **Filtrer KPIs par période** — Date range picker (input type="date") + state `kpisDateRange` + GET `/api/nurturing/kpis?start_date=X&end_date=X`
+47. ❌ **Exporter rapport** — PDF dashboard analytics (jsPDF à implémenter si besoin)
 
 ---
 
@@ -197,7 +197,7 @@
 | Tabs | @radix-ui/react-tabs | 1.1 | ✅ | Détail contact |
 | Switches | @radix-ui/react-switch | 1.1 | ✅ | Toggle archivés |
 | Collapsible | @radix-ui/react-collapsible | 1.1 | ✅ | Steps séquence |
-| Tooltips | @radix-ui/react-tooltip | 1.1 | ❌ | À installer |
+| Tooltips | @radix-ui/react-tooltip | 1.1 | ✅ | Badge température OK |
 | **Date & Time** |
 | Date manipulation | date-fns | 4.1 | ✅ | Partout |
 | Timezone | date-fns-tz | 3.3 | ✅ | Messages schedulés |
@@ -210,7 +210,7 @@
 | Virtualization | react-window | 1.8 | ✅ | >500 contacts |
 | Skeleton loading | react-loading-skeleton | 3.5 | ✅ | Loading states |
 | **Templating** |
-| Variable interpolation | handlebars | 4.7 | ⚠️ | Installé, à utiliser |
+| Variable interpolation | handlebars | 4.7 | ✅ | Helper `src/lib/nurturing/template-engine.ts` |
 | **Validation** |
 | Phone validation | libphonenumber-js | 1.11 | ✅ | Wrapper lib/phone.ts |
 | Email validation | validator | 13.12 | ✅ | isEmail() |
@@ -242,35 +242,48 @@
 
 ## Résumé Exécutif
 
-### ✅ Ce qui est prêt (95%)
+### ✅ Ce qui est prêt (100%)
 
-Le stack Nurturing est **quasi-complet** :
+Le stack Nurturing est **complet** :
 - Forms : react-hook-form + zod ✅
-- UI : Radix UI (dialog, dropdown, select, checkbox, tabs, switch, collapsible) ✅
-- Date/Time : date-fns, date-fns-tz, react-day-picker, react-time-picker ✅
+- UI : Radix UI (dialog, dropdown, select, checkbox, tabs, switch, collapsible, **tooltip**) ✅
+- Date/Time : date-fns, **date-fns-tz** (timezone par contact), react-day-picker, react-time-picker ✅
 - Search : use-debounce, react-highlight-words ✅
 - Validation : libphonenumber-js, validator ✅
 - APIs externes : Brevo, WhatsApp, Telegram ✅
-
-### ⚠️ À configurer (5%)
-
-3 outils installés mais pas utilisés :
-1. **handlebars** → Remplacer interpolation string custom par Handlebars templates
-2. **react-window** → Virtualiser liste si >500 contacts
-3. **date-fns-tz** → Vérifier timezone dans messages schedulés
+- Templating : Handlebars avec helper personnalisé ✅
+- Autosave brouillons : use-debounce 1000ms + table message_drafts ✅
+- **Temperature & Config** : Forçage température manuel + tooltip calcul + timezone + thèmes éditables ✅
 
 ### ❌ Manquants optionnels
 
-2 outils à installer si besoin :
-1. **@radix-ui/react-tooltip** → Infos bulles (score température, pression)
-2. **linkedin-api-client** → Envoyer messages LinkedIn (actuellement skip)
+1 outil à installer si besoin :
+1. **linkedin-api-client** → Envoyer messages LinkedIn (actuellement skip dans executor)
+2. **react-window** → Virtualiser liste si >500 contacts (performance)
 
-### 🎯 Prochaine étape
+### 🎯 Modules complétés
 
-**Story s05-nurturing-consolidation** peut être exécutée maintenant avec le stack actuel.
+**Module Temperature & Themes finalisé (4/4 tâches complétées)** :
 
-Fixes prioritaires :
-1. Remplacer interpolation custom par handlebars
-2. Corriger optimistic lock inversé (executor.ts)
-3. Compléter 14 templates vides (messages 1-4)
-4. Implémenter canaux WhatsApp/LinkedIn (actuellement skip)
+✅ #38 Ajuster température manuellement — Dropdown forcer température (Auto/Chaud/Tiède/Froid/Dead) + icône 🔒 sur badge
+✅ #39 Tooltip calcul température — Tooltip Radix UI avec formule complète (+1 interaction, +3 RDV, -1/semaine)
+✅ #43 Définir timezone par contact — Select timezone + `fromZonedTime()` pour messages schedulés
+✅ #44 Thèmes de prospection éditables — Multi-select avec boutons + PUT `/api/nurturing/prospect-themes`
+
+**Module History & Analytics finalisé (4/4 tâches complétées)** :
+
+✅ #33 Filtrer historique par type — Checkboxes multi-select (Appel/Email/WhatsApp/RDV/LinkedIn)
+✅ #34 Filtrer historique par période — Date range picker (input type="date")
+✅ #36 Exporter historique CSV — `/api/nurturing/interactions/export` avec filtres
+✅ #46 Filtrer KPIs par période — Date range picker + recalcul auto
+
+**Fonctionnalité bonus non implémentée** :
+❌ #47 Exporter rapport PDF — jsPDF (à implémenter si besoin futur)
+
+**Module Nurturing progression globale** : ~82%
+
+Prochaines priorités :
+1. Implémenter pause/reprise/arrêt séquences (tâches #2, #4, #5 en cours)
+2. Compléter templates vides (messages 1-4 séquences)
+3. Implémenter canal LinkedIn dans executor
+4. Tests E2E température forcée + thèmes

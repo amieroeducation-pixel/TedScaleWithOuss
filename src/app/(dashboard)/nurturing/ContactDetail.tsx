@@ -1,5 +1,7 @@
 'use client'
 
+import { useState } from 'react'
+import * as Tooltip from '@radix-ui/react-tooltip'
 import {
   Contact, Interaction, ContactConfig, PressureData, DetailTab, Channel,
   SequenceStep, UpcomingAction, V, tempColors, channelToIcon,
@@ -67,6 +69,15 @@ interface ContactDetailProps {
   onLoadContactDetails: (id: string) => void
   onLoadUpcomingActions: (id: string) => void
   onMarkHonored: (interactionId: string) => void
+  historyTypeFilters: string[]
+  onSetHistoryTypeFilters: (filters: string[]) => void
+  historyDateRange: { start: string | null; end: string | null }
+  onSetHistoryDateRange: (range: { start: string | null; end: string | null }) => void
+  sequenceInstanceId: string | null
+  sequenceStatus: 'active' | 'paused' | 'completed' | 'cancelled' | null
+  onPauseSequence: () => void
+  onResumeSequence: () => void
+  onStopSequence: () => void
 }
 
 export default function ContactDetail(props: ContactDetailProps) {
@@ -85,7 +96,55 @@ export default function ContactDetail(props: ContactDetailProps) {
     onCreateSequence, onLoadTemplateDetail, onSetNewSequence,
     onOpenWhatsApp, onSelectTemplate, contacts, selectedContactIdx,
     showToast, onLoadContactDetails, onLoadUpcomingActions, onMarkHonored,
+    historyTypeFilters, onSetHistoryTypeFilters,
+    historyDateRange, onSetHistoryDateRange,
+    sequenceInstanceId, sequenceStatus,
+    onPauseSequence, onResumeSequence, onStopSequence,
+    availableThemes, selectedThemeIds, onSetSelectedThemeIds, onSaveProspectThemes,
   } = props
+
+  // État local pour l'édition des coordonnées
+  const [editedName, setEditedName] = useState(selectedContact?.name || '')
+  const [editedEmail, setEditedEmail] = useState(selectedContact?.email || '')
+  const [editedPhone, setEditedPhone] = useState(selectedContact?.phone || '')
+  const [editedJob, setEditedJob] = useState(selectedContact?.job || '')
+  const [savingContact, setSavingContact] = useState(false)
+
+  // Réinitialiser les valeurs quand le contact change
+  if (selectedContact && (editedName !== selectedContact.name || editedEmail !== (selectedContact.email || '') || editedPhone !== (selectedContact.phone || '') || editedJob !== selectedContact.job)) {
+    setEditedName(selectedContact.name)
+    setEditedEmail(selectedContact.email || '')
+    setEditedPhone(selectedContact.phone || '')
+    setEditedJob(selectedContact.job)
+  }
+
+  async function handleSaveContactIdentity() {
+    if (!selectedContact) return
+    setSavingContact(true)
+    try {
+      const res = await fetch('/api/nurturing/contacts', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prospect_id: selectedContact.id,
+          full_name: editedName,
+          email: editedEmail || null,
+          phone: editedPhone || null,
+          profession: editedJob || null,
+        }),
+      })
+      if (res.ok) {
+        showToast('Contact mis à jour')
+        onLoadContactDetails(selectedContact.id)
+      } else {
+        const json = await res.json()
+        showToast(json.error || 'Erreur mise à jour', 'error')
+      }
+    } catch {
+      showToast('Erreur mise à jour', 'error')
+    }
+    setSavingContact(false)
+  }
 
   const colors = selectedContact ? tempColors[selectedContact.temp] : tempColors.cold
 
@@ -158,12 +217,53 @@ export default function ContactDetail(props: ContactDetailProps) {
           <div>
             {/* KPIs */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginBottom: '16px' }}>
-              <div style={{ background: V.surface1, border: `1px solid ${V.line}`, borderRadius: '10px', padding: '10px', textAlign: 'center' }}>
-                <div style={{ fontSize: '18px', fontWeight: 700 }}>{selectedContact.icon}</div>
-                <div style={{ fontSize: '9px', color: V.textMid, marginTop: '2px' }}>
-                  {selectedContact.temp === 'hot' ? 'Brûlant' : selectedContact.temp === 'warm' ? 'Tiède' : selectedContact.temp === 'cold' ? 'Froid' : 'Enterré'}
-                </div>
-              </div>
+              <Tooltip.Provider>
+                <Tooltip.Root>
+                  <Tooltip.Trigger asChild>
+                    <div style={{ background: V.surface1, border: `1px solid ${V.line}`, borderRadius: '10px', padding: '10px', textAlign: 'center', cursor: 'help', position: 'relative' }}>
+                      {selectedContact.forcedTemperature && (
+                        <div style={{ position: 'absolute', top: '4px', right: '4px', fontSize: '10px', opacity: 0.7 }}>🔒</div>
+                      )}
+                      <div style={{ fontSize: '18px', fontWeight: 700 }}>{selectedContact.icon}</div>
+                      <div style={{ fontSize: '9px', color: V.textMid, marginTop: '2px' }}>
+                        {selectedContact.temp === 'hot' ? 'Brûlant' : selectedContact.temp === 'warm' ? 'Tiède' : selectedContact.temp === 'cold' ? 'Froid' : 'Enterré'}
+                        {selectedContact.forcedTemperature && <span style={{ marginLeft: '3px', opacity: 0.6 }}>(forcé)</span>}
+                      </div>
+                    </div>
+                  </Tooltip.Trigger>
+                  <Tooltip.Portal>
+                    <Tooltip.Content
+                      style={{
+                        background: V.surface2,
+                        border: `1px solid ${V.line}`,
+                        borderRadius: '8px',
+                        padding: '10px 12px',
+                        fontSize: '11px',
+                        color: V.textHi,
+                        maxWidth: '250px',
+                        lineHeight: '1.5',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+                        zIndex: 9999,
+                      }}
+                      sideOffset={5}
+                    >
+                      <div style={{ fontWeight: 600, marginBottom: '6px', color: V.gold }}>🔥 Calcul température</div>
+                      {selectedContact.forcedTemperature ? (
+                        <div style={{ fontSize: '10px', color: V.warn, marginBottom: '6px' }}>
+                          🔒 Température forcée manuellement — le calcul automatique est désactivé.
+                        </div>
+                      ) : (
+                        <div style={{ fontSize: '10px', color: V.textMid }}>
+                          <div>• +1 point par interaction</div>
+                          <div>• +3 points par RDV</div>
+                          <div>• -1 point par semaine de silence</div>
+                        </div>
+                      )}
+                      <Tooltip.Arrow style={{ fill: V.surface2 }} />
+                    </Tooltip.Content>
+                  </Tooltip.Portal>
+                </Tooltip.Root>
+              </Tooltip.Provider>
               <div style={{ background: V.surface1, border: `1px solid ${V.line}`, borderRadius: '10px', padding: '10px', textAlign: 'center' }}>
                 <div style={{ fontSize: '18px', fontWeight: 700, color: V.textHi }}>{selectedContact.touchpoints}</div>
                 <div style={{ fontSize: '9px', color: V.textMid, marginTop: '2px' }}>Touchpoints</div>
@@ -205,6 +305,11 @@ export default function ContactDetail(props: ContactDetailProps) {
               selectedContactIdx={selectedContactIdx}
               showToast={showToast}
               onLoadContactDetails={onLoadContactDetails}
+              sequenceInstanceId={sequenceInstanceId}
+              sequenceStatus={sequenceStatus}
+              onPauseSequence={onPauseSequence}
+              onResumeSequence={onResumeSequence}
+              onStopSequence={onStopSequence}
             />
 
             {/* QUICK COMPOSE */}
@@ -306,10 +411,144 @@ export default function ContactDetail(props: ContactDetailProps) {
               <span style={{ fontSize: '10px', color: V.textLo }}>{interactions.length} total</span>
             </div>
 
+            {/* FILTRES PAR TYPE ET PÉRIODE */}
+            <div style={{ background: V.surface1, border: `1px solid ${V.line}`, borderRadius: '10px', padding: '12px', marginBottom: '16px' }}>
+              {/* Filtres par type */}
+              <div style={{ marginBottom: '12px' }}>
+                <div style={{ fontSize: '10px', fontWeight: 600, color: V.textMid, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Filtrer par type</div>
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                  {['appel', 'email', 'whatsapp', 'rdv1', 'linkedin'].map(type => {
+                    const isSelected = historyTypeFilters.includes(type)
+                    const typeLabels: Record<string, string> = {
+                      appel: '📞 Appel',
+                      email: '✉️ Email',
+                      whatsapp: '💬 WhatsApp',
+                      rdv1: '📅 RDV',
+                      linkedin: '🔗 LinkedIn',
+                    }
+                    return (
+                      <button
+                        key={type}
+                        onClick={() => {
+                          if (isSelected) {
+                            onSetHistoryTypeFilters(historyTypeFilters.filter(t => t !== type))
+                          } else {
+                            onSetHistoryTypeFilters([...historyTypeFilters, type])
+                          }
+                        }}
+                        style={{
+                          padding: '5px 10px', fontSize: '11px', borderRadius: '6px', cursor: 'pointer',
+                          border: isSelected ? `1px solid ${V.gold}` : `1px solid ${V.line}`,
+                          background: isSelected ? 'rgba(232,200,120,0.1)' : 'transparent',
+                          color: isSelected ? V.gold : V.textMid,
+                          fontWeight: isSelected ? 600 : 400,
+                        }}
+                      >
+                        {typeLabels[type] || type}
+                      </button>
+                    )
+                  })}
+                  {historyTypeFilters.length > 0 && (
+                    <button
+                      onClick={() => onSetHistoryTypeFilters([])}
+                      style={{
+                        padding: '5px 10px', fontSize: '11px', borderRadius: '6px', cursor: 'pointer',
+                        border: `1px solid ${V.red}`, background: 'rgba(255,100,112,0.1)', color: V.red, fontWeight: 600,
+                      }}
+                    >
+                      ✕ Réinitialiser
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Filtres par période */}
+              <div>
+                <div style={{ fontSize: '10px', fontWeight: 600, color: V.textMid, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Filtrer par période</div>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <div>
+                    <label style={{ fontSize: '10px', color: V.textLo, display: 'block', marginBottom: '2px' }}>Du</label>
+                    <input
+                      type="date"
+                      value={historyDateRange.start || ''}
+                      onChange={e => onSetHistoryDateRange({ ...historyDateRange, start: e.target.value || null })}
+                      style={{
+                        padding: '6px 8px', fontSize: '11px', borderRadius: '6px',
+                        border: `1px solid ${V.line}`, background: V.surface2, color: V.textHi,
+                        fontFamily: 'inherit', outline: 'none',
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '10px', color: V.textLo, display: 'block', marginBottom: '2px' }}>Au</label>
+                    <input
+                      type="date"
+                      value={historyDateRange.end || ''}
+                      onChange={e => onSetHistoryDateRange({ ...historyDateRange, end: e.target.value || null })}
+                      style={{
+                        padding: '6px 8px', fontSize: '11px', borderRadius: '6px',
+                        border: `1px solid ${V.line}`, background: V.surface2, color: V.textHi,
+                        fontFamily: 'inherit', outline: 'none',
+                      }}
+                    />
+                  </div>
+                  {(historyDateRange.start || historyDateRange.end) && (
+                    <button
+                      onClick={() => onSetHistoryDateRange({ start: null, end: null })}
+                      style={{
+                        padding: '6px 10px', fontSize: '10px', borderRadius: '6px', cursor: 'pointer', marginTop: '16px',
+                        border: `1px solid ${V.red}`, background: 'rgba(255,100,112,0.1)', color: V.red, fontWeight: 600,
+                      }}
+                    >
+                      ✕ Effacer
+                    </button>
+                  )}
+                  <button
+                    onClick={async () => {
+                      if (!selectedContact) return
+                      const params = new URLSearchParams()
+                      params.set('prospect_id', selectedContact.id)
+                      params.set('format', 'csv')
+                      if (historyTypeFilters.length > 0) {
+                        params.set('types', historyTypeFilters.join(','))
+                      }
+                      if (historyDateRange.start) params.set('start_date', historyDateRange.start)
+                      if (historyDateRange.end) params.set('end_date', historyDateRange.end)
+                      window.open(`/api/nurturing/interactions/export?${params.toString()}`, '_blank')
+                    }}
+                    style={{
+                      padding: '6px 12px', fontSize: '11px', borderRadius: '6px', cursor: 'pointer', marginTop: '16px',
+                      border: `1px solid ${V.cyan}`, background: 'rgba(78,205,196,0.1)', color: V.cyan, fontWeight: 600,
+                    }}
+                  >
+                    📥 Exporter CSV
+                  </button>
+                </div>
+              </div>
+            </div>
+
             {/* Channel stats */}
             {(() => {
+              // Apply filters to interactions
+              let filteredInteractions = interactions
+
+              // Filter by type
+              if (historyTypeFilters.length > 0) {
+                filteredInteractions = filteredInteractions.filter(i => historyTypeFilters.includes(i.channel))
+              }
+
+              // Filter by date range
+              if (historyDateRange.start || historyDateRange.end) {
+                filteredInteractions = filteredInteractions.filter(i => {
+                  const iDate = new Date(i.date)
+                  const startOk = !historyDateRange.start || iDate >= new Date(historyDateRange.start)
+                  const endOk = !historyDateRange.end || iDate <= new Date(historyDateRange.end + 'T23:59:59')
+                  return startOk && endOk
+                })
+              }
+
               const stats: Record<string, { total: number; replied: number }> = {}
-              for (const i of interactions) {
+              for (const i of filteredInteractions) {
                 if (!stats[i.channel]) stats[i.channel] = { total: 0, replied: 0 }
                 stats[i.channel].total++
                 if (i.status === 'replied') stats[i.channel].replied++
@@ -344,11 +583,33 @@ export default function ContactDetail(props: ContactDetailProps) {
             })()}
 
             {/* Timeline */}
-            <div style={{ background: V.surface1, border: `1px solid ${V.line}`, borderRadius: '12px', padding: '14px' }}>
-              {interactions.length === 0 && (
-                <div style={{ padding: '20px', textAlign: 'center', color: V.textMid }}>Aucune interaction enregistrée</div>
-              )}
-              {interactions.map((interaction) => (
+            {(() => {
+              // Apply same filters as channel stats
+              let filteredInteractions = interactions
+
+              // Filter by type
+              if (historyTypeFilters.length > 0) {
+                filteredInteractions = filteredInteractions.filter(i => historyTypeFilters.includes(i.channel))
+              }
+
+              // Filter by date range
+              if (historyDateRange.start || historyDateRange.end) {
+                filteredInteractions = filteredInteractions.filter(i => {
+                  const iDate = new Date(i.date)
+                  const startOk = !historyDateRange.start || iDate >= new Date(historyDateRange.start)
+                  const endOk = !historyDateRange.end || iDate <= new Date(historyDateRange.end + 'T23:59:59')
+                  return startOk && endOk
+                })
+              }
+
+              return (
+                <div style={{ background: V.surface1, border: `1px solid ${V.line}`, borderRadius: '12px', padding: '14px' }}>
+                  {filteredInteractions.length === 0 && (
+                    <div style={{ padding: '20px', textAlign: 'center', color: V.textMid }}>
+                      {interactions.length === 0 ? 'Aucune interaction enregistrée' : 'Aucune interaction ne correspond aux filtres'}
+                    </div>
+                  )}
+                  {filteredInteractions.map((interaction) => (
                 <div
                   key={interaction.id}
                   style={{
@@ -377,8 +638,10 @@ export default function ContactDetail(props: ContactDetailProps) {
                     <span style={{ fontSize: '12px', flexShrink: 0 }}>✅</span>
                   )}
                 </div>
-              ))}
-            </div>
+                  ))}
+                </div>
+              )
+            })()}
 
             {/* Quick log */}
             <div style={{ marginTop: '16px' }}>
@@ -407,9 +670,68 @@ export default function ContactDetail(props: ContactDetailProps) {
         {/* TAB: CONFIG */}
         {selectedContact && detailTab === 'config' && (
           <div>
+            {/* Édition identité */}
+            <div style={{ background: V.surface1, border: '1px solid rgba(232,200,120,0.2)', borderRadius: '12px', padding: '18px', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                <div style={{ fontSize: '13px', fontWeight: 600, color: V.gold }}>Identité & Coordonnées</div>
+                <button
+                  onClick={handleSaveContactIdentity}
+                  disabled={savingContact}
+                  style={{
+                    padding: '5px 10px', fontSize: '11px', borderRadius: '6px', border: 'none',
+                    background: savingContact ? V.surface3 : V.gold, color: savingContact ? V.textLo : V.bgDeep,
+                    cursor: savingContact ? 'not-allowed' : 'pointer', fontWeight: 600,
+                  }}
+                >
+                  {savingContact ? '⏳ Sauvegarde...' : '💾 Sauvegarder'}
+                </button>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div>
+                  <div style={{ fontSize: '10px', color: V.textMid, marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Nom complet</div>
+                  <input
+                    type="text"
+                    value={editedName}
+                    onChange={(e) => setEditedName(e.target.value)}
+                    style={{ padding: '7px 10px', borderRadius: '8px', border: `1px solid ${V.line}`, background: V.surface2, color: V.textHi, fontSize: '12px', fontFamily: 'inherit', width: '100%', outline: 'none' }}
+                  />
+                </div>
+                <div>
+                  <div style={{ fontSize: '10px', color: V.textMid, marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Profession</div>
+                  <input
+                    type="text"
+                    value={editedJob}
+                    onChange={(e) => setEditedJob(e.target.value)}
+                    style={{ padding: '7px 10px', borderRadius: '8px', border: `1px solid ${V.line}`, background: V.surface2, color: V.textHi, fontSize: '12px', fontFamily: 'inherit', width: '100%', outline: 'none' }}
+                  />
+                </div>
+                <div>
+                  <div style={{ fontSize: '10px', color: V.textMid, marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Email</div>
+                  <input
+                    type="email"
+                    value={editedEmail}
+                    onChange={(e) => setEditedEmail(e.target.value)}
+                    placeholder="email@example.com"
+                    style={{ padding: '7px 10px', borderRadius: '8px', border: `1px solid ${V.line}`, background: V.surface2, color: V.textHi, fontSize: '12px', fontFamily: 'inherit', width: '100%', outline: 'none' }}
+                  />
+                </div>
+                <div>
+                  <div style={{ fontSize: '10px', color: V.textMid, marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Téléphone</div>
+                  <input
+                    type="tel"
+                    value={editedPhone}
+                    onChange={(e) => setEditedPhone(e.target.value)}
+                    placeholder="+33 6 12 34 56 78"
+                    style={{ padding: '7px 10px', borderRadius: '8px', border: `1px solid ${V.line}`, background: V.surface2, color: V.textHi, fontSize: '12px', fontFamily: 'inherit', width: '100%', outline: 'none' }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Configuration nurturing */}
             <div style={{ background: V.surface1, border: '1px solid rgba(232,200,120,0.2)', borderRadius: '12px', padding: '18px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-                <div style={{ fontSize: '13px', fontWeight: 600, color: V.gold }}>Configuration nurturing — {selectedContact.name}</div>
+                <div style={{ fontSize: '13px', fontWeight: 600, color: V.gold }}>Configuration nurturing</div>
                 <button
                   onClick={onSaveConfig}
                   style={{ padding: '5px 10px', fontSize: '11px', borderRadius: '6px', border: 'none', background: V.gold, color: V.bgDeep, cursor: 'pointer', fontWeight: 600 }}
@@ -460,6 +782,36 @@ export default function ContactDetail(props: ContactDetailProps) {
                   </select>
                 </div>
                 <div>
+                  <div style={{ fontSize: '10px', color: V.textMid, marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Timezone</div>
+                  <select
+                    value={contactConfig.timezone || 'Europe/Paris'}
+                    onChange={(e) => onSetContactConfig({ ...contactConfig, timezone: e.target.value })}
+                    style={{ padding: '7px 10px', borderRadius: '8px', border: `1px solid ${V.line}`, background: V.surface2, color: V.text, fontSize: '12px', fontFamily: 'inherit', width: '100%', outline: 'none' }}
+                  >
+                    <option value="Europe/Paris">🇫🇷 Paris (UTC+1/+2)</option>
+                    <option value="America/New_York">🇺🇸 New York (UTC-5/-4)</option>
+                    <option value="America/Los_Angeles">🇺🇸 Los Angeles (UTC-8/-7)</option>
+                    <option value="Europe/London">🇬🇧 Londres (UTC+0/+1)</option>
+                    <option value="Asia/Dubai">🇦🇪 Dubaï (UTC+4)</option>
+                    <option value="Asia/Tokyo">🇯🇵 Tokyo (UTC+9)</option>
+                    <option value="Australia/Sydney">🇦🇺 Sydney (UTC+10/+11)</option>
+                  </select>
+                </div>
+                <div>
+                  <div style={{ fontSize: '10px', color: V.textMid, marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Forcer température</div>
+                  <select
+                    value={contactConfig.forced_temperature || ''}
+                    onChange={(e) => onSetContactConfig({ ...contactConfig, forced_temperature: e.target.value || null })}
+                    style={{ padding: '7px 10px', borderRadius: '8px', border: `1px solid ${V.line}`, background: V.surface2, color: V.text, fontSize: '12px', fontFamily: 'inherit', width: '100%', outline: 'none' }}
+                  >
+                    <option value="">⚙️ Auto (calcul normal)</option>
+                    <option value="hot">🔥 Forcer Chaud</option>
+                    <option value="warm">⚡ Forcer Tiède</option>
+                    <option value="cold">❄️ Forcer Froid</option>
+                    <option value="dead">💀 Forcer Dead</option>
+                  </select>
+                </div>
+                <div>
                   <div style={{ fontSize: '10px', color: V.textMid, marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Pression actuelle</div>
                   <div style={{ padding: '7px 10px', borderRadius: '8px', border: `1px solid ${pressure.color}40`, background: `${pressure.color}10`, color: pressure.color, fontSize: '12px', fontWeight: 600 }}>
                     {pressure.label} ({pressure.score.toFixed(1)}/sem)
@@ -496,15 +848,49 @@ export default function ContactDetail(props: ContactDetailProps) {
                   </div>
                 </div>
                 <div style={{ gridColumn: '1/-1' }}>
-                  <div style={{ fontSize: '10px', color: V.textMid, marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Thèmes identifiés</div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                    <div style={{ fontSize: '10px', color: V.textMid, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Thèmes de prospection</div>
+                    <button
+                      onClick={async () => {
+                        if (selectedContact) {
+                          await onSaveProspectThemes(selectedContact.id, selectedThemeIds)
+                        }
+                      }}
+                      style={{ padding: '3px 8px', fontSize: '10px', borderRadius: '5px', border: `1px solid ${V.gold}`, background: 'rgba(232,200,120,0.1)', color: V.gold, cursor: 'pointer', fontWeight: 600 }}
+                    >
+                      💾 Sauvegarder thèmes
+                    </button>
+                  </div>
                   <div style={{ display: 'flex', gap: '6px', marginTop: '4px', flexWrap: 'wrap' }}>
-                    {selectedContact.themes && selectedContact.themes.map(t => (
-                      <span key={t.id} style={{ padding: '5px 10px', borderRadius: '6px', background: `${t.color}20`, color: t.color, fontSize: '11px', fontWeight: 600, border: `1px solid ${t.color}35` }}>
-                        {t.icon} {t.name}
-                      </span>
-                    ))}
-                    {(!selectedContact.themes || selectedContact.themes.length === 0) && (
-                      <span style={{ fontSize: '11px', color: V.textLo }}>Aucun thème associé</span>
+                    {availableThemes.map(theme => {
+                      const isSelected = selectedThemeIds.includes(theme.id)
+                      return (
+                        <button
+                          key={theme.id}
+                          onClick={() => {
+                            if (isSelected) {
+                              onSetSelectedThemeIds(selectedThemeIds.filter(id => id !== theme.id))
+                            } else {
+                              onSetSelectedThemeIds([...selectedThemeIds, theme.id])
+                            }
+                          }}
+                          style={{
+                            padding: '6px 12px', fontSize: '11px', borderRadius: '8px', cursor: 'pointer',
+                            border: isSelected ? `1.5px solid ${theme.color}` : `1px solid ${V.line}`,
+                            background: isSelected ? `${theme.color}20` : 'transparent',
+                            color: isSelected ? theme.color : V.textMid,
+                            fontWeight: isSelected ? 700 : 400,
+                            display: 'flex', alignItems: 'center', gap: '6px',
+                          }}
+                        >
+                          <span>{theme.icon}</span>
+                          <span>{theme.name}</span>
+                          {isSelected && <span style={{ fontSize: '10px' }}>✓</span>}
+                        </button>
+                      )
+                    })}
+                    {availableThemes.length === 0 && (
+                      <span style={{ fontSize: '11px', color: V.textLo }}>Aucun thème disponible</span>
                     )}
                   </div>
                 </div>
