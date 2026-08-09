@@ -51,6 +51,7 @@ export default function NurturingPage() {
   const [upcomingActions, setUpcomingActions] = useState<UpcomingAction[]>([])
   const [sequenceTemplates, setSequenceTemplates] = useState<Array<{ id: string; name: string; description: string }>>([])
   const [newSequence, setNewSequence] = useState({ name: '', description: '', steps: [{ channel: 'email', delay_days: 0, message_template: '' }] })
+  const [kpis, setKpis] = useState<{ taux_conversion: number; temps_moyen_reponse: number; score_global: number; contacts_actifs: number; relances_semaine: number; taux_reponse: number } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const supabase = createSupabaseBrowserClient()
@@ -64,6 +65,7 @@ export default function NurturingPage() {
     })
     loadMessages()
     loadSequenceTemplates()
+    loadKpis()
 
     const scheduledInterval = setInterval(checkScheduledMessages, 30000)
     return () => clearInterval(scheduledInterval)
@@ -171,6 +173,16 @@ export default function NurturingPage() {
       else if (Array.isArray(json.data)) setSequenceTemplates(json.data)
     } catch (e) {
       console.error('loadSequenceTemplates error:', e)
+    }
+  }
+
+  async function loadKpis() {
+    try {
+      const res = await fetch('/api/nurturing/kpis')
+      const json = await res.json()
+      if (json.data) setKpis(json.data)
+    } catch (e) {
+      console.error('loadKpis error:', e)
     }
   }
 
@@ -884,6 +896,41 @@ export default function NurturingPage() {
                 {sending ? 'Création...' : 'Enregistrer le contact'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* KPI BAR */}
+      {kpis && (
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          background: V.surface1, border: `1px solid ${V.line}`,
+          borderRadius: '12px', padding: '14px 20px', marginBottom: '16px',
+          gap: '12px', flexWrap: 'wrap',
+        }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '100px' }}>
+            <span style={{ fontSize: '10px', color: V.textMid }}>Conversion</span>
+            <span style={{ fontSize: '18px', fontWeight: 700, color: V.gold }}>{kpis.taux_conversion}%</span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '100px' }}>
+            <span style={{ fontSize: '10px', color: V.textMid }}>Temps rép. moy.</span>
+            <span style={{ fontSize: '18px', fontWeight: 700, color: V.textHi }}>{kpis.temps_moyen_reponse}j</span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '100px' }}>
+            <span style={{ fontSize: '10px', color: V.textMid }}>Score pression</span>
+            <span style={{ fontSize: '18px', fontWeight: 700, color: kpis.score_global > 5 ? V.red : kpis.score_global >= 3 ? V.warn : V.green }}>{kpis.score_global}</span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '100px' }}>
+            <span style={{ fontSize: '10px', color: V.textMid }}>Contacts actifs</span>
+            <span style={{ fontSize: '18px', fontWeight: 700, color: V.textHi }}>{kpis.contacts_actifs}</span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '100px' }}>
+            <span style={{ fontSize: '10px', color: V.textMid }}>Relances /7j</span>
+            <span style={{ fontSize: '18px', fontWeight: 700, color: V.textHi }}>{kpis.relances_semaine}</span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '100px' }}>
+            <span style={{ fontSize: '10px', color: V.textMid }}>Taux réponse</span>
+            <span style={{ fontSize: '18px', fontWeight: 700, color: V.gold }}>{kpis.taux_reponse}%</span>
           </div>
         </div>
       )}
