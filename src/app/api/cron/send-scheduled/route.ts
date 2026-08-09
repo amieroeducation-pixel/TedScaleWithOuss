@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { verifyCronSecret } from '@/lib/cron/auth'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { apiSuccess, apiError } from '@/lib/api'
+import { sendResendEmail } from '@/lib/sequences/resend-email'
 import { sendBrevoEmail } from '@/lib/sequences/brevo'
 
 export async function POST(req: NextRequest) {
@@ -28,12 +29,27 @@ export async function POST(req: NextRequest) {
 
   for (const msg of messages) {
     if (msg.channel === 'email' && msg.email) {
-      const result = await sendBrevoEmail({
-        to: msg.email,
-        toName: msg.prospect_name,
-        subject: msg.subject || `Suivi - ${msg.prospect_name}`,
-        htmlContent: msg.message.replace(/\n/g, '<br>') + (msg.document_url ? `<br><br>📎 <a href="${msg.document_url}">Document joint</a>` : ''),
-      })
+      const htmlContent = msg.message.replace(/\n/g, '<br>') + (msg.document_url ? `<br><br>📎 <a href="${msg.document_url}">Document joint</a>` : '')
+
+      let result: { success: boolean; error?: string }
+
+      if (process.env.RESEND_API_KEY) {
+        result = await sendResendEmail({
+          to_email: msg.email,
+          to_name: msg.prospect_name,
+          subject: msg.subject || `Suivi - ${msg.prospect_name}`,
+          html_body: htmlContent,
+        })
+      } else if (process.env.BREVO_API_KEY) {
+        result = await sendBrevoEmail({
+          to: msg.email,
+          toName: msg.prospect_name,
+          subject: msg.subject || `Suivi - ${msg.prospect_name}`,
+          htmlContent,
+        })
+      } else {
+        result = { success: false, error: 'Aucun provider email configuré' }
+      }
 
       if (result.success) {
         await supabase
@@ -45,7 +61,7 @@ export async function POST(req: NextRequest) {
           user_id: msg.user_id,
           prospect_id: msg.prospect_id,
           type: 'email',
-          notes: `[Planifié] Email envoyé : ${msg.subject || 'Suivi'}`,
+          notes: `[Planifié] Email envoyé via ${process.env.RESEND_API_KEY ? 'Resend' : 'Brevo'} : ${msg.subject || 'Suivi'}`,
           is_honored: true,
         })
 

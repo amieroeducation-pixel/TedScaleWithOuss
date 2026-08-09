@@ -1,34 +1,7 @@
 import type { SupabaseLike, ProspectForSequence, SequenceInstanceStep, SequenceChannel } from './types'
 import { sendBrevoEmail, sendBrevoSms, sendWhatsAppMessage } from './brevo'
 import { scheduleAutoRelance } from './auto-relance'
-
-export function interpolateTemplate(
-  template: string,
-  prospect: { full_name: string; phone: string | null; email: string | null; pipeline_stage: string },
-  extra?: { profession?: string | null; city?: string | null; heure?: string | null; montant?: string | null; date?: string | null }
-): string {
-  const parts = prospect.full_name.split(' ')
-  const prenom = parts.length > 1 ? parts[0] : prospect.full_name
-  const nom = parts.length > 1 ? parts.slice(1).join(' ') : prospect.full_name
-  let result = template
-    .replace(/\{\{nom\}\}/g, prospect.full_name)
-    .replace(/\{\{prenom\}\}/g, prenom)
-    .replace(/\{\{nom_famille\}\}/g, nom)
-    .replace(/\{\{telephone\}\}/g, prospect.phone ?? '')
-    .replace(/\{\{email\}\}/g, prospect.email ?? '')
-    .replace(/\{\{stade\}\}/g, prospect.pipeline_stage)
-    .replace(/\{Profession\}/gi, extra?.profession ?? '')
-    .replace(/\{Ville\}/gi, extra?.city ?? '')
-    .replace(/\{Heure\}/gi, extra?.heure ?? '')
-    .replace(/\{Montant\}/gi, extra?.montant ?? '')
-    .replace(/\{Date\}/gi, extra?.date ?? '')
-    .replace(/\{\{profession\}\}/g, extra?.profession ?? '')
-    .replace(/\{\{ville\}\}/g, extra?.city ?? '')
-    .replace(/\{\{heure\}\}/g, extra?.heure ?? '')
-    .replace(/\{\{montant\}\}/g, extra?.montant ?? '')
-    .replace(/\{\{date\}\}/g, extra?.date ?? '')
-  return result
-}
+import { interpolateTemplate } from '@/lib/nurturing/template-engine'
 
 const CHANNEL_TO_INTERACTION: Record<SequenceChannel, string> = {
   whatsapp: 'whatsapp',

@@ -1,6 +1,9 @@
 'use client'
 
+import { useState } from 'react'
+import * as Dialog from '@radix-ui/react-dialog'
 import { Contact, Channel, NurturingDoc, NurturingMessage, V } from './nurturing-types'
+import { interpolateTemplate } from '@/lib/nurturing/template-engine'
 
 interface MessageComposerProps {
   selectedContact: Contact
@@ -31,17 +34,41 @@ interface MessageComposerProps {
 }
 
 export default function MessageComposer({
-  selectedChannel, showTips, messageText, messageSubject, sending,
+  selectedContact, selectedChannel, showTips, messageText, messageSubject, sending,
   attachedDoc, libraryOpen, documents, messages, scheduleOpen,
   scheduleDate, scheduleTime,
   onSetSelectedChannel, onSetShowTips, onSetMessageText, onSetMessageSubject,
   onSendMessage, onScheduleMessage, onSetAttachedDoc, onSetLibraryOpen,
   onSetScheduleOpen, onSetScheduleDate, onSetScheduleTime, onSelectTemplate,
 }: MessageComposerProps) {
+  const [previewOpen, setPreviewOpen] = useState(false)
+
   const channelMessages = messages.filter(m => {
     const map: Record<string, string> = { email: 'email', whatsapp: 'whatsapp', linkedin: 'linkedin', call: 'telephone', sms: 'sms' }
     return m.channel === map[selectedChannel]
   })
+
+  function getInterpolatedMessage(): string {
+    if (!messageText.trim()) return ''
+    return interpolateTemplate(messageText, {
+      full_name: selectedContact.name,
+      email: selectedContact.email || null,
+      phone: selectedContact.phone || null,
+      profession: selectedContact.job,
+      city: '', // Pas d'info ville dans Contact type actuel
+    })
+  }
+
+  function getInterpolatedSubject(): string {
+    if (!messageSubject.trim()) return ''
+    return interpolateTemplate(messageSubject, {
+      full_name: selectedContact.name,
+      email: selectedContact.email || null,
+      phone: selectedContact.phone || null,
+      profession: selectedContact.job,
+      city: '',
+    })
+  }
 
   return (
     <div style={{ position: 'relative', background: 'rgba(232,200,120,0.04)', border: '1px solid rgba(232,200,120,0.18)', borderRadius: '14px', padding: '18px', marginBottom: '20px' }}>
@@ -232,6 +259,13 @@ export default function MessageComposer({
                 {sending ? '⏳ Envoi...' : selectedChannel === 'email' ? '✉️ Envoyer' : selectedChannel === 'call' ? '📞 Log appel' : '📤 Envoyer'}
               </button>
               <button
+                onClick={() => setPreviewOpen(true)}
+                disabled={!messageText.trim()}
+                style={{ padding: '5px 10px', fontSize: '11px', borderRadius: '6px', border: `1px solid ${V.line}`, background: 'transparent', color: !messageText.trim() ? V.textLo : V.text, cursor: !messageText.trim() ? 'not-allowed' : 'pointer' }}
+              >
+                👁️ Prévisualiser
+              </button>
+              <button
                 onClick={() => onSetLibraryOpen(!libraryOpen)}
                 style={{ padding: '5px 10px', fontSize: '11px', borderRadius: '6px', border: `1px solid ${V.line}`, background: 'transparent', color: V.text, cursor: 'pointer' }}
               >
@@ -287,6 +321,87 @@ export default function MessageComposer({
           )}
         </>
       )}
+
+      {/* Preview Modal */}
+      <Dialog.Root open={previewOpen} onOpenChange={setPreviewOpen}>
+        <Dialog.Portal>
+          <Dialog.Overlay style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 100,
+            animation: 'fadeIn 150ms ease-out',
+          }} />
+          <Dialog.Content style={{
+            position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+            background: V.bgMid, border: `1px solid ${V.line}`, borderRadius: '16px',
+            padding: '24px', maxWidth: '600px', width: '90%', maxHeight: '80vh', overflowY: 'auto',
+            zIndex: 101, boxShadow: '0 16px 64px rgba(0,0,0,0.6)',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <Dialog.Title style={{ fontSize: '16px', fontWeight: 700, color: V.gold }}>
+                👁️ Prévisualisation du message
+              </Dialog.Title>
+              <Dialog.Close asChild>
+                <button style={{ border: 'none', background: 'transparent', color: V.textLo, cursor: 'pointer', fontSize: '20px' }}>×</button>
+              </Dialog.Close>
+            </div>
+
+            {/* Contact info */}
+            <div style={{ marginBottom: '16px', padding: '10px 12px', borderRadius: '8px', background: V.surface1, border: `1px solid ${V.line}` }}>
+              <div style={{ fontSize: '11px', color: V.textMid, marginBottom: '4px' }}>Destinataire</div>
+              <div style={{ fontSize: '13px', fontWeight: 600, color: V.textHi }}>
+                {selectedContact.name} {selectedContact.job && `· ${selectedContact.job}`}
+              </div>
+              {selectedChannel === 'email' && selectedContact.email && (
+                <div style={{ fontSize: '11px', color: V.textMid, marginTop: '2px' }}>✉️ {selectedContact.email}</div>
+              )}
+              {(selectedChannel === 'sms' || selectedChannel === 'whatsapp') && selectedContact.phone && (
+                <div style={{ fontSize: '11px', color: V.textMid, marginTop: '2px' }}>📱 {selectedContact.phone}</div>
+              )}
+            </div>
+
+            {/* Subject (email only) */}
+            {selectedChannel === 'email' && messageSubject && (
+              <div style={{ marginBottom: '16px' }}>
+                <div style={{ fontSize: '11px', color: V.textMid, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Objet</div>
+                <div style={{ padding: '10px 12px', borderRadius: '8px', background: V.surface1, border: `1px solid ${V.line}`, fontSize: '13px', color: V.textHi, fontWeight: 500 }}>
+                  {getInterpolatedSubject()}
+                </div>
+              </div>
+            )}
+
+            {/* Message body */}
+            <div style={{ marginBottom: '16px' }}>
+              <div style={{ fontSize: '11px', color: V.textMid, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Message</div>
+              <div style={{ padding: '14px 16px', borderRadius: '10px', background: V.surface1, border: `1px solid ${V.line}`, fontSize: '13px', color: V.text, lineHeight: '1.7', whiteSpace: 'pre-wrap' }}>
+                {getInterpolatedMessage()}
+              </div>
+            </div>
+
+            {/* Attached doc */}
+            {attachedDoc && (
+              <div style={{ marginBottom: '16px', padding: '10px 12px', borderRadius: '8px', background: 'rgba(76,175,80,0.1)', border: '1px solid rgba(76,175,80,0.2)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '16px' }}>📎</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '12px', fontWeight: 500, color: V.green }}>{attachedDoc.title}</div>
+                  <div style={{ fontSize: '10px', color: V.textMid, marginTop: '2px' }}>{attachedDoc.format}</div>
+                </div>
+              </div>
+            )}
+
+            {/* Info box */}
+            <div style={{ padding: '10px 12px', borderRadius: '8px', background: 'rgba(100,150,255,0.08)', border: '1px solid rgba(100,150,255,0.2)', fontSize: '11px', color: V.textMid, lineHeight: '1.5' }}>
+              💡 Cette prévisualisation montre le message final avec toutes les variables remplacées par les données réelles du contact.
+            </div>
+
+            <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'flex-end' }}>
+              <Dialog.Close asChild>
+                <button style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', background: V.gold, color: V.bgDeep, fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>
+                  Fermer
+                </button>
+              </Dialog.Close>
+            </div>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
     </div>
   )
 }

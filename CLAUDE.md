@@ -2,6 +2,23 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Ouverture de session
+
+À chaque ouverture sur ce projet :
+
+1. Affiche un **récap de la dernière session** : consulte `git log --oneline -10` pour les derniers travaux effectués
+2. Affiche un **tableau des tâches** au format :
+
+| Statut | Tâche |
+|--------|-------|
+| ✅ Fait | ... |
+| 🔄 En cours | ... |
+| 📋 À faire | ... |
+
+Sources : mémoire (`memory/MEMORY.md`), derniers commits, fichiers TODO/plans dans `docs/`.
+
+3. Attends les instructions de l'utilisateur.
+
 <!-- GSD:project-start source:PROJECT.md -->
 ## Project
 
