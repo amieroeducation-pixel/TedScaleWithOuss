@@ -8,8 +8,12 @@ This file defines the concrete conventions any agent MUST follow when writing co
 - Supabase Auth SSR v0.10 + PostgreSQL
 - Zod v4 for validation
 - Inline CSS via `src/lib/theme.ts` (PSG Cosmos palette)
-- Brevo API for email/SMS
-- Google Calendar API (OAuth2) for calendar sync
+- Brevo API for SMS
+- Google Calendar API (OAuth2) via `googleapis` for calendar sync
+- Resend + react-email for transactional emails
+- Radix UI primitives for accessible components (dialog, alert-dialog, tooltip, select)
+- libphonenumber-js for phone validation/normalization
+- use-debounce for search and auto-save
 
 ## File organization
 
@@ -94,7 +98,53 @@ export async function GET(req: NextRequest) {
 
 - Direct Supabase query builder (no ORM)
 - Always filter by `user_id` for multi-tenant safety
-- Phone normalization: use `normalizePhoneFr()` from `src/lib/phone-utils.ts`
+- Phone normalization: use `normalizePhoneFr()` from `src/lib/phone.ts` (libphonenumber-js)
+
+## Google Calendar integration
+
+- Use `googleapis` client (server-side only, never client)
+- OAuth flow: `/api/auth/google-calendar` → callback → store `refresh_token` in `user_settings`
+- Wrapper: `src/lib/google/calendar.ts` exports `getCalendarClient(refreshToken)`
+- Auto-refresh token handled by googleapis
+
+## Email system
+
+- Templates: `src/emails/*.tsx` (React components via react-email)
+- Delivery: Resend API (`src/lib/email.ts` wrapper)
+- Use cases: booking confirmations, RDV reminders (fallback SMS), nurturing sequences
+- Brevo remains for SMS only
+
+## UI Components
+
+- Use Radix UI primitives for modals, dialogs, tooltips, selects
+- Style with inline CSS (PSG Cosmos palette from `theme.ts`)
+- Pattern: Headless Radix + custom styles, NOT shadcn pre-styled components
+
+```typescript
+import * as Dialog from '@radix-ui/react-dialog'
+import { C } from '@/lib/theme'
+
+<Dialog.Root>
+  <Dialog.Overlay style={{ background: 'rgba(0,0,0,0.7)' }} />
+  <Dialog.Content style={{ background: C.bgMid, border: `1px solid ${C.line}` }}>
+    {/* content */}
+  </Dialog.Content>
+</Dialog.Root>
+```
+
+## Search & Auto-save
+
+- Use `use-debounce` hook for search inputs (300ms) and auto-save (1000ms)
+- Pattern: `useDebouncedValue(searchTerm, 300)` → query with debounced value
+- Pattern: `useDebouncedCallback(saveFn, 1000)` → auto-save on input change
+
+## Phone validation
+
+- Use `libphonenumber-js` for all phone operations
+- Normalize before storing: `normalizePhoneFr(input)` → `+33612345678`
+- Validate in Zod schemas: `z.string().refine(val => isValidPhoneNumber(val, 'FR'))`
+- Detect mobile: `isMobilePhoneFr(phone)` for "portables uniquement" filters
+- Display format: `formatPhoneDisplay(e164)` → `"06 12 34 56 78"`
 
 ## Testing
 
