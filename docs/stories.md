@@ -37,8 +37,8 @@ Source: [docs/prd.md](./prd.md)
 5. La page charge en < 2s et ne contient aucun squelette "..." ni donnée mockée
 
 ### Agentic Notes
-- **Fichiers** : `src/app/(dashboard)/today/page.tsx` (1592 lignes — très gros, à refactorer), `/api/calendar/events` (existe), `/api/today/signal` (existe)
-- **Dépendance** : nécessite que Google Calendar OAuth fonctionne (déjà en place dans Settings)
+- **Fichiers** : `src/app/(dashboard)/today/page.tsx` (1592 lignes — découper en composants pendant cette story), `/api/calendar/events` (existe), `/api/today/signal` (existe)
+- **Dépendance** : nécessite s07 (Calendar sync) ET s05 (Nurturing) pour afficher relances du jour
 - **Ref Calendly** : l'écran "Upcoming events" de Calendly montre les RDV du jour avec rappel — même densité d'info visée ici
 - **Piège** : la page Today actuelle stocke des événements en localStorage et les mélange avec des données API → nettoyer pour source unique (Calendar API + DB)
 - **Risque** : si OAuth token expiré, fallback gracieux (message "reconnectez Calendar" plutôt que page blanche)
@@ -59,7 +59,7 @@ Source: [docs/prd.md](./prd.md)
 5. La recherche et le filtre par tag fonctionnent sur les données réelles
 
 ### Agentic Notes
-- **Fichiers** : `src/app/(dashboard)/crm/page.tsx` (1835 lignes), `/api/prospects/` endpoints
+- **Fichiers** : `src/app/(dashboard)/crm/page.tsx` (1835 lignes — découper en composants pendant cette story), `/api/prospects/` endpoints
 - **Bugs connus** : fiches non modifiables (bug #6), numéros incorrects (bug #3), métiers incorrects (bug #4) — cf. mémoire `dashboard-bugs-list-2026-06-25`
 - **Pattern** : dnd-kit déjà utilisé, CRUD prospects API existe
 - **Piège** : l'enrichissement depuis la prospection TNS peut écraser des données manuelles → s'assurer que l'édition manuelle prévaut
@@ -76,12 +76,13 @@ Source: [docs/prd.md](./prd.md)
 1. La création d'une tâche (titre, description, priorité, deadline, badge) persiste en DB via POST `/api/tasks`
 2. Le drag-drop entre colonnes met à jour le statut en DB
 3. Cocher une tâche la marque "Terminée" en DB
-4. Au rechargement, toutes les tâches viennent de la DB (pas de `INITIAL_TASKS` fallback visible)
+4. Au rechargement, toutes les tâches viennent de la DB — supprimer le fallback `INITIAL_TASKS` et les données mockées du code
 5. Le filtre "Urgentes" / "Cette semaine" / "Terminées" fonctionne sur les données réelles
+6. Le build `npm run build` passe sans erreur après les modifications
 
 ### Agentic Notes
 - **Fichiers** : `src/app/(dashboard)/tasks/page.tsx` (653 lignes), `/api/tasks` endpoint
-- **État** : la page utilise un fallback `INITIAL_TASKS` si la DB est vide → créer une migration `tasks` si la table n'existe pas encore
+- **État** : la page utilise un fallback `INITIAL_TASKS` si la DB est vide → créer une migration `tasks` si la table n'existe pas encore, puis supprimer le fallback mock du code
 - **Pattern** : même Kanban que CRM (dnd-kit) → réutiliser les patterns de drag-drop
 - **Piège** : vérifier que la table `tasks` existe en Supabase et a les bonnes colonnes (title, description, status, priority, deadline, badge, user_id)
 
@@ -97,7 +98,7 @@ Source: [docs/prd.md](./prd.md)
 1. Tous les messages de séquence ont un contenu réel (aucun template "..." ou squelette vide)
 2. L'interpolation de variables fonctionne pour tous les placeholders ({Prénom}, {Profession}, {Ville}, {Date}, {Heure})
 3. Les canaux WhatsApp et LinkedIn ne sont plus "skip" — ils ouvrent le lien/app approprié ou envoient via API
-4. Le score de température reflète les interactions réelles (réponses, clics, RDV pris)
+4. Le score de température est calculé : +1 par interaction (appel, email, message), +3 par RDV pris, -1 par semaine de silence. Un prospect passe de froid→tiède à 5 points, tiède→chaud à 12 points
 5. Le cron de pression fonctionne et envoie les relances automatiques sans auth bypass
 
 ### Agentic Notes
@@ -167,7 +168,8 @@ Source: [docs/prd.md](./prd.md)
 ### Agentic Notes
 - **Fichiers à créer** : `src/app/booking/[slug]/page.tsx` (page publique, hors layout dashboard), table `bookings` en Supabase
 - **Ref Calendly** : page `calendly.com/user/30min` — sélection jour → créneau → formulaire → confirmation. UI épurée, pas de login requis
-- **Contrainte** : cette page est PUBLIQUE (pas d'auth) — middleware.ts doit exclure `/booking` du redirect auth
+- **Contrainte** : cette page est PUBLIQUE (pas d'auth) — middleware.ts doit exclure `/booking` du redirect auth (cette story est responsable de la modification du middleware)
+- **Architecture** : extraire les composants UI en sous-fichiers si la page dépasse 500 lignes
 - **Config** : durée de RDV (30min par défaut), plages horaires (9h-18h), jours dispo — stockés dans `user_settings`
 - **Design** : doit respecter la charte PSG Cosmos (la page publique est une vitrine du CGP)
 
@@ -198,49 +200,27 @@ Source: [docs/prd.md](./prd.md)
 
 ---
 
-## s10-architecture-cleanup — Nettoyage architecture et cohérence APIs
-
-**En tant que** développeur, je veux une architecture propre : fichiers monolithiques découpés, APIs cohérentes, pas de données mockées résiduelles, pour que le Dashboard soit maintenable.
-
-### Acceptance Criteria
-1. Les pages > 1000 lignes sont découpées en composants (Today: 1592L, CRM: 1835L, Settings: 2115L, Nurturing: 1025L)
-2. Les APIs suivent un pattern cohérent (error handling, validation Zod, réponses typées)
-3. Aucune donnée mockée/INITIAL_TASKS ne subsiste dans le code de production
-4. Le `middleware.ts` exclut proprement les routes publiques (`/booking`, `/api/cron`)
-5. Le build `npm run build` passe sans erreur et le lint `npm run lint` est propre
-
-### Agentic Notes
-- **Pages critiques** : `today/page.tsx` (1592L), `crm/page.tsx` (1835L), `settings/page.tsx` (2115L) → extraire composants dans des sous-fichiers
-- **Pattern** : chaque page garde un fichier principal qui importe des composants — pas de restructuration de routes
-- **Piège** : ne pas casser les imports existants, ne pas toucher au design (styles inline PSG Cosmos)
-- **Scope** : uniquement les sections actives — ne pas toucher aux sections en sommeil
-- **Ordre** : cette story peut se faire en parallèle des autres mais doit être validée en dernier (elle impacte tous les fichiers)
-
-### Complexity: 3
-
----
-
 ## Ordre d'exécution (par dépendance)
 
 ```
-s01-menu-dynamique          (aucune dépendance — restructure la nav)
+s01-menu-dynamique              (aucune dépendance — restructure la nav)
   │
-  ├── s04-tasks-fiabilisation    (menu prêt, tâches dans "actif")
+  ├── s04-tasks-fiabilisation        (menu prêt, tâches dans "actif")
   ├── s03-crm-kanban-fiabilisation
   ├── s06-prospection-tns-fiabilisation
   │
   ├── s05-nurturing-consolidation
   │
-  └── s07-google-calendar-sync   (OAuth existe, consolider)
+  └── s07-google-calendar-sync       (OAuth existe, consolider)
         │
-        ├── s02-today-refonte     (dépend de Calendar sync + Nurturing pour les relances)
+        ├── s02-today-refonte         (dépend de s07 + s05)
         │
-        └── s08-booking-page      (dépend de Calendar sync pour les dispos)
+        └── s08-booking-page          (dépend de s07 pour les dispos)
               │
-              └── s09-rappels-sms (dépend de booking pour la table RDV)
-
-s10-architecture-cleanup        (en parallèle, validé en dernier)
+              └── s09-rappels-sms     (dépend de s08 pour la table bookings)
 ```
+
+**Note architecture** : le découpage de fichiers monolithiques et le nettoyage de code sont distribués dans chaque story qui touche la page concernée. Chaque story doit laisser son build propre (`npm run build` OK).
 
 ## Résumé
 
@@ -255,6 +235,5 @@ s10-architecture-cleanup        (en parallèle, validé en dernier)
 | s07 | Google Calendar synchro bidirectionnelle | 3 |
 | s08 | Page publique booking (Kill Calendly) | 3 |
 | s09 | Rappels SMS automatiques avant RDV | 2 |
-| s10 | Architecture cleanup — découpage, cohérence | 3 |
 
-**Total estimé : ~12 jours de travail agent**
+**Total : 9 stories — estimé ~10 jours de travail agent**
