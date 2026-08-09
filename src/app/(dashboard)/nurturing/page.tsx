@@ -24,7 +24,7 @@ export default function NurturingPage() {
   const [showTips, setShowTips] = useState(false)
   const [libraryOpen, setLibraryOpen] = useState(false)
   const [sequencePanelOpen, setSequencePanelOpen] = useState(false)
-  const [sequencePanelView, setSequencePanelView] = useState<'list' | 'create' | 'detail'>('list')
+  const [sequencePanelView, setSequencePanelView] = useState<'list' | 'create' | 'detail' | 'edit'>('list')
   const [seedImporting, setSeedImporting] = useState(false)
   const [detailTemplateId, setDetailTemplateId] = useState<string | null>(null)
   const [detailSteps, setDetailSteps] = useState<Array<{ id: string; step_order: number; channel: string; delay_days: number; message_template: string }>>([])
@@ -896,6 +896,113 @@ export default function NurturingPage() {
     }
   }
 
+  async function handleDuplicateTemplate(templateId: string) {
+    try {
+      const res = await fetch(`/api/crm/sequences/templates/${templateId}/duplicate`, {
+        method: 'POST',
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Erreur duplication')
+      showToast('Séquence dupliquée avec succès')
+      await loadSequenceTemplates()
+      setSequencePanelView('list')
+    } catch (e: any) {
+      showToast(e.message || 'Erreur duplication', 'error')
+    }
+  }
+
+  async function handleEditTemplate(templateId: string) {
+    // Charger le template et ses steps
+    setDetailTemplateId(templateId)
+    setDetailLoading(true)
+    try {
+      const [templateRes, stepsRes] = await Promise.all([
+        fetch(`/api/crm/sequences/templates/${templateId}`),
+        fetch(`/api/crm/sequences/templates/${templateId}/steps`)
+      ])
+      const [templateJson, stepsJson] = await Promise.all([
+        templateRes.json(),
+        stepsRes.json()
+      ])
+
+      if (templateJson.data?.template) {
+        const tpl = templateJson.data.template
+        setNewSequence({
+          name: tpl.name,
+          description: tpl.description || '',
+          steps: stepsJson.data?.steps?.map((s: any) => ({
+            channel: s.channel,
+            delay_days: s.delay_days,
+            message_template: s.message_template || ''
+          })) || []
+        })
+      }
+      setSequencePanelView('edit')
+    } catch (e) {
+      showToast('Erreur chargement template', 'error')
+    } finally {
+      setDetailLoading(false)
+    }
+  }
+
+  async function handleSaveEditedTemplate(templateId: string) {
+    if (!newSequence.name.trim()) {
+      showToast('Nom de séquence requis', 'error')
+      return
+    }
+
+    try {
+      // Mettre à jour le template
+      const resTemplate = await fetch(`/api/crm/sequences/templates/${templateId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: newSequence.name,
+        }),
+      })
+      if (!resTemplate.ok) {
+        const json = await resTemplate.json()
+        throw new Error(json.error || 'Erreur mise à jour template')
+      }
+
+      // Supprimer les anciens steps et recréer
+      const { data: oldSteps } = await supabase
+        .from('sequence_template_steps')
+        .select('id')
+        .eq('template_id', templateId)
+
+      if (oldSteps && oldSteps.length > 0) {
+        for (const step of oldSteps) {
+          await fetch(`/api/crm/sequences/templates/${templateId}/steps/${step.id}`, {
+            method: 'DELETE',
+          })
+        }
+      }
+
+      // Créer les nouveaux steps
+      for (let i = 0; i < newSequence.steps.length; i++) {
+        const step = newSequence.steps[i]
+        await fetch(`/api/crm/sequences/templates/${templateId}/steps`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            step_order: i + 1,
+            channel: step.channel,
+            delay_days: step.delay_days,
+            message_template: step.message_template,
+          }),
+        })
+      }
+
+      showToast('Séquence mise à jour avec succès')
+      await loadSequenceTemplates()
+      setSequencePanelView('list')
+      setDetailTemplateId(null)
+    } catch (e: any) {
+      showToast(e.message || 'Erreur sauvegarde', 'error')
+    }
+  }
+
   // ─── RENDER ────────────────────────────────────────────────────────────────
   const selectedContact = contacts[selectedContactIdx]
 
@@ -1494,6 +1601,9 @@ export default function NurturingPage() {
           onPauseSequence={handlePauseSequence}
           onResumeSequence={handleResumeSequence}
           onStopSequence={handleStopSequence}
+          onDuplicateTemplate={handleDuplicateTemplate}
+          onEditTemplate={handleEditTemplate}
+          onSaveEditedTemplate={handleSaveEditedTemplate}
           availableThemes={availableThemes}
           selectedThemeIds={selectedThemeIds}
           onSetSelectedThemeIds={setSelectedThemeIds}

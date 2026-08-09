@@ -32,7 +32,7 @@ interface ContactDetailProps {
   scheduleDate: string
   scheduleTime: string
   sequencePanelOpen: boolean
-  sequencePanelView: 'list' | 'create' | 'detail'
+  sequencePanelView: 'list' | 'create' | 'detail' | 'edit'
   sequenceTemplates: { id: string; name: string; description: string }[]
   seedImporting: boolean
   detailTemplateId: string | null
@@ -55,7 +55,7 @@ interface ContactDetailProps {
   onSaveConfig: () => void
   onSetContactConfig: (config: ContactConfig) => void
   onOpenSequencePanel: () => void
-  onSetSequencePanelView: (v: 'list' | 'create' | 'detail') => void
+  onSetSequencePanelView: (v: 'list' | 'create' | 'detail' | 'edit') => void
   onSetSequencePanelOpen: (v: boolean) => void
   onAssignSequence: (templateId: string) => void
   onCreateSequence: (assignNow: boolean) => void
@@ -78,6 +78,13 @@ interface ContactDetailProps {
   onPauseSequence: () => void
   onResumeSequence: () => void
   onStopSequence: () => void
+  onDuplicateTemplate: (templateId: string) => void
+  onEditTemplate: (templateId: string) => void
+  onSaveEditedTemplate: (templateId: string) => void
+  availableThemes: Array<{ id: string; name: string; icon: string; color: string }>
+  selectedThemeIds: string[]
+  onSetSelectedThemeIds: (ids: string[]) => void
+  onSaveProspectThemes: (prospectId: string, themeIds: string[]) => void
 }
 
 export default function ContactDetail(props: ContactDetailProps) {
@@ -99,7 +106,8 @@ export default function ContactDetail(props: ContactDetailProps) {
     historyTypeFilters, onSetHistoryTypeFilters,
     historyDateRange, onSetHistoryDateRange,
     sequenceInstanceId, sequenceStatus,
-    onPauseSequence, onResumeSequence, onStopSequence,
+    onPauseSequence, onResumeSequence, onStopSequence, onDuplicateTemplate,
+    onEditTemplate, onSaveEditedTemplate,
     availableThemes, selectedThemeIds, onSetSelectedThemeIds, onSaveProspectThemes,
   } = props
 
@@ -310,6 +318,9 @@ export default function ContactDetail(props: ContactDetailProps) {
               onPauseSequence={onPauseSequence}
               onResumeSequence={onResumeSequence}
               onStopSequence={onStopSequence}
+              onDuplicateTemplate={onDuplicateTemplate}
+              onEditTemplate={onEditTemplate}
+              onSaveEditedTemplate={onSaveEditedTemplate}
             />
 
             {/* QUICK COMPOSE */}

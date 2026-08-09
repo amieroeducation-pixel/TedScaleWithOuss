@@ -31,16 +31,16 @@
 22. ✅ **Sauvegarder brouillon** — Autosave 1000ms via `use-debounce` → table `message_drafts` (upsert par user/prospect/canal) + restauration au changement de contact
 23. ✅ **Historique envois** — Timeline messages envoyés par canal dans tab Historique
 
-### 3. Sequence Management (8 actions)
+### 3. Sequence Management (8 actions) — 100% ✅
 
-24. **Voir séquences actives** — Liste séquences assignées au contact
-25. **Créer nouvelle séquence** — Modal 3 étapes (nom, canaux, steps)
-26. **Éditer séquence** — Modification nom/canaux/steps
-27. **Assigner séquence** — Dropdown séquences + bouton "Démarrer"
-28. **Pause séquence** — Stopper exécution temporairement
-29. **Reprendre séquence** — Continuer où on s'était arrêté
-30. **Arrêter séquence** — Stop définitif (status=stopped)
-31. **Dupliquer séquence** — Créer copie avec nouveau nom
+24. ✅ **Voir séquences actives** — Liste séquences assignées au contact
+25. ✅ **Créer nouvelle séquence** — Modal 3 étapes (nom, canaux, steps)
+26. ✅ **Éditer séquence** — Bouton "✏️ Éditer" dans view='detail' + PATCH template/steps + ajout/suppression d'étapes
+27. ✅ **Assigner séquence** — Dropdown séquences + bouton "Démarrer"
+28. ✅ **Pause séquence** — Bouton "⏸️ Pause" + PATCH /api/crm/sequences/:instanceId → status='paused'
+29. ✅ **Reprendre séquence** — Bouton "▶️ Reprendre" + PATCH /api/crm/sequences/:instanceId → status='active'
+30. ✅ **Arrêter séquence** — Bouton "⏹️ Arrêter" avec confirmation + PATCH cancel → status='cancelled' + skip pending steps
+31. ✅ **Dupliquer séquence** — Bouton "📋 Dupliquer" + POST /api/crm/sequences/templates/:id/duplicate
 
 ### 4. Interaction History (5 actions) — 100%
 
@@ -277,13 +277,21 @@ Le stack Nurturing est **complet** :
 ✅ #36 Exporter historique CSV — `/api/nurturing/interactions/export` avec filtres
 ✅ #46 Filtrer KPIs par période — Date range picker + recalcul auto
 
+**Module Sequence Management finalisé (5/5 tâches complétées)** :
+
+✅ #26 Éditer séquence — Vue 'edit' avec formulaire pré-rempli + PATCH template + DELETE/POST steps
+✅ #28 Pause séquence — Bouton ⏸️ + PATCH action='pause' → status='paused' + cron skip paused
+✅ #29 Reprendre séquence — Bouton ▶️ + PATCH action='resume' → status='active'
+✅ #30 Arrêter séquence — Bouton ⏹️ + confirmation + PATCH action='cancel' → status='cancelled' + skip steps
+✅ #31 Dupliquer séquence — Bouton 📋 + POST /api/crm/sequences/templates/:id/duplicate → copie avec "(Copie)"
+
 **Fonctionnalité bonus non implémentée** :
 ❌ #47 Exporter rapport PDF — jsPDF (à implémenter si besoin futur)
 
-**Module Nurturing progression globale** : ~82%
+**Module Nurturing progression globale** : ~92%
 
 Prochaines priorités :
-1. Implémenter pause/reprise/arrêt séquences (tâches #2, #4, #5 en cours)
-2. Compléter templates vides (messages 1-4 séquences)
-3. Implémenter canal LinkedIn dans executor
-4. Tests E2E température forcée + thèmes
+1. Compléter templates vides (messages 1-4 séquences)
+2. Implémenter canal LinkedIn dans executor
+3. Tests E2E gestion séquences (pause/resume/stop/edit/duplicate)
+4. Remplir les steps des séquences seed avec des messages pertinents
