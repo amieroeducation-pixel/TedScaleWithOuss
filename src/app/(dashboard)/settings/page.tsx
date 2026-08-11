@@ -8,7 +8,7 @@ import { useUserSettings, UserSettings } from '@/hooks/useUserSettings'
 import {
   Tab, TabProps, TABS, MONTHS_SHORT, MONTHS_ID, MONTHS_WEEKS,
   SECTIONS_LIST, MOBILE_SECTIONS,
-  Toggle, SetRow, SetLabel, NumInput, SectionPanel, SetBtn,
+  Toggle, SetRow, SetLabel, NumInput, SectionPanel, SetBtn, TabMenu,
 } from './shared'
 
 // ─── ONGLET GÉNÉRAL ──────────────────────────────────────────────────────────
@@ -1891,6 +1891,7 @@ function SettingsPageContent() {
       {activeTab === 'kpi' && <TabKPI settings={settings} save={save} saving={saving} />}
       {activeTab === 'notifications' && <TabNotifications settings={settings} save={save} saving={saving} />}
       {activeTab === 'integrations' && <TabIntegrations />}
+      {activeTab === 'menu' && <TabMenu settings={settings} save={save} />}
       {activeTab === 'sections' && <TabSections settings={settings} save={save} saving={saving} />}
       {activeTab === 'mobile' && <TabMobile settings={settings} save={save} saving={saving} />}
       {activeTab === 'sequences' && <TabSequences />}

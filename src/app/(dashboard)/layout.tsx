@@ -74,6 +74,13 @@ export default function DashboardLayout({
   const [search, setSearch] = useState('')
   const [recentCount, setRecentCount] = useState<number>(0)
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [menuVisibility, setMenuVisibility] = useState<Record<string, boolean>>({
+    principal: true,
+    clients: true,
+    acquisition: true,
+    outils: true,
+    pilotage: true,
+  })
 
   useEffect(() => {
     fetch('/api/achievements')
@@ -85,6 +92,18 @@ export default function DashboardLayout({
           new Date(a.achieved_at).getTime() > cutoff
         )
         setRecentCount(recent.length)
+      })
+      .catch(() => {/* silencieux */})
+  }, [])
+
+  // Phase 1A : Charger menu_sections_visible depuis settings
+  useEffect(() => {
+    fetch('/api/settings')
+      .then(r => r.json())
+      .then(({ data }) => {
+        if (data?.menu_sections_visible) {
+          setMenuVisibility(data.menu_sections_visible)
+        }
       })
       .catch(() => {/* silencieux */})
   }, [])
@@ -200,7 +219,10 @@ export default function DashboardLayout({
 
           {/* Navigation */}
           <nav style={{ padding: '2px 0', flex: 1 }}>
-            {NAV_SECTIONS.map((section) => (
+            {NAV_SECTIONS.filter(section => {
+              const key = section.label.toLowerCase()
+              return menuVisibility[key] !== false
+            }).map((section) => (
               <div key={section.label}>
                 <div style={{
                   fontSize: 7,

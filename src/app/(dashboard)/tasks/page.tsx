@@ -3,6 +3,22 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { C } from '@/lib/theme'
+import {
+  DndContext,
+  DragOverlay,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragStartEvent,
+  type DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 
 type Filter = 'Toutes' | 'Urgentes' | 'Cette semaine' | 'Terminées'
 type KanbanCol = 'todo' | 'inprogress' | 'waiting' | 'blocked' | 'done'
@@ -68,6 +84,46 @@ function PriorityDots({ n }: { n: Priority }) {
         <span key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: C.gold, flexShrink: 0 }} />
       ))}
     </span>
+  )
+}
+
+// Phase 1B : DroppableColumn pour drag-drop
+function DroppableColumn({ id, label, color, count, children }: { id: string; label: string; color: string; count: number; children: React.ReactNode }) {
+  const { setNodeRef } = useSortable({ id })
+
+  return (
+    <div ref={setNodeRef}>
+      {/* Column header */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '8px 12px', marginBottom: 8,
+        background: `${color}12`, border: `1px solid ${color}40`, borderRadius: 8,
+      }}>
+        <span style={{ fontFamily: 'Oswald,sans-serif', fontSize: 11, fontWeight: 500, color, letterSpacing: '0.08em' }}>{label}</span>
+        <span style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 10, color, background: `${color}20`, border: `1px solid ${color}50`, padding: '1px 7px', borderRadius: 10 }}>{count}</span>
+      </div>
+      {/* Cards */}
+      <div>
+        {children}
+      </div>
+    </div>
+  )
+}
+
+// Phase 1B : SortableTaskCard pour drag-drop
+function SortableTaskCard({ task, onCheck, onOpen }: { task: Task; onCheck?: (checked: boolean) => void; onOpen?: () => void }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  }
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      <TaskCard task={task} onCheck={onCheck} onOpen={onOpen} />
+    </div>
   )
 }
 
@@ -319,6 +375,14 @@ export default function TasksPage() {
   const [creating, setCreating] = useState(false)
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
 
+  // Phase 1B : Drag-drop states
+  const [activeTask, setActiveTask] = useState<Task | null>(null)
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 8 }
+    })
+  )
+
   useEffect(() => {
     fetch('/api/tasks')
       .then(r => r.json())
@@ -338,15 +402,109 @@ export default function TasksPage() {
       .finally(() => setLoading(false))
   }, [])
 
+  // Phase 1B : Fix persistence avec debounce + retry
+  const checkTimeouts = new Map<string, NodeJS.Timeout>()
+
   async function handleCheck(taskId: string, checked: boolean) {
     if (!dbConnected) return
+
+    // Optimistic update
     const newCol: KanbanCol = checked ? 'done' : 'todo'
     setTasks(prev => prev.map(t => t.id === taskId ? { ...t, col: newCol } : t))
-    await fetch(`/api/tasks/${taskId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ col: newCol }),
-    }).catch(() => {})
+
+    // Debounce 500ms (évite multiples appels si clic rapide)
+    if (checkTimeouts.has(taskId)) {
+      clearTimeout(checkTimeouts.get(taskId)!)
+    }
+
+    const timeout = setTimeout(async () => {
+      checkTimeouts.delete(taskId)
+
+      // Retry logic (3 tentatives)
+      let attempts = 0
+      const maxAttempts = 3
+
+      while (attempts < maxAttempts) {
+        try {
+          const res = await fetch(`/api/tasks/${taskId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ col: newCol }),
+          })
+
+          if (res.ok) {
+            // Succès - pas de toast pour éviter spam
+            return
+          }
+
+          // Erreur serveur - retry
+          attempts++
+          if (attempts === maxAttempts) {
+            // Rollback optimistic update
+            setTasks(prev => prev.map(t => t.id === taskId ? { ...t, col: checked ? 'todo' : 'done' } : t))
+            console.error('Échec persistence checkbox après 3 tentatives')
+          } else {
+            // Wait avant retry (100ms, 200ms, 400ms)
+            await new Promise(resolve => setTimeout(resolve, 100 * Math.pow(2, attempts)))
+          }
+        } catch (error) {
+          attempts++
+          if (attempts === maxAttempts) {
+            // Rollback
+            setTasks(prev => prev.map(t => t.id === taskId ? { ...t, col: checked ? 'todo' : 'done' } : t))
+            console.error('Erreur réseau persistence checkbox:', error)
+          } else {
+            await new Promise(resolve => setTimeout(resolve, 100 * Math.pow(2, attempts)))
+          }
+        }
+      }
+    }, 500)
+
+    checkTimeouts.set(taskId, timeout)
+  }
+
+  // Phase 1B : Drag-drop handlers
+  function handleDragStart(event: DragStartEvent) {
+    const task = tasks.find(t => t.id === event.active.id)
+    setActiveTask(task || null)
+  }
+
+  async function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event
+    setActiveTask(null)
+
+    if (!over || !dbConnected) return
+
+    const taskId = active.id as string
+    const targetCol = over.id as KanbanCol
+
+    // Check si la colonne cible est valide
+    if (!COLS.find(c => c.id === targetCol)) return
+
+    const task = tasks.find(t => t.id === taskId)
+    if (!task || task.col === targetCol) return
+
+    // Optimistic update
+    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, col: targetCol } : t))
+
+    // Persist
+    try {
+      const res = await fetch(`/api/tasks/${taskId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ col: targetCol }),
+      })
+
+      if (!res.ok) {
+        // Rollback
+        setTasks(prev => prev.map(t => t.id === taskId ? { ...t, col: task.col } : t))
+        console.error('Échec déplacement tâche')
+      }
+    } catch (error) {
+      // Rollback
+      setTasks(prev => prev.map(t => t.id === taskId ? { ...t, col: task.col } : t))
+      console.error('Erreur réseau déplacement:', error)
+    }
   }
 
   async function handleCreate() {
@@ -483,45 +641,46 @@ export default function TasksPage() {
         </div>
       </div>
 
-      {/* Kanban board */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: colsToShow.length === 1 ? '1fr' : colsToShow.length === 5 ? 'repeat(5,1fr)' : `repeat(${colsToShow.length},1fr)`,
-        gap: 10,
-      }}>
-        {colsToShow.map(col => {
-          const colTasks = tasksByCol(col.id)
-          return (
-            <div key={col.id}>
-              {/* Column header */}
-              <div style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '8px 12px', marginBottom: 8,
-                background: `${col.color}12`, border: `1px solid ${col.color}40`, borderRadius: 8,
-              }}>
-                <span style={{ fontFamily: 'Oswald,sans-serif', fontSize: 11, fontWeight: 500, color: col.color, letterSpacing: '0.08em' }}>{col.label}</span>
-                <span style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 10, color: col.color, background: `${col.color}20`, border: `1px solid ${col.color}50`, padding: '1px 7px', borderRadius: 10 }}>{colTasks.length}</span>
-              </div>
-              {/* Cards */}
-              <div>
-                {colTasks.map(task => (
-                  <TaskCard
-                    key={task.id}
-                    task={task}
-                    onCheck={dbConnected ? (checked) => handleCheck(task.id, checked) : undefined}
-                    onOpen={() => setSelectedTask(task)}
-                  />
-                ))}
-                {colTasks.length === 0 && (
-                  <div style={{ padding: '16px 0', textAlign: 'center', fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.textVlo, fontStyle: 'italic' }}>
-                    Aucune tâche
-                  </div>
-                )}
-              </div>
-            </div>
-          )
-        })}
-      </div>
+      {/* Kanban board - Phase 1B : Drag-drop enabled */}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: colsToShow.length === 1 ? '1fr' : colsToShow.length === 5 ? 'repeat(5,1fr)' : `repeat(${colsToShow.length},1fr)`,
+          gap: 10,
+        }}>
+          {colsToShow.map(col => {
+            const colTasks = tasksByCol(col.id)
+            return (
+              <SortableContext key={col.id} items={[col.id, ...colTasks.map(t => t.id)]} strategy={verticalListSortingStrategy}>
+                <DroppableColumn id={col.id} label={col.label} color={col.color} count={colTasks.length}>
+                  {colTasks.map(task => (
+                    <SortableTaskCard
+                      key={task.id}
+                      task={task}
+                      onCheck={dbConnected ? (checked) => handleCheck(task.id, checked) : undefined}
+                      onOpen={() => setSelectedTask(task)}
+                    />
+                  ))}
+                  {colTasks.length === 0 && (
+                    <div style={{ padding: '16px 0', textAlign: 'center', fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.textVlo, fontStyle: 'italic' }}>
+                      Aucune tâche
+                    </div>
+                  )}
+                </DroppableColumn>
+              </SortableContext>
+            )
+          })}
+        </div>
+
+        <DragOverlay>
+          {activeTask && <TaskCard task={activeTask} />}
+        </DragOverlay>
+      </DndContext>
 
       {/* Modal nouvelle tâche */}
       {showNewTask && (
