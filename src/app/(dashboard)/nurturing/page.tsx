@@ -14,6 +14,7 @@ import {
 import ContactList from './ContactList'
 import ContactDetail from './ContactDetail'
 import { interpolateTemplate, prepareContactData } from '@/lib/nurturing/interpolate'
+import { generateNurturingPDF } from '@/lib/nurturing/pdf-export'
 
 export default function NurturingPage() {
   const [contacts, setContacts] = useState<Contact[]>([])
@@ -1003,6 +1004,57 @@ export default function NurturingPage() {
     }
   }
 
+  async function handleExportPDF() {
+    if (!kpis) {
+      showToast('Aucune donnée KPI à exporter', 'error')
+      return
+    }
+
+    try {
+      // Préparer top 5 contacts actifs
+      const sortedContacts = [...contacts]
+        .filter(c => !c.archived)
+        .sort((a, b) => b.touchpoints - a.touchpoints)
+        .slice(0, 5)
+
+      const topContacts = sortedContacts.map(c => ({
+        name: c.name,
+        temperature: c.temp,
+        touchpoints: c.touchpoints,
+        responses: c.responses,
+      }))
+
+      // Calculer stats canaux depuis interactions de tous les contacts
+      const channelStats: Record<string, { total: number; replied: number }> = {}
+      for (const contact of contacts) {
+        // Charger interactions du contact
+        const res = await fetch(`/api/nurturing/interactions?prospect_id=${contact.id}`)
+        const json = await res.json()
+        if (json.data) {
+          for (const i of json.data) {
+            if (!channelStats[i.type]) channelStats[i.type] = { total: 0, replied: 0 }
+            channelStats[i.type].total++
+            if (i.is_honored) channelStats[i.type].replied++
+          }
+        }
+      }
+
+      const channelStatsArray = Object.entries(channelStats).map(([channel, stats]) => ({
+        channel,
+        total: stats.total,
+        replied: stats.replied,
+        rate: stats.total > 0 ? (stats.replied / stats.total) * 100 : 0,
+      }))
+
+      // Générer PDF
+      await generateNurturingPDF(kpis, kpisDateRange, topContacts, channelStatsArray)
+      showToast('Rapport PDF généré avec succès')
+    } catch (e: any) {
+      console.error('Export PDF error:', e)
+      showToast(e.message || 'Erreur génération PDF', 'error')
+    }
+  }
+
   // ─── RENDER ────────────────────────────────────────────────────────────────
   const selectedContact = contacts[selectedContactIdx]
 
@@ -1472,6 +1524,15 @@ export default function NurturingPage() {
             ✕ Tout afficher
           </button>
         )}
+        <button
+          onClick={handleExportPDF}
+          style={{
+            padding: '5px 12px', fontSize: '11px', borderRadius: '6px', cursor: 'pointer',
+            border: `1px solid ${V.cyan}`, background: 'rgba(78,205,196,0.1)', color: V.cyan, fontWeight: 600,
+          }}
+        >
+          📥 Exporter PDF
+        </button>
       </div>
 
       {/* KPI BAR */}
