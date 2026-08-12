@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SMS Bridge</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            text-align: center;
+            max-width: 500px;
+            width: 100%;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+        .phone {
+            font-size: 20px;
+            font-weight: bold;
+            color: #667eea;
+            margin: 20px 0;
+        }
+        .message-preview {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-style: italic;
+            color: #555;
+            max-height: 150px;
+            overflow-y: auto;
+            line-height: 1.6;
+        }
+        .btn-send {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 20px 40px;
+            font-size: 20px;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin: 30px 0;
+            width: 100%;
+            max-width: 300px;
+        }
+        .btn-send:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 40px rgba(102, 126, 234, 0.6);
+        }
+        .btn-send:active {
+            transform: translateY(0);
+        }
+        .warning {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+            text-align: left;
+            font-size: 14px;
+            color: #856404;
+        }
+        .warning-title {
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        .info {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+            text-align: left;
+            font-size: 14px;
+        }
+        .info-title {
+            font-weight: bold;
+            color: #1976d2;
+            margin-bottom: 8px;
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 30px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .steps {
+            line-height: 1.8;
+            color: #555;
+        }
+        .steps li {
+            margin: 8px 0;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📱 SMS Bridge</h1>
+        <p class="subtitle">Envoyer un SMS via iPhone</p>
+
+        <div id="loading" class="loader"></div>
+
+        <div id="content" style="display: none;">
+            <div class="phone" id="phone"></div>
+            <div class="message-preview" id="message"></div>
+
+            <button class="btn-send" id="btnSend" onclick="sendSMS()">
+                📤 Envoyer SMS
+            </button>
+
+            <div class="warning">
+                <div class="warning-title">⚠️ Important</div>
+                <div>Tu dois d'abord créer le Raccourci "EnvoiSMS" sur ton iPhone (voir instructions ci-dessous). Sans ce raccourci, le bouton ne fonctionnera pas.</div>
+            </div>
+
+            <div class="info">
+                <div class="info-title">📋 Créer le Raccourci "EnvoiSMS"</div>
+                <ol class="steps">
+                    <li>Ouvre l'app <strong>Raccourcis</strong> sur iPhone</li>
+                    <li>Appuie sur <strong>+</strong> en haut à droite</li>
+                    <li>Renomme en <strong>EnvoiSMS</strong></li>
+                    <li>Ajoute ces actions :
+                        <ul>
+                            <li>"Obtenir l'entrée du raccourci"</li>
+                            <li>"Diviser le texte" (séparateur: <strong>|</strong>)</li>
+                            <li>"Obtenir l'élément" (Premier → renommer "Numéro")</li>
+                            <li>"Obtenir l'élément" (Dernier → renommer "Message")</li>
+                            <li>"Envoyer un message" (Message: variable Message, Destinataire: variable Numéro)</li>
+                        </ul>
+                    </li>
+                    <li>Désactive "Afficher lors de l'exécution"</li>
+                    <li>Sauvegarde</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let shortcutUrl = '';
+
+        async function loadLatestSMS() {
+            try {
+                const response = await fetch('/sms/latest');
+                const data = await response.json();
+
+                if (data.success) {
+                    document.getElementById('phone').textContent = `📞 ${data.phone}`;
+                    document.getElementById('message').textContent = data.message;
+                    shortcutUrl = data.shortcut_url;
+
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('content').style.display = 'block';
+                } else {
+                    document.getElementById('loading').innerHTML = '<p style="color: #666;">Aucun SMS en attente. Envoie un SMS depuis le Dashboard.</p>';
+                }
+            } catch (error) {
+                document.getElementById('loading').innerHTML = '<p style="color: #e74c3c;">Erreur de connexion au serveur</p>';
+            }
+        }
+
+        function sendSMS() {
+            if (!shortcutUrl) {
+                alert('Aucun SMS en attente');
+                return;
+            }
+
+            // Ouvrir l'URL scheme du raccourci
+            window.location.href = shortcutUrl;
+
+            // Feedback visuel
+            const btn = document.getElementById('btnSend');
+            btn.textContent = '✅ Envoyé !';
+            btn.style.background = '#4caf50';
+
+            setTimeout(() => {
+                btn.textContent = '📤 Envoyer SMS';
+                btn.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+            }, 2000);
+        }
+
+        // Charger au démarrage
+        loadLatestSMS();
+
+        // Rafraîchir toutes les 5 secondes
+        setInterval(loadLatestSMS, 5000);
+    </script>
+</body>
+</html>

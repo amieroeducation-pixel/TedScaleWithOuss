@@ -68,6 +68,68 @@ npx playwright test --ui                     # Mode UI interactif
 ```
 
 <!-- GSD:conventions-start source:CONVENTIONS.md -->
+## Process Diagnostique
+
+**Avant de travailler sur une fonctionnalité, TOUJOURS effectuer un Diagnostique complet.**
+
+Le Diagnostique est un **AUDIT du BOILERPLATE existant** (pas du développement) :
+
+### Méthodologie en 2 Phases
+
+**Phase 1 — INVENTAIRE** (Lister tout ce qui existe)
+1. Lire TOUS les fichiers concernés (page, composants, API routes)
+2. Identifier TOUTES les fonctions impliquées (handlers, helpers, API)
+3. Noter les packages utilisés (imports)
+4. Chercher les TODOs, commentaires "non implémenté", fonctions vides
+5. **Distinguer ACTIONS (utilisateur) vs FONCTIONS (code)** :
+   - ❌ FAUX : "Créer un contact" (trop vague)
+   - ✅ CORRECT :
+     - **ACTION** : "Cliquer 'Nouveau contact', remplir nom/email/tel, cliquer 'Sauvegarder', voir toast"
+     - **FONCTION** : `handleCreateClick()` → validation zod → `POST /api/contacts` → `createContact()` → toast
+
+**Phase 2 — TEST** (Vérifier ce qui marche)
+1. Lancer `npm run dev`
+2. Naviguer vers chaque page du boilerplate
+3. **TESTER chaque action** dans le navigateur (clics, saisies, formulaires)
+4. Noter le comportement RÉEL :
+   - ✅ Fonctionne comme attendu
+   - ⚠️ Fonctionne partiellement (bug, limitation)
+   - ❌ Ne fonctionne pas (erreur, absent, bouton mort)
+
+### Format Tableau ASCII Obligatoire
+
+```
+┌─────────────────┬────────────────┬──────────────────────────────────────┬──────────────────────────────────┬───────────────┐
+│        #        │  Action User   │        Fonctions Principales         │              Outils              │    Statut     │
+│                 │                │                                      │                                  │  Fonctionnel  │
+├─────────────────┼────────────────┼──────────────────────────────────────┼──────────────────────────────────┼───────────────┤
+│ 1. CATÉGORIE    │                │                                      │                                  │               │
+│ (X actions)     │                │                                      │                                  │               │
+├─────────────────┼────────────────┼──────────────────────────────────────┼──────────────────────────────────┼───────────────┤
+│ 1               │ [ACTION 1]     │ [FONCTIONS 1]                        │ [OUTILS 1]                       │ [✅/⚠️/❌]    │
+│                 │ Détails gestes │ Liste complète des fonctions code    │ Packages utilisés                │ Justification │
+└─────────────────┴────────────────┴──────────────────────────────────────┴──────────────────────────────────┴───────────────┘
+```
+
+### Règles Absolues
+
+- **Ne JAMAIS mettre ✅ sans test manuel dans le navigateur**
+- **Toujours distinguer ACTION (geste utilisateur) vs FONCTION (code technique)**
+- **Documenter dans `docs/diagnostique-<nom-module>-tableau-ascii.md`**
+- **Référence complète** : `docs/DIAGNOSTIQUE-PROCESS.md`
+- **Exemple complet** : `docs/DIAGNOSTIQUE-TOUS-TABLEAUX-ASCII.md` (9 stories, 294 actions)
+
+### Résultats Actuels
+
+- **294 actions documentées** sur 9 stories killer-saas
+- **283 actions opérationnelles** (96%)
+- **6 actions partielles** (2%)
+- **20 actions manquantes** (8%)
+
+Voir détails : `docs/DIAGNOSTIQUE-SYNTHESE-GLOBALE.md`
+
+---
+
 ## Conventions
 
 - Inline CSS uniquement via `C` importé de `src/lib/theme.ts` — aucun Tailwind, aucun shadcn token
