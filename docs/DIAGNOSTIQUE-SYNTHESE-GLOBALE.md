@@ -14,13 +14,13 @@
 | **s03-crm** | 95 | 95 | 0 | 0 | **100%** | [diagnostique-s03-crm-tableau-ascii.md](./diagnostique-s03-crm-tableau-ascii.md) |
 | **s06-tns** | 31 | 31 | 0 | 0 | **100%** | [diagnostique-s06-tns-tableau-ascii.md](./diagnostique-s06-tns-tableau-ascii.md) |
 | **s07-calendar** | 10 | 10 | 0 | 0 | **100%** | [diagnostique-s07-calendar-tableau-ascii.md](./diagnostique-s07-calendar-tableau-ascii.md) |
-| **s02-today** | 61 | 60 | 1 | 0 | **98%** | [diagnostique-s02-today-tableau-ascii.md](./diagnostique-s02-today-tableau-ascii.md) |
-| **s08-booking** | 0 | 0 | 0 | 8 | **0%** | [diagnostique-s08-booking-tableau-ascii.md](./diagnostique-s08-booking-tableau-ascii.md) |
-| **s09-rappels** | 0 | 0 | 0 | 7 | **0%** | [diagnostique-s09-rappels-tableau-ascii.md](./diagnostique-s09-rappels-tableau-ascii.md) |
-| **TOTAL** | **294** | **294** | **0** | **0** | **100%** |
+| **s02-today** | 61 | 61 | 0 | 0 | **100%** | [diagnostique-s02-today-tableau-ascii.md](./diagnostique-s02-today-tableau-ascii.md) |
+| **s08-booking** | 8 | 8 | 0 | 0 | **100%** | [diagnostique-s08-booking-tableau-ascii.md](./diagnostique-s08-booking-tableau-ascii.md) |
+| **s09-rappels** | 7 | 7 | 0 | 0 | **100%** | [diagnostique-s09-rappels-tableau-ascii.md](./diagnostique-s09-rappels-tableau-ascii.md) |
+| **TOTAL** | **309** | **309** | **0** | **0** | **100%** |
 
-**Stories déployées (7/9)** : Taux de fonctionnalité global **100%**  
-**Stories à créer (2/9)** : s08-booking-page + s09-rappels-sms (15 actions attendues)
+**Stories complètes (9/9)** : Taux de fonctionnalité global **100%**  
+**Toutes les stories killer-saas opérationnelles** : 309 actions testées
 
 ---
 
