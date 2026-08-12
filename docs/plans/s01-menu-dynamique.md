@@ -72,7 +72,7 @@ Conforme AGENTS.md:
 
 ## Tasks
 
-### Task 1: Créer migration DB pour menu_sections_visible
+### Task 1: Créer migration DB pour menu_sections_visible [✅ DONE]
 
 **File**: `supabase/migrations/20260811_add_menu_visibility.sql` (NEW)
 
@@ -99,7 +99,7 @@ COMMENT ON COLUMN user_settings.menu_sections_visible IS 'Visibilité sections m
 
 ---
 
-### Task 2: Ajouter menu_sections_visible au type UserSettings
+### Task 2: Ajouter menu_sections_visible au type UserSettings [✅ DONE]
 
 **File**: `src/hooks/useUserSettings.ts` (EDIT)
 
@@ -117,7 +117,7 @@ menu_sections_visible?: Record<string, boolean>
 
 ---
 
-### Task 3: Créer composant TabMenu dans settings/shared.tsx
+### Task 3: Créer composant TabMenu dans settings/shared.tsx [✅ DONE]
 
 **File**: `src/app/(dashboard)/settings/shared.tsx` (EDIT)
 
@@ -144,7 +144,7 @@ Exporter nouvelle fonction `TabMenu` (lignes 153-194 dans implémentation):
 
 ---
 
-### Task 4: Ajouter onglet Menu dans settings/page.tsx
+### Task 4: Ajouter onglet Menu dans settings/page.tsx [✅ DONE]
 
 **File**: `src/app/(dashboard)/settings/page.tsx` (EDIT)
 
@@ -167,7 +167,7 @@ Exporter nouvelle fonction `TabMenu` (lignes 153-194 dans implémentation):
 
 ---
 
-### Task 5: Ajouter state menuVisibility dans layout.tsx
+### Task 5: Ajouter state menuVisibility dans layout.tsx [✅ DONE]
 
 **File**: `src/app/(dashboard)/layout.tsx` (EDIT lignes 77-83, 100-109)
 
@@ -206,7 +206,7 @@ Exporter nouvelle fonction `TabMenu` (lignes 153-194 dans implémentation):
 
 ---
 
-### Task 6: Filtrer NAV_SECTIONS selon menuVisibility
+### Task 6: Filtrer NAV_SECTIONS selon menuVisibility [✅ DONE]
 
 **File**: `src/app/(dashboard)/layout.tsx` (EDIT lignes 222-224)
 
@@ -238,7 +238,7 @@ Wrapper le `.map()` existant avec `.filter()`:
 
 ---
 
-### Task 7: Tests E2E complets
+### Task 7: Tests E2E complets [✅ DONE - tests created, need credentials]
 
 **File**: `e2e/phase0-1-test.spec.ts` (NEW ou EDIT)
 
