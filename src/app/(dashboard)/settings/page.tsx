@@ -10,6 +10,7 @@ import {
   SECTIONS_LIST, MOBILE_SECTIONS,
   Toggle, SetRow, SetLabel, NumInput, SectionPanel, SetBtn, TabMenu,
 } from './shared'
+import { RappelsSmsTab } from './RappelsSmsTab'
 
 // ─── ONGLET GÉNÉRAL ──────────────────────────────────────────────────────────
 function triggerCelebration(type: string) {
@@ -1891,13 +1892,14 @@ function SettingsPageContent() {
       {activeTab === 'kpi' && <TabKPI settings={settings} save={save} saving={saving} />}
       {activeTab === 'notifications' && <TabNotifications settings={settings} save={save} saving={saving} />}
       {activeTab === 'integrations' && <TabIntegrations />}
-      {activeTab === 'menu' && <TabMenu settings={settings} save={save} />}
+      {activeTab === 'menu' && <TabMenu settings={settings} save={save} saving={saving} />}
       {activeTab === 'sections' && <TabSections settings={settings} save={save} saving={saving} />}
       {activeTab === 'mobile' && <TabMobile settings={settings} save={save} saving={saving} />}
       {activeTab === 'sequences' && <TabSequences />}
       {activeTab === 'variantes' && <TabVariantes settings={settings} save={save} saving={saving} />}
       {activeTab === 'triggers' && <TabTriggers />}
       {activeTab === 'scripts' && <TabScripts />}
+      {activeTab === 'rappels' && <RappelsSmsTab settings={settings} save={save} saving={saving} />}
     </>
   )
 }

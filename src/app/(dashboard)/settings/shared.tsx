@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { C } from '@/lib/theme'
 import { UserSettings } from '@/hooks/useUserSettings'
 
-export type Tab = 'general' | 'kpi' | 'notifications' | 'integrations' | 'sections' | 'mobile' | 'sequences' | 'variantes' | 'triggers' | 'scripts' | 'menu'
+export type Tab = 'general' | 'kpi' | 'notifications' | 'integrations' | 'sections' | 'mobile' | 'sequences' | 'variantes' | 'triggers' | 'scripts' | 'menu' | 'rappels'
 
 export type TabProps = {
   settings: UserSettings | null
@@ -24,6 +24,7 @@ export const TABS: { id: Tab; label: string }[] = [
   { id: 'variantes', label: '🎯 Variantes' },
   { id: 'triggers', label: '⚡ Triggers' },
   { id: 'scripts', label: '📞 Scripts' },
+  { id: 'rappels', label: '📲 Rappels SMS' },
 ]
 
 export const MONTHS_SHORT = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc']
