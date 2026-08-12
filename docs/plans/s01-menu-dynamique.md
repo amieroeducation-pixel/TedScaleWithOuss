@@ -3,7 +3,7 @@ story: s01-menu-dynamique
 date: 2026-08-12
 status: post-mortem
 commit: 57c73a9
-validated: no
+validated: yes
 complexity: 2
 tasks_total: 7
 ---
