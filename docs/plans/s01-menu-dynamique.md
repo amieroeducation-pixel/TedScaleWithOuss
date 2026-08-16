@@ -457,6 +457,28 @@ Si une décision était documentée, elle serait:
 
 ---
 
+## Review Fixes (from docs/reviews/s01-menu-dynamique.md)
+
+### Fix #1: CRITICAL - API schema missing menu_sections_visible [✅ DONE]
+- **File**: `src/app/api/settings/route.ts` (line 118)
+- **Action**: Add `menu_sections_visible: z.record(z.string(), z.boolean()).optional()` to PatchSettingsSchema
+- **Test**: Node script validation - schema accepts field
+- **Exit criteria**: TypeScript compiles, schema safeParse accepts payload with menu_sections_visible
+
+### Fix #2: MAJOR - Test selector [role="switch"] doesn't match checkbox [ ]
+- **File**: `src/app/(dashboard)/settings/shared.tsx` (Toggle component line 75)
+- **Action**: Add `role="switch"` attribute to checkbox input
+- **Test**: Run e2e test - locator finds elements
+- **Exit criteria**: Tests can locate toggle elements
+
+### Fix #3: MAJOR - Test credentials not configured [ ]
+- **File**: Create test user in Supabase or mock auth
+- **Action**: Enable tests to run without manual .env.local setup
+- **Test**: Run e2e tests without manual credentials
+- **Exit criteria**: Tests pass in CI/local without manual setup
+
+---
+
 ## Validation Checklist
 
 Avant de valider ce plan, vérifier:
