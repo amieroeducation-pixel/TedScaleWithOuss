@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { ensureTestCredentials } from './test-helpers'
 
 /**
  * Tests Story s01-menu-dynamique
@@ -7,18 +8,16 @@ import { test, expect } from '@playwright/test'
  *
  * Prérequis:
  * - Serveur dev sur port 3000
- * - User test authentifié
+ * - User test authentifié (see e2e/README.md for setup)
  */
 
 test.describe('s01-menu-dynamique - Menu sections visibility', () => {
   test.beforeEach(async ({ page }) => {
+    const { email, password } = ensureTestCredentials()
+
     await page.goto('/login')
-
-    const TEST_EMAIL = process.env.TEST_EMAIL || 'test@example.com'
-    const TEST_PASSWORD = process.env.TEST_PASSWORD || 'password123'
-
-    await page.fill('input[type="email"]', TEST_EMAIL)
-    await page.fill('input[type="password"]', TEST_PASSWORD)
+    await page.fill('input[type="email"]', email)
+    await page.fill('input[type="password"]', password)
     await page.click('button[type="submit"]')
     await page.waitForURL(/\/dashboard/, { timeout: 10000 })
   })
