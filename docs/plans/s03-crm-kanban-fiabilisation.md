@@ -312,7 +312,7 @@ const INTERACTION_ICONS: Record<string, string> = {
 
 ---
 
-### Task 5: AddInteractionModal component (1h)
+### Task 5: AddInteractionModal component (1h) ✅
 
 **Pourquoi maintenant**: Dépend du schema (Task 1), peut être testé isolément.
 
