@@ -505,7 +505,7 @@ test.describe('s03-crm-kanban-fiabilisation', () => {
 
 ---
 
-### Task 9: Documentation technique (30min)
+### Task 9: Documentation technique (30min) ✅
 
 **Pourquoi à la fin**: Documenter les décisions et patterns une fois stabilisés.
 
