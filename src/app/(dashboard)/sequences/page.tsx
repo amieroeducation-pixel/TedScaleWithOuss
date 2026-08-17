@@ -47,7 +47,7 @@ const SequencesStatsWidget = () => {
   if (loading) {
     return (
       <div style={{
-        background: C.bgCard, borderRadius: 12, padding: 20, marginBottom: 24,
+        background: C.surface1, borderRadius: 12, padding: 20, marginBottom: 24,
         border: `1px solid ${C.line}`
       }}>
         <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 11, color: C.textMid }}>
