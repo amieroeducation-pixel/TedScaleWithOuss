@@ -258,7 +258,7 @@ async function handleDragEnd(event: DragEndEvent) {
 
 ---
 
-### Task 4: InteractionTimeline component (1h)
+### Task 4: InteractionTimeline component (1h) ✅
 
 **Pourquoi maintenant**: Composant UI pur, peut être développé en parallèle.
 
