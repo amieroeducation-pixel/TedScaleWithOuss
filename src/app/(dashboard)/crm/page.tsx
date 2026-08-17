@@ -70,93 +70,6 @@ const PRESSURE_COLORS: Record<PressureLevel, string> = {
   max:    C.cyan,
 }
 
-// HTML-sourced prospects merged with existing rich data
-const INITIAL_PROSPECTS: Prospect[] = [
-  // À contacter — from HTML
-  {
-    id: 'p1', nom: 'P. Rousseau', initials: 'PR', profession: 'Médecin gén.', ville: 'Paris 16e',
-    telephone: '01 45 00 XX XX', email: 'p.rousseau@cabinet.fr', stage: 'À contacter',
-    leadScore: 90, nextAction: 'Appel découverte', notes: 'Jamais contacté. Cabinet solo.',
-    tags: ['TNS', 'Médecin'], source: 'Google Places', lastContact: '—', pressure: 'low',
-  },
-  {
-    id: 'p2', nom: 'S. Moreau', initials: 'SM', profession: 'Sophrologue', ville: 'Neuilly-s-S.',
-    telephone: '01 47 22 XX XX', email: 's.moreau@cabinet.fr', stage: 'À contacter',
-    leadScore: 82, nextAction: 'Email intro', notes: 'Il y a 3j. Revenu estimé 90k+.',
-    tags: ['TNS', 'Santé'], source: 'Google Places', lastContact: 'il y a 3j', pressure: 'low',
-  },
-  {
-    id: 'p3', nom: 'B. Girard', initials: 'BG', profession: 'Ostéopathe', ville: 'Aulnay-s-Bois',
-    telephone: '01 48 66 XX XX', email: 'b.girard@cabinet.fr', stage: 'À contacter',
-    leadScore: 68, nextAction: 'Premier contact', notes: 'Il y a 1j. Nouveau cabinet.',
-    tags: ['TNS', 'Kiné'], source: 'Google Places', lastContact: 'il y a 1j', pressure: 'low',
-  },
-  // RDV1
-  {
-    id: 'p4', nom: 'F. Dubois', initials: 'FD', profession: 'Kinésithérapeute', ville: 'Boulogne-B.',
-    telephone: '01 46 05 XX XX', email: 'f.dubois@cabinet.fr', stage: 'RDV1',
-    leadScore: 78, nextAction: 'RDV jeudi 15h', notes: 'RDV jeu. 15h confirmé.',
-    tags: ['TNS', 'Kiné'], source: 'Google Places', lastContact: 'RDV jeu. 15h', pressure: 'medium',
-  },
-  {
-    id: 'p5', nom: 'A. Petit', initials: 'AP', profession: "Chef d'entreprise", ville: 'Paris 8e',
-    telephone: '01 53 34 XX XX', email: 'a.petit@holding.fr', stage: 'RDV1',
-    leadScore: 88, nextAction: 'Étude patrimoniale', notes: 'Il y a 4j. CA 2M. Très motivé.',
-    tags: ['Chef entreprise', 'VIP'], source: 'Import manuel', lastContact: 'il y a 4j', pressure: 'medium',
-  },
-  {
-    id: 'p6', nom: 'M. Lefort', initials: 'ML', profession: 'Infirmière lib.', ville: 'Aulnay-s-Bois',
-    telephone: '01 48 77 XX XX', email: 'm.lefort@soin.fr', stage: 'RDV1',
-    leadScore: 62, nextAction: 'Relance WA', notes: '5j sans réponse. Urgence relance.',
-    tags: ['TNS', 'Infirmière'], source: 'Google Places', lastContact: '5j sans rép.', pressure: 'high',
-  },
-  // RDV2
-  {
-    id: 'p7', nom: 'Dr. Martin', initials: 'DM', profession: 'Chirurgien', ville: 'Vincennes',
-    telephone: '01 43 28 XX XX', email: 'dr.martin@chir.fr', stage: 'RDV2',
-    leadScore: 94, nextAction: 'Proposition', notes: '5j sans réponse. Dossier prêt.',
-    tags: ['TNS', 'Médecin', 'VIP'], source: 'Google Places', lastContact: '5j sans rép.', pressure: 'max',
-  },
-  {
-    id: 'p8', nom: 'C. Blanc', initials: 'CB', profession: 'Infirmière lib.', ville: 'Montreuil',
-    telephone: '01 48 59 XX XX', email: 'c.blanc@soin.fr', stage: 'RDV2',
-    leadScore: 70, nextAction: 'Dossier à envoyer', notes: 'Il y a 2j. Dossier AV en cours.',
-    tags: ['TNS', 'Infirmière'], source: 'Google Places', lastContact: 'il y a 2j', pressure: 'high',
-  },
-  // RDV3
-  {
-    id: 'p9', nom: 'L. Chen', initials: 'LC', profession: 'Pharmacienne', ville: 'Paris 6e',
-    telephone: '01 43 26 XX XX', email: 'l.chen@pharma.fr', stage: 'RDV3',
-    leadScore: 92, nextAction: 'Proposition finale', notes: 'RDV mer. 16h. Accord de principe.',
-    tags: ['TNS', 'Pharma', 'VIP'], source: 'Import manuel', lastContact: 'RDV mer. 16h', pressure: 'high',
-  },
-  {
-    id: 'p10', nom: 'J. Barré', initials: 'JB', profession: 'Radiologue', ville: 'Vincennes',
-    telephone: '01 43 74 XX XX', email: 'j.barre@radio.fr', stage: 'RDV3',
-    leadScore: 85, nextAction: 'Closing RDV 3', notes: 'Il y a 1j. Très motivé.',
-    tags: ['TNS', 'Médecin'], source: 'Google Places', lastContact: 'il y a 1j', pressure: 'max',
-  },
-  // Convertis
-  {
-    id: 'p11', nom: 'M. Bernard', initials: 'MB', profession: 'Dentiste', ville: 'Paris 15e',
-    telephone: '01 45 78 XX XX', email: 'm.bernard@dental.fr', stage: 'Converti',
-    leadScore: 96, nextAction: 'Ass. vie + PER', notes: '4 200 €/an. Client satisfait.',
-    tags: ['TNS', 'Dentiste', 'VIP'], source: 'Import manuel', lastContact: '4 200 €/an', pressure: 'low',
-  },
-  {
-    id: 'p12', nom: 'T. Nguyen', initials: 'TN', profession: 'Infirmière lib.', ville: 'Saint-Denis',
-    telephone: '01 48 22 XX XX', email: 't.nguyen@soin.fr', stage: 'Converti',
-    leadScore: 78, nextAction: 'Prévoyance', notes: '2 800 €/an. Suivi portefeuille.',
-    tags: ['TNS', 'Infirmière'], source: 'Import CSV', lastContact: '2 800 €/an', pressure: 'low',
-  },
-  // Perdu
-  {
-    id: 'p13', nom: 'J. Lambert', initials: 'JL', profession: 'Ostéopathe', ville: 'Versailles',
-    telephone: '01 39 50 XX XX', email: 'j.lambert@osteo.fr', stage: 'Perdu',
-    leadScore: 55, nextAction: 'Relance 3 mois', notes: 'A choisi un concurrent. Relance dans 3 mois.',
-    tags: ['TNS', 'Kiné'], source: 'Google Places', lastContact: 'Concurrent', pressure: 'low',
-  },
-]
 
 // --- DB ↔ UI STAGE MAPPING ---
 const DB_TO_UI: Record<string, Stage> = {
@@ -1399,12 +1312,7 @@ function CrmPageContent() {
         ))}
       </div>
 
-      {/* Loading / Error states */}
-      {isLoading && (
-        <div style={{ textAlign: 'center', padding: '24px 0', color: C.textLo, fontSize: 12 }}>
-          Chargement du CRM…
-        </div>
-      )}
+      {/* Error state */}
       {fetchError && (
         <div style={{
           padding: '10px 14px', borderRadius: 8, marginBottom: 12,
@@ -1415,28 +1323,67 @@ function CrmPageContent() {
         </div>
       )}
 
-      {/* Board */}
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
-      >
-        <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 8, minHeight: 400 }}>
-          {STAGES.map(stage => (
-            <KanbanColumn
-              key={stage}
-              stage={stage}
-              prospects={filteredProspects.filter(p => p.stage === stage)}
-              onCardClick={p => setSelectedProspect(p)}
+      {/* Loading state - skeleton cards */}
+      {isLoading && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 10 }}>
+          {[...Array(6)].map((_, i) => (
+            <div
+              key={i}
+              style={{
+                background: C.surface1,
+                height: 200,
+                borderRadius: 10,
+                border: `1px solid ${C.line}`,
+                animation: 'pulse 1.5s infinite',
+              }}
             />
           ))}
         </div>
+      )}
 
-        <DragOverlay>
-          {activeProspect && <CardContent prospect={activeProspect} isDragging />}
-        </DragOverlay>
-      </DndContext>
+      {/* Board */}
+      {!isLoading && (
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
+          <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 8, minHeight: 400 }}>
+            {STAGES.map(stage => (
+              <KanbanColumn
+                key={stage}
+                stage={stage}
+                prospects={filteredProspects.filter(p => p.stage === stage)}
+                onCardClick={p => setSelectedProspect(p)}
+              />
+            ))}
+          </div>
+
+          <DragOverlay>
+            {activeProspect && <CardContent prospect={activeProspect} isDragging />}
+          </DragOverlay>
+        </DndContext>
+      )}
+
+      {/* Empty state */}
+      {!isLoading && prospects.length === 0 && !fetchError && (
+        <div
+          style={{
+            textAlign: 'center',
+            padding: 60,
+            color: C.textMid,
+          }}
+        >
+          <div style={{ fontSize: 48, marginBottom: 16 }}>📭</div>
+          <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8, color: C.textHi }}>
+            Aucun prospect
+          </div>
+          <div style={{ fontSize: 10, color: C.textLo }}>
+            Cliquez "Nouveau prospect" pour commencer.
+          </div>
+        </div>
+      )}
 
       {/* Drawer */}
       {selectedProspect && (

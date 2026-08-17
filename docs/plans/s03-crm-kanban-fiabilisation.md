@@ -401,7 +401,7 @@ const [interactionCount, setInteractionCount] = useState(0)
 
 ---
 
-### Task 7: Supprimer données mock (30min)
+### Task 7: Supprimer données mock (30min) ✅
 
 **Pourquoi maintenant**: Nettoyage final après validation des fonctionnalités réelles.
 
