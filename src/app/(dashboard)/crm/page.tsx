@@ -25,6 +25,9 @@ import ProspectEditForm from '@/components/prospects/ProspectEditForm'
 import { saveLastSection } from '@/lib/navigation-state'
 import { detectCivilite } from '@/lib/civilite'
 import { LinkButton, LinkChip, LinkInline } from '@/lib/cross-links'
+import InteractionTimeline from '@/components/crm/InteractionTimeline'
+import AddInteractionModal from '@/components/crm/AddInteractionModal'
+import ProspectDeleteDialog from '@/components/crm/ProspectDeleteDialog'
 
 // --- TYPES ---
 type Stage = 'À contacter' | 'RDV1' | 'RDV2' | 'RDV3' | 'Converti' | 'Perdu'
@@ -384,6 +387,12 @@ function ProspectDrawer({ prospect, onClose, onStageChange, onPressureChange, on
   const [emailBody, setEmailBody] = useState('')
   const [emailSending, setEmailSending] = useState(false)
 
+  // --- États interactions + delete ---
+  const [showAddInteraction, setShowAddInteraction] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [interactionCount, setInteractionCount] = useState(0)
+  const [interactionKey, setInteractionKey] = useState(0)
+
   async function handleSendEmail() {
     if (!prospect.email || !emailSubject.trim() || !emailBody.trim()) return
     setEmailSending(true)
@@ -411,6 +420,16 @@ function ProspectDrawer({ prospect, onClose, onStageChange, onPressureChange, on
     setEmailSending(false)
   }
 
+  function handleInteractionAdded() {
+    // Force timeline refresh
+    setInteractionKey(prev => prev + 1)
+  }
+
+  function handleDeleteSuccess() {
+    // Close drawer and refresh prospects list
+    onClose()
+  }
+
   // --- Chargement instances + templates ---
   useEffect(() => {
     fetch(`/api/crm/sequences/by-prospect/${prospect.id}`)
@@ -427,6 +446,14 @@ function ProspectDrawer({ prospect, onClose, onStageChange, onPressureChange, on
           setSeqTemplates(j.data.templates)
           if (j.data.templates.length > 0) setSelectedTemplateId(j.data.templates[0].id)
         }
+      })
+      .catch(() => {})
+
+    // Fetch interaction count for delete warning
+    fetch(`/api/interactions?prospect_id=${prospect.id}`)
+      .then(r => r.json())
+      .then(j => {
+        if (j.data?.interactions) setInteractionCount(j.data.interactions.length)
       })
       .catch(() => {})
   }, [prospect.id])
@@ -489,6 +516,7 @@ function ProspectDrawer({ prospect, onClose, onStageChange, onPressureChange, on
       position: 'fixed', top: 0, right: 0, width: 400, height: '100vh',
       background: C.bgMid, borderLeft: `1px solid ${C.line}`, zIndex: 1000,
       overflowY: 'auto', display: 'flex', flexDirection: 'column',
+      paddingBottom: 60,
     }}>
       {/* Header */}
       <div style={{ padding: '20px 20px 16px', borderBottom: `1px solid ${C.line}` }}>
@@ -831,6 +859,61 @@ function ProspectDrawer({ prospect, onClose, onStageChange, onPressureChange, on
           </div>
         </div>
       )}
+
+      {/* Interaction Timeline */}
+      <InteractionTimeline
+        key={interactionKey}
+        prospectId={prospect.id}
+        onAddClick={() => setShowAddInteraction(true)}
+      />
+
+      {/* Delete button - positioned at bottom left */}
+      <div
+        style={{
+          position: 'absolute',
+          bottom: 20,
+          left: 20,
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => setShowDeleteConfirm(true)}
+          style={{
+            background: 'transparent',
+            border: `1px solid ${C.warn}`,
+            color: C.warn,
+            padding: '6px 12px',
+            borderRadius: 6,
+            fontSize: 9,
+            fontFamily: 'Oswald',
+            fontWeight: 600,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+          }}
+        >
+          🗑️ Supprimer
+        </button>
+      </div>
+
+      {/* Add Interaction Modal */}
+      <AddInteractionModal
+        open={showAddInteraction}
+        onOpenChange={setShowAddInteraction}
+        prospectId={prospect.id}
+        prospectName={prospect.nom}
+        onSuccess={handleInteractionAdded}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <ProspectDeleteDialog
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        prospect={{ id: prospect.id, full_name: prospect.nom }}
+        interactionCount={interactionCount}
+        onDeleteSuccess={handleDeleteSuccess}
+      />
     </div>
   )
 }

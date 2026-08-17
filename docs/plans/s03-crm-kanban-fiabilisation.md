@@ -364,7 +364,7 @@ interface AddInteractionModalProps {
 
 ---
 
-### Task 6: Intégrer timeline + delete dans ProspectDetailModal (45min)
+### Task 6: Intégrer timeline + delete dans ProspectDetailModal (45min) ✅
 
 **Pourquoi maintenant**: Composants unitaires testés, on assemble.
 
