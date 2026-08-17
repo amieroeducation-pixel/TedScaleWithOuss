@@ -126,7 +126,7 @@ export type CreateInteractionInput = z.infer<typeof createInteractionSchema>
 
 ---
 
-### Task 2: ProspectDeleteDialog component (45min)
+### Task 2: ProspectDeleteDialog component (45min) ✅
 
 **Pourquoi maintenant**: Composant isolé, pas de dépendance complexe.
 
