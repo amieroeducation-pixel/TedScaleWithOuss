@@ -47,7 +47,7 @@ Fiabiliser le CRM Kanban avec 3 nouveaux composants UI et amélioration du drag-
 
 ## Tasks (TDD order)
 
-### Task 1: Centraliser les schemas Zod (30min)
+### Task 1: Centraliser les schemas Zod (30min) ✅
 
 **Pourquoi en premier**: Schemas nécessaires pour validation client + tests unitaires.
 
