@@ -172,7 +172,7 @@ interface ProspectDeleteDialogProps {
 
 ---
 
-### Task 3: Drag-drop rollback logic (1h)
+### Task 3: Drag-drop rollback logic (1h) ✅
 
 **Pourquoi maintenant**: Fonctionnalité critique, doit être testée avant d'ajouter plus de UI.
 

@@ -1068,24 +1068,6 @@ function CrmPageContent() {
     tryScroll()
   }, [highlightProspectId, prospects])
 
-  // Persist stage move to DB
-  async function persistMove(prospectId: string, toStage: Stage) {
-    try {
-      const res = await fetch('/api/pipeline/move', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prospect_id: prospectId, to_stage: UI_TO_DB[toStage] }),
-      })
-      if (!res.ok) {
-        const json = await res.json()
-        toast.error(json.error || 'Erreur lors du déplacement')
-      } else {
-        toast.success(`Déplacé vers ${toStage}`)
-      }
-    } catch {
-      toast.error('Connexion impossible')
-    }
-  }
 
   async function handleCreateProspect() {
     if (!npForm.full_name.trim()) return
@@ -1146,28 +1128,91 @@ function CrmPageContent() {
     setActiveId(event.active.id as string)
   }
 
-  function handleDragEnd(event: DragEndEvent) {
+  async function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event
     setActiveId(null)
     if (!over) return
+
     const activeProspectId = active.id as string
     const overId = over.id as string
     const overStage = STAGES.find(s => s === overId)
     const overProspect = prospects.find(p => p.id === overId)
     const targetStage: Stage = overStage || overProspect?.stage || findStageForProspect(activeProspectId)
     const currentStage = findStageForProspect(activeProspectId)
+
+    // No change, exit early
     if (targetStage === currentStage) return
+
+    // Save old state for rollback
+    const oldProspect = prospects.find(p => p.id === activeProspectId)
+    if (!oldProspect) return
+
+    // Optimistic update
     setProspects(prev => prev.map(p => p.id === activeProspectId ? { ...p, stage: targetStage } : p))
-    persistMove(activeProspectId, targetStage)
+
+    // API call with rollback on error
+    try {
+      const res = await fetch('/api/pipeline/move', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prospect_id: activeProspectId,
+          from_stage: UI_TO_DB[currentStage],
+          to_stage: UI_TO_DB[targetStage],
+        }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Erreur lors du déplacement')
+      }
+
+      toast.success(`Prospect déplacé vers ${targetStage}`)
+    } catch (error) {
+      // ROLLBACK: revert to old stage
+      setProspects(prev => prev.map(p => p.id === activeProspectId ? { ...p, stage: currentStage } : p))
+
+      // Error toast
+      toast.error(error instanceof Error ? error.message : 'Erreur lors du déplacement')
+    }
   }
 
-  function handleStageChange(id: string, stage: Stage) {
+  async function handleStageChange(id: string, stage: Stage) {
     const currentStage = findStageForProspect(id)
+    if (stage === currentStage) return
+
+    // Optimistic update
     setProspects(prev => prev.map(p => p.id === id ? { ...p, stage } : p))
     if (selectedProspect?.id === id) {
       setSelectedProspect(prev => prev ? { ...prev, stage } : null)
     }
-    if (stage !== currentStage) persistMove(id, stage)
+
+    // API call with rollback on error
+    try {
+      const res = await fetch('/api/pipeline/move', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prospect_id: id,
+          from_stage: UI_TO_DB[currentStage],
+          to_stage: UI_TO_DB[stage],
+        }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Erreur lors du déplacement')
+      }
+
+      toast.success(`Prospect déplacé vers ${stage}`)
+    } catch (error) {
+      // ROLLBACK
+      setProspects(prev => prev.map(p => p.id === id ? { ...p, stage: currentStage } : p))
+      if (selectedProspect?.id === id) {
+        setSelectedProspect(prev => prev ? { ...prev, stage: currentStage } : null)
+      }
+      toast.error(error instanceof Error ? error.message : 'Erreur lors du déplacement')
+    }
   }
 
   function handlePressureChange(id: string, pressure: PressureLevel) {
