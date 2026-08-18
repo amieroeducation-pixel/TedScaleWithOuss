@@ -115,6 +115,8 @@ const PatchSettingsSchema = z.object({
   mobile_font_size: z.enum(['small', 'medium', 'large']).optional(),
   mobile_compact: z.boolean().optional(),
   mobile_bottom_menu: z.boolean().optional(),
+  // Menu sections visibility (s01-menu-dynamique)
+  menu_sections_visible: z.record(z.string(), z.boolean()).optional(),
 })
 
 export async function GET(_request: NextRequest) {

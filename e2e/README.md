@@ -6,7 +6,13 @@ Les tests E2E Playwright nécessitent des credentials de test Supabase configur�
 
 ### Configuration des variables d'environnement
 
-Créer un fichier `.env.local` à la racine du projet (si pas déjà existant) et ajouter:
+**Option 1 - Utiliser les credentials par défaut** (recommandé pour démarrage rapide):
+- Les tests utilisent `test@example.com` / `password123` si aucune variable n'est définie
+- Créez simplement un utilisateur avec ces credentials dans Supabase Dashboard
+
+**Option 2 - Configurer des credentials personnalisées**:
+1. Copier le template: `cp .env.test.example .env.local`
+2. Éditer `.env.local` et définir vos credentials:
 
 ```bash
 # Test credentials pour E2E Playwright
