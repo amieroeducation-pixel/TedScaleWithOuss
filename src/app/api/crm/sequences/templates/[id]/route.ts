@@ -11,6 +11,23 @@ const PatchTemplateSchema = z.object({
   auto_trigger: z.boolean().optional(),
 })
 
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const supabase = await createSupabaseServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return apiUnauthorized()
+
+  const { data, error } = await supabase
+    .from('sequence_templates')
+    .select('*')
+    .eq('id', id)
+    .eq('user_id', user.id)
+    .single()
+
+  if (error) return apiError(error.message)
+  return apiSuccess({ template: data })
+}
+
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = await createSupabaseServerClient()

@@ -49,6 +49,12 @@ export type UserSettings = {
   mobile_font_size?: 'small' | 'medium' | 'large'
   mobile_compact?: boolean
   mobile_bottom_menu?: boolean
+  // Rappels SMS
+  reminder_enabled?: boolean
+  reminder_delay_24h?: number
+  reminder_delay_1h?: number
+  // Menu sections visibility
+  menu_sections_visible?: Record<string, boolean>
 }
 
 export function useUserSettings() {

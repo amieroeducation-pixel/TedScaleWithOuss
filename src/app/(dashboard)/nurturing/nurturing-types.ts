@@ -10,6 +10,7 @@ export interface Contact {
   email?: string
   phone?: string
   job: string
+  city?: string
   badges: string[]
   warning?: string
   nextTime: string
@@ -30,6 +31,8 @@ export interface Contact {
   excludedChannels?: string[]
   sequenceActive?: string | null
   archived?: boolean
+  forcedTemperature?: string | null
+  timezone?: string
 }
 
 export interface Interaction {
@@ -68,6 +71,8 @@ export interface ContactConfig {
   excluded_channels: string[]
   notes: string
   preferred_time_slot: string | null
+  timezone?: string
+  forced_temperature?: string | null
 }
 
 export interface PressureData {
@@ -189,8 +194,15 @@ export function calculateTempCategory(
   lastContactDays: number | null,
   hasActiveSequence: boolean,
   noResponseCount: number,
-  pressureScore: string | null
+  pressureScore: string | null,
+  forcedTemperature?: string | null
 ): TempCategory {
+  // Si température forcée manuellement, on la retourne directement
+  if (forcedTemperature && ['hot', 'warm', 'cold', 'dead'].includes(forcedTemperature)) {
+    return forcedTemperature as TempCategory
+  }
+
+  // Sinon calcul automatique
   if (pressureScore === 'a_stopper' || noResponseCount >= 5) return 'dead'
   if (lastContactDays === null) return 'cold'
   if (lastContactDays <= 3 || hasActiveSequence) return 'hot'

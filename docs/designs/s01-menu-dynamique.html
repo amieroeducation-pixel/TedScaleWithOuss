@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>s01-menu-dynamique — Mockup PSG Cosmos</title>
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(180deg, #0a0e22 0%, #14193d 50%, #0a0e22 100%);
+      color: #d8e1ff;
+      padding: 20px;
+      min-height: 100vh;
+    }
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 185px 1fr;
+      gap: 20px;
+    }
+
+    /* SIDEBAR */
+    .sidebar {
+      background: linear-gradient(180deg, rgba(8,18,74,0.96), rgba(4,8,31,0.99));
+      border: 1px solid #3a4690;
+      border-radius: 10px;
+      padding: 0;
+      height: fit-content;
+      position: sticky;
+      top: 20px;
+    }
+    .sidebar-ribbon {
+      height: 2px;
+      background: linear-gradient(90deg, #c84048 0%, #ff6470 25%, #f5e8c8 55%, #7a92e8 80%, #5c70b8 100%);
+      border-radius: 10px 10px 0 0;
+    }
+    .sidebar-logo {
+      padding: 10px 12px 8px;
+      border-bottom: 1px solid #3a4690;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .sidebar-logo-img {
+      width: 34px;
+      height: 34px;
+      background: radial-gradient(circle, rgba(232,200,120,0.3), transparent);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+    .sidebar-logo-text {
+      font-family: 'Oswald', sans-serif;
+      font-weight: 600;
+      font-size: 13px;
+      color: #e8c878;
+      line-height: 1.1;
+    }
+    .sidebar-logo-sub {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 8px;
+      color: #5a6ba8;
+      letter-spacing: 0.06em;
+      margin-top: 2px;
+    }
+    .sidebar-nav {
+      padding: 2px 0;
+    }
+    .sidebar-section {
+      margin-bottom: 4px;
+    }
+    .sidebar-section-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 7px;
+      font-weight: 600;
+      color: #3a4885;
+      padding: 5px 10px 1px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+    }
+    .sidebar-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 10px;
+      font-size: 11px;
+      color: rgba(255,216,102,0.65);
+      text-decoration: none;
+      border-left: 2px solid transparent;
+      transition: all 0.15s ease;
+    }
+    .sidebar-item.active {
+      color: #ffe89a;
+      font-weight: 500;
+      border-left: 2px solid #ff6470;
+      background: linear-gradient(90deg, rgba(200,64,72,0.22), transparent 70%);
+    }
+    .sidebar-item-dot {
+      width: 3px;
+      height: 3px;
+      border-radius: 50%;
+      background: rgba(255,216,102,0.4);
+      flex-shrink: 0;
+    }
+    .sidebar-item.active .sidebar-item-dot {
+      background: #ff6470;
+      box-shadow: 0 0 6px rgba(255,100,112,0.7);
+    }
+    .sidebar-item-badge {
+      min-width: 16px;
+      height: 16px;
+      background: linear-gradient(90deg, #c84048 0%, #ff6470 25%, #f5e8c8 55%, #7a92e8 80%, #5c70b8 100%);
+      color: #0a0e22;
+      border-radius: 8px;
+      font-size: 8px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 4px;
+      font-family: 'JetBrains Mono', monospace;
+      margin-left: auto;
+    }
+    .sidebar-user {
+      padding: 8px 12px;
+      border-top: 1px solid #3a4690;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+    }
+    .sidebar-user-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #c84048, #7a92e8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Oswald', sans-serif;
+      font-weight: 600;
+      font-size: 11px;
+      color: #fff;
+      flex-shrink: 0;
+    }
+    .sidebar-user-name {
+      font-family: 'Oswald', sans-serif;
+      font-weight: 500;
+      font-size: 11px;
+      color: #d8e1ff;
+    }
+    .sidebar-user-role {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 8px;
+      color: #5a6ba8;
+      margin-top: 1px;
+    }
+
+    /* MAIN CONTENT */
+    .main {
+      background: rgba(17,22,58,0.6);
+      border: 1px solid #3a4690;
+      border-radius: 10px;
+      padding: 20px;
+    }
+    .main-header {
+      font-family: 'Oswald', sans-serif;
+      font-weight: 600;
+      font-size: 20px;
+      color: #e8c878;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 16px;
+    }
+    .tabs {
+      display: flex;
+      gap: 8px;
+      border-bottom: 1px solid #3a4690;
+      padding-bottom: 12px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .tab {
+      padding: 6px 12px;
+      background: rgba(26,33,80,0.5);
+      border: 1px solid #3a4690;
+      border-radius: 6px;
+      font-size: 9px;
+      font-weight: 500;
+      color: #8ea0d9;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      font-family: 'Inter', sans-serif;
+    }
+    .tab.active {
+      background: #1a2150;
+      border-color: #7a92e8;
+      color: #d8e1ff;
+    }
+
+    /* SECTION PANEL */
+    .section-panel {
+      background: linear-gradient(180deg, #11163a, #14193d);
+      border: 1px solid #3a4690;
+      border-radius: 10px;
+      padding: 14px;
+      margin-bottom: 12px;
+      position: relative;
+      overflow: hidden;
+    }
+    .section-panel::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255,100,112,0.4), transparent);
+    }
+    .section-panel-title {
+      font-family: 'Oswald', sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      color: #e8c878;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      margin-bottom: 12px;
+    }
+    .section-panel-desc {
+      font-size: 9px;
+      color: #5a6ba8;
+      margin-bottom: 14px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* SET ROW */
+    .set-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 12px;
+      background: #11163a;
+      border-radius: 6px;
+      border: 1px solid #1a2150;
+      margin-bottom: 8px;
+    }
+    .set-label {
+      flex: 1;
+    }
+    .set-label-text {
+      font-size: 10px;
+      font-weight: 500;
+      color: #ffffff;
+      font-family: 'Inter', sans-serif;
+    }
+    .set-label-desc {
+      font-size: 8px;
+      color: #5a6ba8;
+      margin-top: 2px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* TOGGLE */
+    .toggle {
+      position: relative;
+      width: 48px;
+      height: 24px;
+      flex-shrink: 0;
+      cursor: pointer;
+    }
+    .toggle-bg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: #3a4885;
+      border-radius: 24px;
+      transition: background 0.3s;
+    }
+    .toggle.on .toggle-bg {
+      background: #4ade80;
+    }
+    .toggle-handle {
+      position: absolute;
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background: white;
+      border-radius: 50%;
+      transition: left 0.3s;
+    }
+    .toggle.on .toggle-handle {
+      left: 27px;
+    }
+
+    /* SIDEBAR VARIATIONS */
+    .sidebar.filtered .sidebar-section.hidden {
+      display: none;
+    }
+
+    /* LAYOUT GRID FOR COMPARISON */
+    .comparison {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-top: 40px;
+    }
+    .comparison-label {
+      font-family: 'Oswald', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      color: #e8c878;
+      text-align: center;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+  </style>
+</head>
+<body>
+
+  <h1 style="font-family: 'Oswald', sans-serif; font-size: 24px; color: #e8c878; text-align: center; margin-bottom: 24px; text-transform: uppercase; letter-spacing: 0.1em;">
+    s01-menu-dynamique — Mockup PSG Cosmos
+  </h1>
+
+  <!-- SCREEN 1: Settings Page -->
+  <div class="container">
+    <aside class="sidebar">
+      <div class="sidebar-ribbon"></div>
+      <div class="sidebar-logo">
+        <div class="sidebar-logo-img">🏆</div>
+        <div>
+          <div class="sidebar-logo-text">Champion's</div>
+          <div class="sidebar-logo-sub">CGP Dashboard</div>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="sidebar-section">
+          <div class="sidebar-section-label">Principal</div>
+          <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> Global</a>
+          <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> Aujourd'hui</a>
+          <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> Vue hebdo</a>
+          <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> Revenue</a>
+          <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> 🏆 Champions <span class="sidebar-item-badge">3</span></a>
+          <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> Pipeline</a>
+          <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> Tâches <span class="sidebar-item-badge">5</span></a>
+        </div>
+        <div class="sidebar-section">
+          <div class="sidebar-section-label">Clients</div>
+          <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> CRM Kanban</a>
+          <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> Premium</a>
+          <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> Nurturing</a>
+          <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> Cercle</a>
+        </div>
+        <div class="sidebar-section">
+          <div class="sidebar-section-label">Acquisition</div>
+          <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> Carte TNS</a>
+          <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> Prospection TNS</a>
+          <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> Chefs entrep. <span class="sidebar-item-badge">8</span></a>
+          <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> Particuliers</a>
+        </div>
+        <div class="sidebar-section">
+          <div class="sidebar-section-label">Outils</div>
+          <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> ⚡ Playbooks</a>
+          <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> Séquences</a>
+          <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> Simulateur</a>
+          <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> Commerce</a>
+          <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> Automatisations</a>
+        </div>
+        <div class="sidebar-section">
+          <div class="sidebar-section-label">Pilotage</div>
+          <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> 📊 Analytics</a>
+          <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> 📈 Données & KPI</a>
+          <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> 🤖 Assistant</a>
+          <a href="#" class="sidebar-item active"><span class="sidebar-item-dot"></span> ⚙️ Paramètres</a>
+          <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> Scoring patrim.</a>
+        </div>
+      </nav>
+      <div class="sidebar-user">
+        <div class="sidebar-user-avatar">TK</div>
+        <div>
+          <div class="sidebar-user-name">Ted K.</div>
+          <div class="sidebar-user-role">CGP Manager</div>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <div class="main-header">Paramètres</div>
+      <div class="tabs">
+        <div class="tab">Général</div>
+        <div class="tab">📊 KPI</div>
+        <div class="tab">🔔 Notif</div>
+        <div class="tab">🔗 API</div>
+        <div class="tab active">📂 Menu</div>
+        <div class="tab">👁️ Sections</div>
+        <div class="tab">📱 Mobile</div>
+        <div class="tab">🔗 Séquences</div>
+        <div class="tab">🎯 Variantes</div>
+        <div class="tab">⚡ Triggers</div>
+        <div class="tab">📞 Scripts</div>
+        <div class="tab">📲 Rappels SMS</div>
+      </div>
+
+      <div class="section-panel">
+        <div class="section-panel-title">Visibilité Sections Menu</div>
+        <div class="section-panel-desc">Masquez les sections du menu latéral que vous n'utilisez pas.</div>
+
+        <div class="set-row">
+          <div class="set-label">
+            <div class="set-label-text">Principal</div>
+            <div class="set-label-desc">Dashboard, Aujourd'hui, Global</div>
+          </div>
+          <div class="toggle on">
+            <div class="toggle-bg"></div>
+            <div class="toggle-handle"></div>
+          </div>
+        </div>
+
+        <div class="set-row">
+          <div class="set-label">
+            <div class="set-label-text">Clients</div>
+            <div class="set-label-desc">Clients Premium, CRM Kanban, Revenue</div>
+          </div>
+          <div class="toggle on">
+            <div class="toggle-bg"></div>
+            <div class="toggle-handle"></div>
+          </div>
+        </div>
+
+        <div class="set-row">
+          <div class="set-label">
+            <div class="set-label-text">Acquisition</div>
+            <div class="set-label-desc">TNS, Chefs d'entreprise, Particuliers</div>
+          </div>
+          <div class="toggle on">
+            <div class="toggle-bg"></div>
+            <div class="toggle-handle"></div>
+          </div>
+        </div>
+
+        <div class="set-row">
+          <div class="set-label">
+            <div class="set-label-text">Outils</div>
+            <div class="set-label-desc">Assistant, Simulateur, Scoring, Map</div>
+          </div>
+          <div class="toggle on">
+            <div class="toggle-bg"></div>
+            <div class="toggle-handle"></div>
+          </div>
+        </div>
+
+        <div class="set-row">
+          <div class="set-label">
+            <div class="set-label-text">Pilotage</div>
+            <div class="set-label-desc">Analytics, Achievements, Automatisations</div>
+          </div>
+          <div class="toggle on">
+            <div class="toggle-bg"></div>
+            <div class="toggle-handle"></div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- SCREEN 2: Sidebar Comparison (Before/After) -->
+  <div style="max-width: 1400px; margin: 60px auto 0;">
+    <h2 style="font-family: 'Oswald', sans-serif; font-size: 20px; color: #e8c878; text-align: center; margin-bottom: 24px; text-transform: uppercase; letter-spacing: 0.08em;">
+      Sidebar — Avant / Après Toggle
+    </h2>
+    <div class="comparison">
+      <div>
+        <div class="comparison-label">Toutes sections visibles</div>
+        <aside class="sidebar">
+          <div class="sidebar-ribbon"></div>
+          <div class="sidebar-logo">
+            <div class="sidebar-logo-img">🏆</div>
+            <div>
+              <div class="sidebar-logo-text">Champion's</div>
+              <div class="sidebar-logo-sub">CGP Dashboard</div>
+            </div>
+          </div>
+          <nav class="sidebar-nav">
+            <div class="sidebar-section">
+              <div class="sidebar-section-label">Principal</div>
+              <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> Global</a>
+              <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> Aujourd'hui</a>
+              <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> Vue hebdo</a>
+              <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> Revenue</a>
+              <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> 🏆 Champions <span class="sidebar-item-badge">3</span></a>
+              <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> Pipeline</a>
+              <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> Tâches <span class="sidebar-item-badge">5</span></a>
+            </div>
+            <div class="sidebar-section">
+              <div class="sidebar-section-label">Clients</div>
+              <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> CRM Kanban</a>
+              <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> Premium</a>
+              <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> Nurturing</a>
+              <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> Cercle</a>
+            </div>
+            <div class="sidebar-section">
+              <div class="sidebar-section-label">Acquisition</div>
+              <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> Carte TNS</a>
+              <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> Prospection TNS</a>
+              <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> Chefs entrep. <span class="sidebar-item-badge">8</span></a>
+              <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> Particuliers</a>
+            </div>
+            <div class="sidebar-section">
+              <div class="sidebar-section-label">Outils</div>
+              <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> ⚡ Playbooks</a>
+              <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> Séquences</a>
+              <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> Simulateur</a>
+              <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> Commerce</a>
+              <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> Automatisations</a>
+            </div>
+            <div class="sidebar-section">
+              <div class="sidebar-section-label">Pilotage</div>
+              <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> 📊 Analytics</a>
+              <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> 📈 Données & KPI</a>
+              <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> 🤖 Assistant</a>
+              <a href="#" class="sidebar-item active"><span class="sidebar-item-dot"></span> ⚙️ Paramètres</a>
+              <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> Scoring patrim.</a>
+            </div>
+          </nav>
+          <div class="sidebar-user">
+            <div class="sidebar-user-avatar">TK</div>
+            <div>
+              <div class="sidebar-user-name">Ted K.</div>
+              <div class="sidebar-user-role">CGP Manager</div>
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      <div>
+        <div class="comparison-label">Section "Clients" masquée</div>
+        <aside class="sidebar filtered">
+          <div class="sidebar-ribbon"></div>
+          <div class="sidebar-logo">
+            <div class="sidebar-logo-img">🏆</div>
+            <div>
+              <div class="sidebar-logo-text">Champion's</div>
+              <div class="sidebar-logo-sub">CGP Dashboard</div>
+            </div>
+          </div>
+          <nav class="sidebar-nav">
+            <div class="sidebar-section">
+              <div class="sidebar-section-label">Principal</div>
+              <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> Global</a>
+              <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> Aujourd'hui</a>
+              <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> Vue hebdo</a>
+              <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> Revenue</a>
+              <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> 🏆 Champions <span class="sidebar-item-badge">3</span></a>
+              <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> Pipeline</a>
+              <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> Tâches <span class="sidebar-item-badge">5</span></a>
+            </div>
+            <div class="sidebar-section hidden">
+              <div class="sidebar-section-label">Clients</div>
+              <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> CRM Kanban</a>
+              <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> Premium</a>
+              <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> Nurturing</a>
+              <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> Cercle</a>
+            </div>
+            <div class="sidebar-section">
+              <div class="sidebar-section-label">Acquisition</div>
+              <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> Carte TNS</a>
+              <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> Prospection TNS</a>
+              <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> Chefs entrep. <span class="sidebar-item-badge">8</span></a>
+              <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> Particuliers</a>
+            </div>
+            <div class="sidebar-section">
+              <div class="sidebar-section-label">Outils</div>
+              <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> ⚡ Playbooks</a>
+              <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> Séquences</a>
+              <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> Simulateur</a>
+              <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> Commerce</a>
+              <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> Automatisations</a>
+            </div>
+            <div class="sidebar-section">
+              <div class="sidebar-section-label">Pilotage</div>
+              <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> 📊 Analytics</a>
+              <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> 📈 Données & KPI</a>
+              <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> 🤖 Assistant</a>
+              <a href="#" class="sidebar-item active"><span class="sidebar-item-dot"></span> ⚙️ Paramètres</a>
+              <a href="#" class="sidebar-item"><span class="sidebar-item-dot"></span> Scoring patrim.</a>
+            </div>
+          </nav>
+          <div class="sidebar-user">
+            <div class="sidebar-user-avatar">TK</div>
+            <div>
+              <div class="sidebar-user-name">Ted K.</div>
+              <div class="sidebar-user-role">CGP Manager</div>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </div>
+
+  <footer style="max-width: 1400px; margin: 60px auto 20px; text-align: center; font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #5a6ba8;">
+    Mockup s01-menu-dynamique — PSG Cosmos Design System — Post-mortem commit 57c73a9
+  </footer>
+
+</body>
+</html>

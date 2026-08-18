@@ -8,8 +8,9 @@ import { useUserSettings, UserSettings } from '@/hooks/useUserSettings'
 import {
   Tab, TabProps, TABS, MONTHS_SHORT, MONTHS_ID, MONTHS_WEEKS,
   SECTIONS_LIST, MOBILE_SECTIONS,
-  Toggle, SetRow, SetLabel, NumInput, SectionPanel, SetBtn,
+  Toggle, SetRow, SetLabel, NumInput, SectionPanel, SetBtn, TabMenu,
 } from './shared'
+import { RappelsSmsTab } from './RappelsSmsTab'
 
 // ─── ONGLET GÉNÉRAL ──────────────────────────────────────────────────────────
 function triggerCelebration(type: string) {
@@ -883,6 +884,8 @@ type WorkflowItem = { id: string; name: string; target: string; type: string; ke
 
 function TabIntegrations() {
   const [calendarStatus, setCalendarStatus] = useState<'loading' | 'connected' | 'disconnected'>('loading')
+  const [bookingSlug, setBookingSlug] = useState<string | null>(null)
+  const [bookingUrl, setBookingUrl] = useState<string>('')
   const [workflows, setWorkflows] = useState<WorkflowItem[]>([
     { id: '1', name: 'Import Pappers → TNS', target: 'tns', type: 'api', key: '' },
   ])
@@ -896,6 +899,17 @@ function TabIntegrations() {
       .then(r => r.json())
       .then(json => setCalendarStatus(json.success && json.data?.connected ? 'connected' : 'disconnected'))
       .catch(() => setCalendarStatus('disconnected'))
+
+    // Charger le booking slug
+    fetch('/api/booking/my-slug')
+      .then(r => r.json())
+      .then(json => {
+        if (json.success && json.data) {
+          setBookingSlug(json.data.slug)
+          setBookingUrl(json.data.bookingUrl)
+        }
+      })
+      .catch(() => {})
   }, [])
 
   return (
@@ -931,6 +945,60 @@ function TabIntegrations() {
         {calendarStatus === 'connected' && (
           <div style={{ fontSize: 8, color: C.green, fontFamily: 'JetBrains Mono,monospace', padding: '6px 10px', background: `${C.green}12`, borderRadius: 4 }}>
             ✅ Tes RDVs apparaissent dans la page Pipeline — section &quot;RDV cette semaine&quot;
+          </div>
+        )}
+      </SectionPanel>
+
+      {/* Booking URL */}
+      <SectionPanel title="📅 Page de Prise de Rendez-vous">
+        <div style={{ fontSize: 9, color: C.textLo, marginBottom: 12, fontFamily: 'JetBrains Mono,monospace' }}>
+          URL publique pour que tes prospects prennent RDV directement. Partage ce lien sur ton site, tes emails, ou tes réseaux sociaux.
+        </div>
+        {bookingSlug ? (
+          <>
+            <div style={{ background: C.surface2, border: `1px solid ${C.line}`, borderRadius: 6, padding: 12, marginBottom: 12 }}>
+              <div style={{ fontSize: 8, color: C.textLo, marginBottom: 6, fontFamily: 'JetBrains Mono,monospace' }}>Ton URL de réservation :</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <code style={{ flex: 1, padding: '8px 12px', background: C.bgDeep, border: `1px solid ${C.lineSoft}`, borderRadius: 4, color: C.gold, fontSize: 10, fontFamily: 'JetBrains Mono,monospace', wordBreak: 'break-all' }}>
+                  {bookingUrl}
+                </code>
+                <SetBtn
+                  color={C.green}
+                  bg="#0d1a0d"
+                  onClick={() => {
+                    navigator.clipboard.writeText(bookingUrl)
+                    toast.success('URL copiée dans le presse-papier')
+                  }}
+                >
+                  📋 Copier
+                </SetBtn>
+              </div>
+            </div>
+            <a
+              href={bookingUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'inline-block',
+                padding: '8px 16px',
+                borderRadius: 6,
+                textDecoration: 'none',
+                fontSize: 10,
+                fontWeight: 600,
+                fontFamily: 'Oswald,sans-serif',
+                letterSpacing: '0.05em',
+                background: `linear-gradient(90deg,${C.indigo},${C.cyan})`,
+                color: C.bgDeep,
+                border: 'none',
+                cursor: 'pointer',
+              }}
+            >
+              👁️ Prévisualiser la page
+            </a>
+          </>
+        ) : (
+          <div style={{ fontSize: 8, color: C.textLo, fontFamily: 'JetBrains Mono,monospace', padding: '8px 12px', background: C.surface2, borderRadius: 4 }}>
+            ⏳ Chargement de ton URL...
           </div>
         )}
       </SectionPanel>
@@ -1891,12 +1959,14 @@ function SettingsPageContent() {
       {activeTab === 'kpi' && <TabKPI settings={settings} save={save} saving={saving} />}
       {activeTab === 'notifications' && <TabNotifications settings={settings} save={save} saving={saving} />}
       {activeTab === 'integrations' && <TabIntegrations />}
+      {activeTab === 'menu' && <TabMenu settings={settings} save={save} saving={saving} />}
       {activeTab === 'sections' && <TabSections settings={settings} save={save} saving={saving} />}
       {activeTab === 'mobile' && <TabMobile settings={settings} save={save} saving={saving} />}
       {activeTab === 'sequences' && <TabSequences />}
       {activeTab === 'variantes' && <TabVariantes settings={settings} save={save} saving={saving} />}
       {activeTab === 'triggers' && <TabTriggers />}
       {activeTab === 'scripts' && <TabScripts />}
+      {activeTab === 'rappels' && <RappelsSmsTab settings={settings} save={save} saving={saving} />}
     </>
   )
 }

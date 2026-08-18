@@ -60,5 +60,15 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ insta
 
   if (error) return apiError(error.message)
   if (!updated) return apiNotFound('Instance')
+
+  // Si cancel, marquer tous les steps pending en skipped
+  if (parsed.data.action === 'cancel') {
+    await supabase
+      .from('sequence_instance_steps')
+      .update({ status: 'skipped', executed_at: nowIso })
+      .eq('instance_id', paramsParsed.data.instanceId)
+      .eq('status', 'pending')
+  }
+
   return apiSuccess({ instance_id: updated.id, status: updated.status })
 }

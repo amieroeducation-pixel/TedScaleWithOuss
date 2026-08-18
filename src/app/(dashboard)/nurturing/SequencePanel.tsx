@@ -6,7 +6,7 @@ interface SequencePanelProps {
   selectedContact: Contact
   sequenceSteps: SequenceStep[]
   sequencePanelOpen: boolean
-  sequencePanelView: 'list' | 'create' | 'detail'
+  sequencePanelView: 'list' | 'create' | 'detail' | 'edit'
   sequenceTemplates: { id: string; name: string; description: string }[]
   seedImporting: boolean
   detailTemplateId: string | null
@@ -14,7 +14,7 @@ interface SequencePanelProps {
   detailLoading: boolean
   newSequence: { name: string; description: string; steps: { channel: string; delay_days: number; message_template: string }[] }
   onOpenSequencePanel: () => void
-  onSetSequencePanelView: (v: 'list' | 'create' | 'detail') => void
+  onSetSequencePanelView: (v: 'list' | 'create' | 'detail' | 'edit') => void
   onSetSequencePanelOpen: (v: boolean) => void
   onAssignSequence: (templateId: string) => void
   onCreateSequence: (assignNow: boolean) => void
@@ -28,6 +28,14 @@ interface SequencePanelProps {
   selectedContactIdx: number
   showToast: (msg: string, type?: 'success' | 'error') => void
   onLoadContactDetails: (id: string) => void
+  sequenceInstanceId: string | null
+  sequenceStatus: 'active' | 'paused' | 'completed' | 'cancelled' | null
+  onPauseSequence: () => void
+  onResumeSequence: () => void
+  onStopSequence: () => void
+  onDuplicateTemplate: (templateId: string) => void
+  onEditTemplate: (templateId: string) => void
+  onSaveEditedTemplate: (templateId: string) => void
 }
 
 export default function SequencePanel({
@@ -38,6 +46,9 @@ export default function SequencePanel({
   onAssignSequence, onCreateSequence, onLoadTemplateDetail, onSetNewSequence,
   onOpenWhatsApp, onLogInteraction, onSetSelectedChannel, onSetScheduleOpen,
   contacts, selectedContactIdx, showToast, onLoadContactDetails,
+  sequenceInstanceId, sequenceStatus,
+  onPauseSequence, onResumeSequence, onStopSequence, onDuplicateTemplate,
+  onEditTemplate, onSaveEditedTemplate,
 }: SequencePanelProps) {
 
   if (sequenceSteps.length > 0) {
@@ -45,12 +56,23 @@ export default function SequencePanel({
       <div style={{ background: V.surface1, border: `1px solid ${V.line}`, borderRadius: '12px', padding: '14px', marginBottom: '16px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '10px', padding: '3px 8px', borderRadius: '6px', background: 'rgba(76,175,80,0.12)', color: V.green, fontWeight: 600 }}>▶ Séquence active</span>
+            <span style={{ fontSize: '10px', padding: '3px 8px', borderRadius: '6px', background: sequenceStatus === 'paused' ? 'rgba(255,152,0,0.12)' : 'rgba(76,175,80,0.12)', color: sequenceStatus === 'paused' ? '#ff9800' : V.green, fontWeight: 600 }}>
+              {sequenceStatus === 'paused' ? '⏸️ En pause' : '▶ Séquence active'}
+            </span>
             <span style={{ fontSize: '10px', color: V.textLo }}>
               Étape {sequenceSteps.filter(s => s.status === 'sent' || s.status === 'skipped').length + 1}/{sequenceSteps.length}
             </span>
           </div>
-          <button onClick={() => { onSetSequencePanelOpen(true); onSetSequencePanelView('list') }} style={{ padding: '4px 8px', fontSize: '10px', borderRadius: '5px', border: `1px solid ${V.line}`, background: 'transparent', color: V.textMid, cursor: 'pointer' }}>Modifier séquence</button>
+          <div style={{ display: 'flex', gap: '4px' }}>
+            {sequenceStatus === 'active' && (
+              <button onClick={onPauseSequence} style={{ padding: '4px 8px', fontSize: '10px', borderRadius: '5px', border: `1px solid ${V.line}`, background: 'transparent', color: V.textMid, cursor: 'pointer' }} title="Pause séquence">⏸️</button>
+            )}
+            {sequenceStatus === 'paused' && (
+              <button onClick={onResumeSequence} style={{ padding: '4px 8px', fontSize: '10px', borderRadius: '5px', border: `1px solid ${V.green}`, background: 'rgba(76,175,80,0.08)', color: V.green, cursor: 'pointer' }} title="Reprendre séquence">▶️</button>
+            )}
+            <button onClick={onStopSequence} style={{ padding: '4px 8px', fontSize: '10px', borderRadius: '5px', border: `1px solid ${V.red}`, background: 'transparent', color: V.red, cursor: 'pointer' }} title="Arrêter séquence">⏹️</button>
+            <button onClick={() => { onSetSequencePanelOpen(true); onSetSequencePanelView('list') }} style={{ padding: '4px 8px', fontSize: '10px', borderRadius: '5px', border: `1px solid ${V.line}`, background: 'transparent', color: V.textMid, cursor: 'pointer' }}>Modifier séquence</button>
+          </div>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -210,6 +232,20 @@ export default function SequencePanel({
             >
               ▶ Lancer cette séquence
             </button>
+            <button
+              onClick={() => onEditTemplate(detailTemplateId)}
+              style={{ padding: '7px 12px', borderRadius: '6px', border: `1px solid ${V.gold}`, background: 'rgba(232,200,120,0.08)', color: V.gold, fontSize: '11px', cursor: 'pointer' }}
+              title="Éditer cette séquence"
+            >
+              ✏️ Éditer
+            </button>
+            <button
+              onClick={() => onDuplicateTemplate(detailTemplateId)}
+              style={{ padding: '7px 12px', borderRadius: '6px', border: `1px solid ${V.line}`, background: 'transparent', color: V.textMid, fontSize: '11px', cursor: 'pointer' }}
+              title="Dupliquer cette séquence"
+            >
+              📋 Dupliquer
+            </button>
           </div>
         </div>
       )}
@@ -291,6 +327,87 @@ export default function SequencePanel({
               </button>
               <button onClick={() => onCreateSequence(false)} style={{ padding: '7px 12px', borderRadius: '6px', border: `1px solid ${V.line}`, background: 'transparent', color: V.text, fontSize: '10px', cursor: 'pointer' }}>
                 Créer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {sequencePanelOpen && sequencePanelView === 'edit' && detailTemplateId && (
+        <div style={{ borderTop: `1px solid ${V.line}`, paddingTop: '12px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+            <button onClick={() => onSetSequencePanelView('detail')} style={{ border: 'none', background: 'transparent', color: V.textMid, cursor: 'pointer', fontSize: '11px' }}>← Annuler</button>
+            <div style={{ fontSize: '11px', fontWeight: 600, color: V.gold }}>Éditer la séquence</div>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <input
+              value={newSequence.name}
+              onChange={e => onSetNewSequence({ ...newSequence, name: e.target.value })}
+              placeholder="Nom de la séquence *"
+              style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: `1px solid ${V.line}`, background: V.surface2, color: V.textHi, fontSize: '11px', fontFamily: 'inherit', outline: 'none' }}
+            />
+            <input
+              value={newSequence.description}
+              onChange={e => onSetNewSequence({ ...newSequence, description: e.target.value })}
+              placeholder="Description (optionnel)"
+              style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: `1px solid ${V.line}`, background: V.surface2, color: V.textHi, fontSize: '11px', fontFamily: 'inherit', outline: 'none' }}
+            />
+
+            <div style={{ borderTop: `1px solid ${V.line}`, paddingTop: '8px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                <div style={{ fontSize: '10px', color: V.textMid, textTransform: 'uppercase' }}>Étapes ({newSequence.steps.length})</div>
+                <button
+                  onClick={() => onSetNewSequence({ ...newSequence, steps: [...newSequence.steps, { channel: 'email', delay_days: newSequence.steps.length, message_template: '' }] })}
+                  style={{ padding: '3px 8px', fontSize: '9px', borderRadius: '4px', border: `1px solid ${V.gold}`, background: 'rgba(232,200,120,0.08)', color: V.gold, cursor: 'pointer', fontWeight: 600 }}
+                >
+                  + Étape
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                {newSequence.steps.map((step, idx) => (
+                  <div key={idx} style={{ padding: '8px', borderRadius: '6px', background: V.surface2, border: `1px solid ${V.line}` }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                      <div style={{ fontSize: '10px', fontWeight: 600, color: V.textHi }}>Étape {idx + 1}</div>
+                      {newSequence.steps.length > 1 && (
+                        <button onClick={() => onSetNewSequence({ ...newSequence, steps: newSequence.steps.filter((_: any, i: number) => i !== idx) })} style={{ padding: '2px 6px', fontSize: '9px', borderRadius: '3px', border: `1px solid ${V.line}`, background: 'transparent', color: V.red, cursor: 'pointer' }}>×</button>
+                      )}
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 70px', gap: '4px', marginBottom: '4px' }}>
+                      <select
+                        value={step.channel}
+                        onChange={e => { const u = [...newSequence.steps]; u[idx] = { ...u[idx], channel: e.target.value }; onSetNewSequence({ ...newSequence, steps: u }) }}
+                        style={{ padding: '4px 6px', borderRadius: '4px', border: `1px solid ${V.line}`, background: V.surface1, color: V.text, fontSize: '10px', fontFamily: 'inherit', outline: 'none' }}
+                      >
+                        <option value="email">✉️ Email</option>
+                        <option value="whatsapp">💬 WhatsApp</option>
+                        <option value="sms">📱 SMS</option>
+                        <option value="call_reminder">📞 Appel</option>
+                        <option value="linkedin">🔗 LinkedIn</option>
+                      </select>
+                      <input
+                        type="number"
+                        value={step.delay_days}
+                        onChange={e => { const u = [...newSequence.steps]; u[idx] = { ...u[idx], delay_days: parseInt(e.target.value) || 0 }; onSetNewSequence({ ...newSequence, steps: u }) }}
+                        placeholder="J+"
+                        style={{ padding: '4px 6px', borderRadius: '4px', border: `1px solid ${V.line}`, background: V.surface1, color: V.text, fontSize: '10px', fontFamily: 'inherit', outline: 'none', textAlign: 'center' }}
+                      />
+                    </div>
+                    <textarea
+                      value={step.message_template}
+                      onChange={e => { const u = [...newSequence.steps]; u[idx] = { ...u[idx], message_template: e.target.value }; onSetNewSequence({ ...newSequence, steps: u }) }}
+                      placeholder="Message avec {{prenom}}, {{nom}}..."
+                      style={{ width: '100%', minHeight: '40px', padding: '5px 7px', borderRadius: '4px', border: `1px solid ${V.line}`, background: V.surface1, color: V.textHi, fontSize: '10px', fontFamily: 'inherit', resize: 'vertical', lineHeight: '1.4', outline: 'none' }}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '6px', marginTop: '6px' }}>
+              <button onClick={() => onSaveEditedTemplate(detailTemplateId)} style={{ flex: 1, padding: '7px 12px', borderRadius: '6px', border: 'none', background: V.gold, color: V.bgDeep, fontSize: '11px', cursor: 'pointer', fontWeight: 600 }}>
+                💾 Sauvegarder les modifications
               </button>
             </div>
           </div>

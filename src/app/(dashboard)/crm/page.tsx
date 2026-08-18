@@ -237,7 +237,7 @@ function ProspectCard({
   }
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners} onClick={onClick}>
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners} onClick={onClick} data-prospect-id={prospect.id}>
       <CardContent prospect={prospect} />
     </div>
   )
@@ -1020,6 +1020,53 @@ function CrmPageContent() {
   }, [])
 
   useEffect(() => { fetchProspects() }, [fetchProspects])
+
+  // Quick Win #4 + #6 : Highlight prospect depuis URL + validation UUID + retry scroll
+  useEffect(() => {
+    if (!highlightProspectId || prospects.length === 0) return
+
+    // Validation UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    if (!uuidRegex.test(highlightProspectId)) {
+      toast.error('UUID prospect invalide')
+      return
+    }
+
+    // Vérifier si prospect existe
+    const targetProspect = prospects.find(p => p.id === highlightProspectId)
+    if (!targetProspect) {
+      toast.error('Prospect introuvable')
+      return
+    }
+
+    // Scroll avec retry logic (wait for render)
+    let attempts = 0
+    const maxAttempts = 5
+    const delays = [100, 200, 500, 1000, 2000]
+
+    function tryScroll() {
+      const card = document.querySelector(`[data-prospect-id="${highlightProspectId}"]`)
+      if (card) {
+        card.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        // Highlight temporaire
+        const cardEl = card as HTMLElement
+        const originalBg = cardEl.style.background
+        cardEl.style.background = `${C.gold}40`
+        setTimeout(() => { cardEl.style.background = originalBg }, 2000)
+        return true
+      }
+
+      attempts++
+      if (attempts < maxAttempts) {
+        setTimeout(tryScroll, delays[attempts])
+      } else {
+        toast.error('Impossible de localiser le prospect dans la vue')
+      }
+      return false
+    }
+
+    tryScroll()
+  }, [highlightProspectId, prospects])
 
   // Persist stage move to DB
   async function persistMove(prospectId: string, toStage: Stage) {

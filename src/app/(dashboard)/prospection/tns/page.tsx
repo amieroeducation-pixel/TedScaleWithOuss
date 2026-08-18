@@ -114,9 +114,10 @@ const ACTION_LABELS: Record<string, string> = {
   WA: 'WA', email: '@', SMS: 'SMS', LI: 'in', seq: '▶',
 }
 
-const FILTER_LABELS: Record<MetierFilter, string> = {
-  all: 'Tous (23)', medecin: 'Médecins (8)', infirmier: 'Infirmiers (5)', kine: 'Kinés (6)', avocat: 'Avocats (4)',
-}
+// Tabs filtres métiers retirés (backend filtrage par métier non implémenté)
+// const FILTER_LABELS: Record<MetierFilter, string> = {
+//   all: 'Tous (23)', medecin: 'Médecins (8)', infirmier: 'Infirmiers (5)', kine: 'Kinés (6)', avocat: 'Avocats (4)',
+// }
 
 function Panel({ children, accent = C.indigo, style = {} }: { children: React.ReactNode; accent?: string; style?: React.CSSProperties }) {
   return (
@@ -664,27 +665,8 @@ export default function TnsPage() {
           Prospects TNS déjà dans ta base
         </div>
 
-        {/* Filter tabs */}
-        <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' as const, marginBottom: 14 }}>
-          {(Object.keys(FILTER_LABELS) as MetierFilter[]).map(f => {
-            const active = activeFilter === f
-            return (
-              <button
-                key={f}
-                onClick={() => setActiveFilter(f)}
-                style={{
-                  fontFamily: 'JetBrains Mono,monospace', fontSize: 8, padding: '4px 10px', borderRadius: 10, cursor: 'pointer',
-                  background: active ? '#1a1400' : C.surface2,
-                  color: active ? C.gold : C.textLo,
-                  border: active ? `1px solid ${C.gold}50` : `1px solid ${C.lineSoft}`,
-                  fontWeight: active ? 600 : 400,
-                }}
-              >
-                {FILTER_LABELS[f]}
-              </button>
-            )
-          })}
-        </div>
+        {/* Filter tabs retirés — backend filtrage par métier non implémenté */}
+        {/* Tous les prospects TNS affichés sans filtre métier */}
 
         {/* Prospect list */}
         {prospectsLoading && <div style={{ fontSize: 10, color: C.textLo, padding: 16, textAlign: 'center' }}>Chargement...</div>}

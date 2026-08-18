@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { C } from '@/lib/theme'
 import { UserSettings } from '@/hooks/useUserSettings'
 
-export type Tab = 'general' | 'kpi' | 'notifications' | 'integrations' | 'sections' | 'mobile' | 'sequences' | 'variantes' | 'triggers' | 'scripts'
+export type Tab = 'general' | 'kpi' | 'notifications' | 'integrations' | 'sections' | 'mobile' | 'sequences' | 'variantes' | 'triggers' | 'scripts' | 'menu' | 'rappels'
 
 export type TabProps = {
   settings: UserSettings | null
@@ -17,12 +17,14 @@ export const TABS: { id: Tab; label: string }[] = [
   { id: 'kpi', label: '📊 KPI' },
   { id: 'notifications', label: '🔔 Notif' },
   { id: 'integrations', label: '🔗 API' },
+  { id: 'menu', label: '📂 Menu' },
   { id: 'sections', label: '👁️ Sections' },
   { id: 'mobile', label: '📱 Mobile' },
   { id: 'sequences', label: '🔗 Séquences' },
   { id: 'variantes', label: '🎯 Variantes' },
   { id: 'triggers', label: '⚡ Triggers' },
   { id: 'scripts', label: '📞 Scripts' },
+  { id: 'rappels', label: '📲 Rappels SMS' },
 ]
 
 export const MONTHS_SHORT = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc']
@@ -70,7 +72,14 @@ export const MOBILE_SECTIONS = [
 export function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
   return (
     <label style={{ position: 'relative', display: 'inline-block', width: 48, height: 24, flexShrink: 0, cursor: 'pointer' }}>
-      <input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)} style={{ opacity: 0, width: 0, height: 0 }} />
+      <input
+        type="checkbox"
+        role="switch"
+        aria-checked={checked}
+        checked={checked}
+        onChange={e => onChange(e.target.checked)}
+        style={{ opacity: 0, width: 0, height: 0 }}
+      />
       <span style={{
         position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
         background: checked ? C.green : C.textVlo,
@@ -144,6 +153,50 @@ export function SectionPanel({ title, children }: { title: string; children: Rea
       </div>
       {children}
     </div>
+  )
+}
+
+// TabMenu - Phase 1A s01-menu Sections sommeil
+export function TabMenu({ settings, save }: TabProps) {
+  const [visible, setVisible] = useState<Record<string, boolean>>(
+    settings?.menu_sections_visible ?? {
+      principal: true,
+      clients: true,
+      acquisition: true,
+      outils: true,
+      pilotage: true,
+    }
+  )
+
+  const sections = [
+    { key: 'principal', label: 'Principal', desc: 'Dashboard, Aujourd\'hui, Global' },
+    { key: 'clients', label: 'Clients', desc: 'Clients Premium, CRM Kanban, Revenue' },
+    { key: 'acquisition', label: 'Acquisition', desc: 'TNS, Chefs d\'entreprise, Particuliers' },
+    { key: 'outils', label: 'Outils', desc: 'Assistant, Simulateur, Scoring, Map' },
+    { key: 'pilotage', label: 'Pilotage', desc: 'Analytics, Achievements, Automatisations' },
+  ]
+
+  async function handleToggle(key: string, value: boolean) {
+    const next = { ...visible, [key]: value }
+    setVisible(next)
+    await save({ menu_sections_visible: next })
+  }
+
+  return (
+    <SectionPanel title="Visibilité Sections Menu">
+      <div style={{ fontSize: 9, color: C.textLo, marginBottom: 14, fontFamily: 'JetBrains Mono,monospace' }}>
+        Masquez les sections du menu latéral que vous n'utilisez pas.
+      </div>
+      {sections.map(s => (
+        <SetRow key={s.key}>
+          <SetLabel label={s.label} desc={s.desc} />
+          <Toggle
+            checked={visible[s.key] ?? true}
+            onChange={(v) => handleToggle(s.key, v)}
+          />
+        </SetRow>
+      ))}
+    </SectionPanel>
   )
 }
 

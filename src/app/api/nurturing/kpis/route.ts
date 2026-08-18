@@ -1,10 +1,14 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { apiSuccess, apiError, apiUnauthorized } from '@/lib/api'
 
-export async function GET() {
+export async function GET(request: Request) {
   const supabase = await createSupabaseServerClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return apiUnauthorized()
+
+  const { searchParams } = new URL(request.url)
+  const startDate = searchParams.get('start_date')
+  const endDate = searchParams.get('end_date')
 
   try {
     // 1. All nurturing prospects (non-archived)
@@ -30,11 +34,23 @@ export async function GET() {
       ? Math.round((pressures.reduce((a, b) => a + b, 0) / contacts_actifs) * 10) / 10
       : 0
 
-    // 2. All interactions for this user
-    const { data: allInteractions, error: intErr } = await supabase
+    // 2. All interactions for this user (with optional date filter)
+    let interactionsQuery = supabase
       .from('interactions')
       .select('id, prospect_id, is_honored, occurred_at, created_at')
       .eq('user_id', user.id)
+
+    if (startDate) {
+      interactionsQuery = interactionsQuery.gte('occurred_at', startDate)
+    }
+
+    if (endDate) {
+      const endDateTime = new Date(endDate)
+      endDateTime.setHours(23, 59, 59, 999)
+      interactionsQuery = interactionsQuery.lte('occurred_at', endDateTime.toISOString())
+    }
+
+    const { data: allInteractions, error: intErr } = await interactionsQuery
 
     if (intErr) return apiError(intErr.message)
 

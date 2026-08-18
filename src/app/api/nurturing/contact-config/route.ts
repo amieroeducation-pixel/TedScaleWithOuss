@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
 
   const { data, error } = await supabase
     .from('prospects')
-    .select('id, preferred_channel, contact_frequency_days, excluded_channels, preferred_time_slot, notes')
+    .select('id, preferred_channel, contact_frequency_days, excluded_channels, preferred_time_slot, notes, timezone, forced_temperature')
     .eq('id', prospectId)
     .eq('user_id', user.id)
     .single()
@@ -28,7 +28,7 @@ export async function PATCH(request: NextRequest) {
   if (!user) return apiUnauthorized()
 
   const body = await request.json()
-  const { prospect_id, preferred_channel, contact_frequency_days, excluded_channels, preferred_time_slot, notes, next_action_date } = body
+  const { prospect_id, preferred_channel, contact_frequency_days, excluded_channels, preferred_time_slot, notes, next_action_date, timezone, forced_temperature } = body
 
   if (!prospect_id) return apiError('prospect_id requis', 400)
 
@@ -39,6 +39,8 @@ export async function PATCH(request: NextRequest) {
   if (preferred_time_slot !== undefined) updates.preferred_time_slot = preferred_time_slot
   if (notes !== undefined) updates.notes = notes
   if (next_action_date !== undefined) updates.next_action_date = next_action_date
+  if (timezone !== undefined) updates.timezone = timezone
+  if (forced_temperature !== undefined) updates.forced_temperature = forced_temperature
 
   const { data, error } = await supabase
     .from('prospects')
