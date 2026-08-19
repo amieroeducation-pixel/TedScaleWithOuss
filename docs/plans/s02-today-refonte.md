@@ -19,8 +19,8 @@ Branch: `feature/s02-today-refonte`
 
 ## Tasks (ordered)
 
-1. [ ] **Créer `/api/tasks` route** — GET avec query params `urgency` et `deadline`, retourne tasks depuis DB (table existe déjà)
-2. [ ] **Test unitaire `/api/tasks`** — vérifier retour JSON correct, filtres urgency/deadline, auth required
+1. [x] **Créer `/api/tasks` route** — GET avec query params `urgency` et `deadline`, retourne tasks depuis DB (table existe déjà)
+2. [x] **Test unitaire `/api/tasks`** — vérifier retour JSON correct, filtres urgency/deadline, auth required
 3. [ ] **Extraire composants lourds** — Créer `today/AudioPlayer.tsx`, `today/VideoPlayer.tsx`, `today/DeepWorkTimer.tsx` depuis le monolithe (lignes ~200-400)
 4. [ ] **Extraire composants métier** — Créer `today/WeeklySignal.tsx`, `today/DailyCounters.tsx`, `today/TodayAgenda.tsx` (lignes ~400-1200)
 5. [ ] **Créer `today/UrgentTasks.tsx`** — Nouveau composant : fetch `/api/tasks?urgency=urgent&deadline=today`, affichage cards avec priorité/deadline
