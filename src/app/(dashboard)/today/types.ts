@@ -60,4 +60,4 @@ export type Task = {
   created_at: string
 }
 
-export { AgendaEvent }
+export type { AgendaEvent }

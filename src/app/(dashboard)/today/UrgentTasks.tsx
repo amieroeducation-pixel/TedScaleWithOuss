@@ -54,9 +54,7 @@ export default function UrgentTasks() {
     <div style={{ padding: 16, background: C.surface1, borderRadius: 6, border: `0.5px solid ${C.line}` }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
         <div style={{ fontSize: 8, color: C.textLo, fontWeight: 500 }}>🚨 Actions prioritaires</div>
-        <LinkButton href="/tasks" style={{ fontSize: 8, padding: '4px 8px' }}>
-          Voir toutes
-        </LinkButton>
+        <LinkButton href="/tasks" label="Voir toutes" />
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
