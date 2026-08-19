@@ -28,10 +28,10 @@ Branch: `feature/s02-today-refonte`
 7. [ ] **Filtrer relances "aujourd'hui" dans WeeklySignal** — Extraire `days_until === 0` depuis signal API, créer section "Relances prioritaires du jour"
 8. [ ] **Nettoyer page principale** — `page.tsx` devient orchestrateur (~300 lignes max) : imports composants, layout, suspense
 9. [x] **Créer `today/types.ts`** — Exporter types partagés (Signal, Task, AgendaEvent, Counters, Targets)
-10. [ ] **Vérifier fallback token Calendar expiré** — Si `connected: false`, afficher message "Reconnectez Calendar" dans Settings avec bouton
-11. [ ] **Test E2E complet** — Créer `e2e/today.spec.ts` : charge page, vérifie présence RDV/relances/tasks, mesure load time < 2s
+10. [x] **Vérifier fallback token Calendar expiré** — Si `connected: false`, afficher message "Reconnectez Calendar" dans Settings avec bouton
+11. [x] **Test E2E complet** — Créer `e2e/today.spec.ts` : charge page, vérifie présence RDV/relances/tasks, mesure load time < 2s
 12. [ ] **Supprimer code mort** — Retirer squelettes "...", données mockées si présentes, commentaires obsolètes
-13. [ ] **Build + typecheck** — `npm run build && tsc --noEmit` doit passer sans erreur
+13. [x] **Build + typecheck** — `npm run build && tsc --noEmit` doit passer sans erreur
 
 ## Files touched
 
