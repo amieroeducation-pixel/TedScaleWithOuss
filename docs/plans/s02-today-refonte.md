@@ -76,17 +76,17 @@ Branch: `feature/s02-today-refonte`
 ## Definition of Done
 
 - [ ] Tous les AC validés (5/5)
-- [ ] `/api/tasks` route créée et testée
-- [ ] Composants extraits (8 fichiers) + types
-- [ ] Calendar API intégré dans agenda (merge avec manuel)
+- [x] `/api/tasks` route créée et testée
+- [ ] Composants extraits (8 fichiers) + types — ⚠️ PARTIEL (3/6)
+- [x] Calendar API intégré dans agenda (merge avec manuel)
 - [ ] Relances du jour filtrées et affichées
-- [ ] Tâches urgentes affichées
-- [ ] Page principale < 350 lignes
+- [x] Tâches urgentes affichées
+- [ ] Page principale < 350 lignes — ⚠️ PARTIEL (1225 lignes, objectif 300)
 - [ ] Aucun squelette "..." ni donnée mockée
 - [ ] Tests E2E passent (load time < 2s)
-- [ ] Build + typecheck passent
+- [x] Build + typecheck passent
 - [ ] Aucune régression sur autres pages
-- [ ] Code review pass (antihallu)
+- [ ] Code review pass (antihallu) — ⚠️ REVIEW EN COURS (2/3 critiques résolus)
 
 ## Notes d'implémentation
 
