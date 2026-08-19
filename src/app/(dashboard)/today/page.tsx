@@ -10,6 +10,9 @@ import { saveLastSection } from '@/lib/navigation-state'
 import CallingSessionPanel from '@/components/calling/CallingSessionPanel'
 import { useCelebrations } from '@/hooks/useCelebrations'
 import { LinkButton, LinkBadge, LinkChip, LinkInline, buildHref } from '@/lib/cross-links'
+import UrgentTasks from './UrgentTasks'
+import AudioPlayer from './AudioPlayer'
+import VideoPlayer from './VideoPlayer'
 
 // ─── Objectifs du jour ────────────────────────────────────────────────────────
 interface TodayTargets { contacts: number; calls: number; rdv1: number; rdv2: number }
@@ -652,15 +655,50 @@ function TodayPageContent() {
     setRdv2(c.rdv2)
   }, [])
 
-  // Load agenda from DB
+  // Load agenda from DB + Calendar API
+  const [calendarConnected, setCalendarConnected] = useState(true)
   useEffect(() => {
     const dk = todayDateKey()
-    fetch(`/api/today/agenda?date=${dk}`)
+    const today = new Date().toISOString().split('T')[0]
+
+    // Fetch manual agenda from DB
+    const manualPromise = fetch(`/api/today/agenda?date=${dk}`)
       .then(r => r.json())
-      .then(j => { if (j.data) setAgendaEvents(j.data) })
+      .then(j => j.data || [])
+      .catch(() => loadDayAgenda(dk))
+
+    // Fetch Calendar events for today
+    const calendarPromise = fetch(`/api/calendar/events?start=${today}&end=${today}`)
+      .then(r => r.json())
+      .then(j => {
+        if (!j.success) {
+          setCalendarConnected(false)
+          return []
+        }
+        if (!j.data.connected) {
+          setCalendarConnected(false)
+          return []
+        }
+        setCalendarConnected(true)
+        // Convert Calendar events to AgendaEvent format
+        return (j.data.events || []).map((ev: any) => ({
+          id: `cal_${ev.id}`,
+          time: ev.start ? new Date(ev.start).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '00:00',
+          title: ev.title || 'Événement Calendar',
+          client: ev.location || undefined,
+          type: 'rdv' as AgendaEventType,
+          isCalendarEvent: true,
+        }))
+      })
       .catch(() => {
-        // Fallback to localStorage if API fails
-        setAgendaEvents(loadDayAgenda(dk))
+        setCalendarConnected(false)
+        return []
+      })
+
+    // Merge both sources
+    Promise.all([manualPromise, calendarPromise])
+      .then(([manual, calendar]) => {
+        setAgendaEvents([...calendar, ...manual])
       })
   }, [])
 
@@ -1075,6 +1113,9 @@ function TodayPageContent() {
           )}
         </div>
 
+        {/* Section Tâches urgentes */}
+        <UrgentTasks />
+
         {/* Section 2 — RDV de la semaine (DATA-07) */}
         <div style={{ background: C.surface1, border: `0.5px solid ${C.line}`, borderRadius: 10, padding: '14px 16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
@@ -1244,6 +1285,12 @@ function TodayPageContent() {
                   >+ Événement</button>
                 </div>
 
+                {!calendarConnected && (
+                  <div style={{ marginBottom: 12, padding: 8, background: '#1a1400', border: `0.5px solid ${C.gold}40`, borderRadius: 4, fontSize: 8, color: C.textMid }}>
+                    ⚠️ Calendrier non connecté — <a href="/settings" style={{ color: C.gold, textDecoration: 'underline', cursor: 'pointer' }}>Connecter dans Paramètres</a>
+                  </div>
+                )}
+
                 {agendaEvents.length === 0 ? (
                   <div style={{ fontSize: 9, color: C.textVlo, fontStyle: 'italic', textAlign: 'center', padding: '24px 0' }}>
                     Aucun événement · Clique &quot;+ Événement&quot; pour ajouter
@@ -1252,22 +1299,24 @@ function TodayPageContent() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                     {[...agendaEvents].sort((a, b) => a.time.localeCompare(b.time)).map(ev => {
                       const colors = AGENDA_COLORS[ev.type]
+                      const isCalendar = ev.isCalendarEvent
                       return (
                         <div key={ev.id} style={{ display: 'flex', alignItems: 'center', gap: 8, background: colors.bg, border: `0.5px solid ${colors.border}`, borderRadius: 6, padding: '6px 10px' }}>
+                          <span style={{ fontSize: 10, marginRight: -4 }}>{isCalendar ? '🗓️' : '✏️'}</span>
                           <span style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: colors.text, width: 36, flexShrink: 0 }}>{ev.time}</span>
                           <span style={{ fontSize: 10, color: C.textHi, flex: 1 }}>{ev.title}</span>
-                          <a
+                          {!isCalendar && <a
                             href={fantasticalUrl(ev, todayDateKey())}
                             style={{ fontSize: 10, textDecoration: 'none', color: C.textVlo, cursor: 'pointer', padding: '0 2px' }}
                             title="Ouvrir dans Fantastical"
-                          >📲</a>
-                          <button
+                          >📲</a>}
+                          {!isCalendar && <button
                             onClick={() => {
                               setAgendaEvents(prev => prev.filter(e => e.id !== ev.id))
                               fetch(`/api/today/agenda?id=${ev.id}`, { method: 'DELETE' }).catch(() => {})
                             }}
                             style={{ background: 'none', border: 'none', color: C.textVlo, cursor: 'pointer', fontSize: 10, padding: '0 2px' }}
-                          >✕</button>
+                          >✕</button>}
                         </div>
                       )
                     })}
