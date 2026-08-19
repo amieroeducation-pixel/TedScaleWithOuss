@@ -21,13 +21,13 @@ Branch: `feature/s02-today-refonte`
 
 1. [x] **Créer `/api/tasks` route** — GET avec query params `urgency` et `deadline`, retourne tasks depuis DB (table existe déjà)
 2. [x] **Test unitaire `/api/tasks`** — vérifier retour JSON correct, filtres urgency/deadline, auth required
-3. [ ] **Extraire composants lourds** — Créer `today/AudioPlayer.tsx`, `today/VideoPlayer.tsx`, `today/DeepWorkTimer.tsx` depuis le monolithe (lignes ~200-400)
+3. [x] **Extraire composants lourds** — Créer `today/AudioPlayer.tsx`, `today/VideoPlayer.tsx`, `today/DeepWorkTimer.tsx` depuis le monolithe (lignes ~200-400)
 4. [ ] **Extraire composants métier** — Créer `today/WeeklySignal.tsx`, `today/DailyCounters.tsx`, `today/TodayAgenda.tsx` (lignes ~400-1200)
-5. [ ] **Créer `today/UrgentTasks.tsx`** — Nouveau composant : fetch `/api/tasks?urgency=urgent&deadline=today`, affichage cards avec priorité/deadline
-6. [ ] **Intégrer Calendar API dans TodayAgenda** — Ajouter fetch `/api/calendar/events` + merge avec `user_agenda`, distinction visuelle (🗓️ vs ✏️)
+5. [x] **Créer `today/UrgentTasks.tsx`** — Nouveau composant : fetch `/api/tasks?urgency=urgent&deadline=today`, affichage cards avec priorité/deadline
+6. [x] **Intégrer Calendar API dans TodayAgenda** — Ajouter fetch `/api/calendar/events` + merge avec `user_agenda`, distinction visuelle (🗓️ vs ✏️)
 7. [ ] **Filtrer relances "aujourd'hui" dans WeeklySignal** — Extraire `days_until === 0` depuis signal API, créer section "Relances prioritaires du jour"
 8. [ ] **Nettoyer page principale** — `page.tsx` devient orchestrateur (~300 lignes max) : imports composants, layout, suspense
-9. [ ] **Créer `today/types.ts`** — Exporter types partagés (Signal, Task, AgendaEvent, Counters, Targets)
+9. [x] **Créer `today/types.ts`** — Exporter types partagés (Signal, Task, AgendaEvent, Counters, Targets)
 10. [ ] **Vérifier fallback token Calendar expiré** — Si `connected: false`, afficher message "Reconnectez Calendar" dans Settings avec bouton
 11. [ ] **Test E2E complet** — Créer `e2e/today.spec.ts` : charge page, vérifie présence RDV/relances/tasks, mesure load time < 2s
 12. [ ] **Supprimer code mort** — Retirer squelettes "...", données mockées si présentes, commentaires obsolètes

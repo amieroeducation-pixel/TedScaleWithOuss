@@ -126,8 +126,7 @@ function PressureDots({ n, color }: { n: 1 | 2 | 3; color: string }) {
   )
 }
 
-// ─── Audio player ─────────────────────────────────────────────────────────
-function AudioPlayer() {
+// ─── Main page ────────────────────────────────────────────────────────────
   const audioRef = useRef<HTMLAudioElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [playlist, setPlaylist] = useState<Array<{ name: string; url: string }>>([])
