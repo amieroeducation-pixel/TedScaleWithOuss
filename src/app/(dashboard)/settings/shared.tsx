@@ -72,7 +72,14 @@ export const MOBILE_SECTIONS = [
 export function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
   return (
     <label style={{ position: 'relative', display: 'inline-block', width: 48, height: 24, flexShrink: 0, cursor: 'pointer' }}>
-      <input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)} style={{ opacity: 0, width: 0, height: 0 }} />
+      <input
+        type="checkbox"
+        role="switch"
+        aria-checked={checked}
+        checked={checked}
+        onChange={e => onChange(e.target.checked)}
+        style={{ opacity: 0, width: 0, height: 0 }}
+      />
       <span style={{
         position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
         background: checked ? C.green : C.textVlo,
