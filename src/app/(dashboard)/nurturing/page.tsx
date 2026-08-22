@@ -156,11 +156,11 @@ export default function NurturingPage() {
       if (!json.data) { setLoading(false); return 0 }
 
       const contactList: Contact[] = json.data.map((p: any) => {
-        // Quick score estimation from available data (proper calculation done in backend)
-        const estimatedScore = (p.total_touchpoints || 0) + (p.responded_touchpoints || 0) * 2
+        // Use actual temperature_score computed by backend cron
+        const temperatureScore = p.temperature_score || 0
 
         const temp = calculateTempCategory(
-          estimatedScore,
+          temperatureScore,
           p.nb_relances_sans_reponse || 0,
           p.forced_temperature
         )

@@ -24,7 +24,7 @@ test('full sequence cycle: temperature scoring after interactions', () => {
   ]
 
   // Calculate score: 3 interactions (+3) + 1 RDV (+3) + 3 weeks of silence (-3) = 3
-  const score = computeTemperatureScore(interactions, firstContact.toISOString())
+  const score = computeTemperatureScore(interactions, firstContact.toISOString(), now)
   expect(score).toBe(3)
 
   // Score 3 → cold (< 5)
@@ -34,6 +34,7 @@ test('full sequence cycle: temperature scoring after interactions', () => {
 
 test('sequence with high engagement becomes hot', () => {
   const firstContact = new Date('2026-08-20T10:00:00Z')
+  const now = new Date('2026-08-22T10:00:00Z')
 
   // High engagement: 2 RDVs + 5 interactions in last 2 days
   const interactions: Interaction[] = [
@@ -47,7 +48,7 @@ test('sequence with high engagement becomes hot', () => {
   ]
 
   // Score: 5 interactions (+5) + 2 RDVs (+6) + 0 weeks = 11
-  const score = computeTemperatureScore(interactions, firstContact.toISOString())
+  const score = computeTemperatureScore(interactions, firstContact.toISOString(), now)
   expect(score).toBe(11)
 
   // Score 11 → warm (5-11)
@@ -57,6 +58,7 @@ test('sequence with high engagement becomes hot', () => {
 
 test('sequence with RDV triggers becomes hot', () => {
   const firstContact = new Date('2026-08-15T10:00:00Z')
+  const now = new Date('2026-08-22T10:00:00Z')
 
   // 3 RDVs + 3 interactions
   const interactions: Interaction[] = [
@@ -69,7 +71,7 @@ test('sequence with RDV triggers becomes hot', () => {
   ]
 
   // Score: 3 interactions (+3) + 3 RDVs (+9) - 1 week (-1) = 11
-  const score = computeTemperatureScore(interactions, firstContact.toISOString())
+  const score = computeTemperatureScore(interactions, firstContact.toISOString(), now)
   expect(score).toBe(11)
 
   const category = calculateTempCategory(score, 0)
@@ -78,6 +80,7 @@ test('sequence with RDV triggers becomes hot', () => {
 
 test('dead prospect stays dead regardless of score', () => {
   const firstContact = '2026-08-15T10:00:00Z' // 1 week ago
+  const now = new Date('2026-08-22T10:00:00Z')
   const interactions: Interaction[] = [
     { type: 'email', occurred_at: firstContact },
     { type: 'rdv1', occurred_at: '2026-08-21T10:00:00Z' },
@@ -85,7 +88,7 @@ test('dead prospect stays dead regardless of score', () => {
   ]
 
   // Score: 1 interaction (+1) + 2 RDVs (+6) - 1 week (-1) = 6
-  const score = computeTemperatureScore(interactions, firstContact)
+  const score = computeTemperatureScore(interactions, firstContact, now)
   expect(score).toBe(6)
 
   // But with noResponseCount >= 5, should be dead
@@ -94,12 +97,13 @@ test('dead prospect stays dead regardless of score', () => {
 })
 
 test('forced temperature overrides computed score', () => {
+  const now = new Date('2026-08-22T10:00:00Z')
   const interactions: Interaction[] = [
     { type: 'email', occurred_at: '2026-08-20T10:00:00Z' },
   ]
 
   // Low score (1)
-  const score = computeTemperatureScore(interactions, '2026-08-20T10:00:00Z')
+  const score = computeTemperatureScore(interactions, '2026-08-20T10:00:00Z', now)
   expect(score).toBe(1)
 
   // But forced hot

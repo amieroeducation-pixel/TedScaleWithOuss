@@ -14,7 +14,8 @@ test('score +1 per interaction (email, sms, whatsapp, linkedin, appel)', () => {
     { type: 'linkedin', occurred_at: '2026-08-20T13:00:00Z' },
     { type: 'appel', occurred_at: '2026-08-20T14:00:00Z' },
   ]
-  expect(computeTemperatureScore(interactions, '2026-08-20T09:00:00Z')).toBe(5)
+  const now = new Date('2026-08-22T10:00:00Z')
+  expect(computeTemperatureScore(interactions, '2026-08-20T09:00:00Z', now)).toBe(5)
 })
 
 test('score +3 per RDV (rdv1, rdv2, rdv3)', () => {
@@ -23,7 +24,8 @@ test('score +3 per RDV (rdv1, rdv2, rdv3)', () => {
     { type: 'rdv2', occurred_at: '2026-08-21T10:00:00Z' },
     { type: 'rdv3', occurred_at: '2026-08-22T10:00:00Z' },
   ]
-  expect(computeTemperatureScore(interactions, '2026-08-19T09:00:00Z')).toBe(9)
+  const now = new Date('2026-08-22T10:00:00Z')
+  expect(computeTemperatureScore(interactions, '2026-08-19T09:00:00Z', now)).toBe(9)
 })
 
 test('score -1 per complete week of silence since first contact', () => {
@@ -35,8 +37,8 @@ test('score -1 per complete week of silence since first contact', () => {
     { type: 'email', occurred_at: firstContact.toISOString() },
   ]
 
-  // 1 interaction (+1) + 3 weeks of silence (-3) = -2, but minimum is 0
-  const score = computeTemperatureScore(interactions, firstContact.toISOString())
+  // 1 interaction (+1) + 3 weeks of silence (-3) = -2
+  const score = computeTemperatureScore(interactions, firstContact.toISOString(), now)
   expect(score).toBe(-2)
 })
 
@@ -54,19 +56,21 @@ test('score combines: 3 RDV + 2 emails + 1 week silence', () => {
   ]
 
   // 3 RDV (+9) + 2 emails (+2) + 1 week silence (-1) = 10
-  const score = computeTemperatureScore(interactions, firstContact.toISOString())
+  const score = computeTemperatureScore(interactions, firstContact.toISOString(), now)
   expect(score).toBe(10)
 })
 
 test('no interactions = 0 score', () => {
-  expect(computeTemperatureScore([], '2026-08-20T10:00:00Z')).toBe(0)
+  const now = new Date('2026-08-22T10:00:00Z')
+  expect(computeTemperatureScore([], '2026-08-20T10:00:00Z', now)).toBe(0)
 })
 
 test('no first contact date = 0 weeks of silence', () => {
   const interactions: Interaction[] = [
     { type: 'email', occurred_at: '2026-08-20T10:00:00Z' },
   ]
-  expect(computeTemperatureScore(interactions, null)).toBe(1)
+  const now = new Date('2026-08-22T10:00:00Z')
+  expect(computeTemperatureScore(interactions, null, now)).toBe(1)
 })
 
 test('category: score < 5 → cold', () => {

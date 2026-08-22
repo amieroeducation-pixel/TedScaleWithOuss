@@ -3,7 +3,7 @@ import { createSupabaseCronClient } from '@/lib/supabase/cron-client'
 import { verifyCronSecret } from '@/lib/cron/auth'
 import { logCronRun } from '@/lib/cron/logger'
 import { apiSuccess, apiError } from '@/lib/api'
-import { PRESSURE_COEFS } from '@/app/(dashboard)/nurturing/nurturing-types'
+import { PRESSURE_COEFS, computeTemperatureScore, calculateTempCategory } from '@/app/(dashboard)/nurturing/nurturing-types'
 
 export async function GET(req: NextRequest) {
   const authError = verifyCronSecret(req)
@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
 
   const { data: prospects, error } = await supabase
     .from('prospects')
-    .select('id, user_id, nurturing_category, nb_relances_sans_reponse, computed_pressure')
+    .select('id, user_id, nurturing_category, nb_relances_sans_reponse, computed_pressure, temperature_score')
     .not('nurturing_category', 'is', null)
     .or('nurturing_archived.is.null,nurturing_archived.eq.false')
 
@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
   const [{ data: interactions }, { data: recentInteractions }] = await Promise.all([
     supabase
       .from('interactions')
-      .select('prospect_id, occurred_at, is_honored')
+      .select('prospect_id, occurred_at, is_honored, type')
       .in('prospect_id', prospectIds)
       .order('occurred_at', { ascending: false }),
     supabase
@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
       .gte('occurred_at', cutoff.toISOString()),
   ])
 
-  const interactionsMap: Record<string, Array<{ occurred_at: string; is_honored: boolean }>> = {}
+  const interactionsMap: Record<string, Array<{ occurred_at: string; is_honored: boolean; type?: string }>> = {}
   for (const i of (interactions || [])) {
     if (!interactionsMap[i.prospect_id]) interactionsMap[i.prospect_id] = []
     interactionsMap[i.prospect_id].push(i)
@@ -64,9 +64,24 @@ export async function GET(req: NextRequest) {
     }
 
     const newPressure = pressureMap[prospect.id] || 0
+
+    // Compute temperature score
+    const allInteractions = interactions?.filter(i => i.prospect_id === prospect.id) || []
+    const firstContactDate = allInteractions.length > 0
+      ? allInteractions.reduce((earliest, i) =>
+          new Date(i.occurred_at) < new Date(earliest) ? i.occurred_at : earliest
+        , allInteractions[0].occurred_at)
+      : null
+
+    const temperatureScore = computeTemperatureScore(
+      allInteractions.map(i => ({ type: i.type || 'email', occurred_at: i.occurred_at })),
+      firstContactDate
+    )
+
     const needsUpdate =
       consecutiveNR !== (prospect.nb_relances_sans_reponse || 0) ||
-      newPressure !== (prospect.computed_pressure || 0)
+      newPressure !== (prospect.computed_pressure || 0) ||
+      temperatureScore !== (prospect.temperature_score || 0)
 
     if (needsUpdate) {
       const { error: updateErr } = await supabase
@@ -74,6 +89,7 @@ export async function GET(req: NextRequest) {
         .update({
           nb_relances_sans_reponse: consecutiveNR,
           computed_pressure: newPressure,
+          temperature_score: temperatureScore,
         })
         .eq('id', prospect.id)
 

@@ -197,10 +197,13 @@ export function computePressure(interactions: { channel: string; date: string }[
  * - +1 per interaction (email, sms, whatsapp, linkedin, appel)
  * - +3 per RDV (rdv1, rdv2, rdv3)
  * - -1 per complete week of silence since first contact
+ *
+ * @param now - Optional date for testing, defaults to current time
  */
 export function computeTemperatureScore(
   interactions: { type: string; occurred_at: string }[],
-  firstContactAt: string | null
+  firstContactAt: string | null,
+  now?: Date
 ): number {
   let score = 0
 
@@ -217,8 +220,8 @@ export function computeTemperatureScore(
   // -1 per complete week of silence since first contact
   if (firstContactAt) {
     const firstContactDate = new Date(firstContactAt)
-    const now = new Date()
-    const diffMs = now.getTime() - firstContactDate.getTime()
+    const currentDate = now || new Date()
+    const diffMs = currentDate.getTime() - firstContactDate.getTime()
     const diffDays = diffMs / (1000 * 60 * 60 * 24)
     const completeWeeks = Math.floor(diffDays / 7)
     score -= completeWeeks

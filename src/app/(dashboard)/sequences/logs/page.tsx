@@ -81,7 +81,7 @@ export default function SequenceLogsPage() {
 
       {loading ? (
         <div style={{
-          background: C.bgCard,
+          background: C.surface1,
           border: `1px solid ${C.line}`,
           borderRadius: 12,
           padding: 32,
@@ -95,7 +95,7 @@ export default function SequenceLogsPage() {
       ) : (
         <>
           <div style={{
-            background: C.bgCard,
+            background: C.surface1,
             border: `1px solid ${C.line}`,
             borderRadius: 12,
             overflow: 'hidden'
@@ -223,7 +223,7 @@ export default function SequenceLogsPage() {
                       </td>
                       <td style={{
                         padding: 12,
-                        color: C.error,
+                        color: C.cyan,
                         fontSize: 10,
                         fontFamily: 'JetBrains Mono,monospace'
                       }}>
