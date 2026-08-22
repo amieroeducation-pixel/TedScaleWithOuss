@@ -46,7 +46,7 @@ Rendre la section Nurturing 100% fiable : température calculée par score cumul
   - Update cron to compute and store cumulative score (new column `temperature_score INT` on prospects table)
 - **Test:** Unit test for score calculation with edge cases (0 interactions, 3 RDVs only, silence decay)
 
-### 3. [ ] Fix WhatsApp in cron (remove skip)
+### 3. [x] Fix WhatsApp in cron (remove skip)
 - **File:** `src/app/api/cron/sequences-process/route.ts`
 - **Change:** Remove WhatsApp from the skip block (line 41-51). Let WhatsApp flow through `executeStep()` which already handles it via Brevo API
 - **Keep:** LinkedIn still handled separately (task 4)
