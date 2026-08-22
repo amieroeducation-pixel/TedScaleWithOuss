@@ -76,7 +76,7 @@ Rendre la section Nurturing 100% fiable : température calculée par score cumul
   - Update `message_sent` to indicate channel used: prepend "[SMS fallback] "
 - **Test:** Verify fallback logged correctly
 
-### 6. [ ] Migration: add temperature_score column
+### 6. [x] Migration: add temperature_score column
 - **File:** `supabase/migrations/008_temperature_score.sql`
 - **SQL:**
   ```sql
