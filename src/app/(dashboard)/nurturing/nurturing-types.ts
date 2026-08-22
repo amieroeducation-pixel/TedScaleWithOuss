@@ -33,6 +33,7 @@ export interface Contact {
   archived?: boolean
   forcedTemperature?: string | null
   timezone?: string
+  linkedin_url?: string | null
 }
 
 export interface Interaction {
