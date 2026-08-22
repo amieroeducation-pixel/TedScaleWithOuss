@@ -84,7 +84,7 @@ Rendre la section Nurturing 100% fiable : température calculée par score cumul
   ```
 - Must run before task 2 can work in production
 
-### 7. [ ] Integration test: full sequence cycle
+### 7. [x] Integration test: full sequence cycle
 - Create a test sequence with steps: email J+0, WhatsApp J+3, LinkedIn J+5, SMS J+7
 - Assign to test prospect
 - Run cron processing
