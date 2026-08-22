@@ -69,7 +69,7 @@ Rendre la section Nurturing 100% fiable : température calculée par score cumul
     - After click, PATCH interaction to `is_honored: true`
 - **Test:** Verify LinkedIn steps produce interaction + message stored, UI shows action button
 
-### 5. [ ] Add WhatsApp fallback transparency
+### 5. [x] Add WhatsApp fallback transparency
 - **File:** `src/lib/sequences/executor.ts`
 - **Change:** When WhatsApp fails and falls back to SMS:
   - Log the fallback: insert interaction with `type: 'sms'` and notes containing "Fallback SMS (WhatsApp indisponible)"

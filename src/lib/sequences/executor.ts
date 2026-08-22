@@ -74,6 +74,7 @@ async function executeSingleAttempt(args: {
   httpCode?: number
   error?: string
   messageSent?: string
+  isFallback?: boolean
 }> {
   const { step, prospect, messageTemplate, prospectExtra } = args
 
@@ -115,12 +116,18 @@ async function executeSingleAttempt(args: {
     }
     const res = await sendWhatsAppMessage({ to: phone, message: interpolated })
     if (!res.success) {
-      // Fallback SMS si WhatsApp échoue
+      // Fallback SMS si WhatsApp échoue - with transparency
       const smsRes = await sendBrevoSms({ to: phone, content: interpolated.slice(0, 160) })
       if (!smsRes.success) {
         return { success: false, httpCode: smsRes.httpCode, error: `WhatsApp: ${res.error} | SMS fallback: ${smsRes.error}` }
       }
-      return { success: true, httpCode: smsRes.httpCode, messageSent: interpolated }
+      // Log as SMS with fallback note
+      return {
+        success: true,
+        httpCode: smsRes.httpCode,
+        messageSent: `[SMS fallback] ${interpolated}`,
+        isFallback: true,
+      }
     }
     return { success: true, httpCode: res.httpCode, messageSent: interpolated }
   }
@@ -226,9 +233,15 @@ export async function executeStep(args: {
         message_sent: res.messageSent,
       }).eq('id', step.id)
 
+      // If WhatsApp fallback, log as SMS with fallback note
+      const interactionChannel = (step.channel === 'whatsapp' && res.isFallback) ? 'sms' : step.channel
+      const interactionNotes = (step.channel === 'whatsapp' && res.isFallback)
+        ? 'Fallback SMS (WhatsApp indisponible)'
+        : `[Séquence] ${step.channel} envoyé`
+
       await insertInteraction({
-        supabase, userId, prospectId: prospect.id, channel: step.channel,
-        notes: `[Séquence] ${step.channel} envoyé`,
+        supabase, userId, prospectId: prospect.id, channel: interactionChannel,
+        notes: interactionNotes,
         isHonored: step.channel !== 'call_reminder',
       })
 
