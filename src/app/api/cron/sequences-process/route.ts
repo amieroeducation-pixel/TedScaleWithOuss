@@ -26,19 +26,8 @@ export async function GET(req: NextRequest) {
     const userId = rawStep.instance_user_id as string
 
     const channel = rawStep.channel as SequenceChannel
-    // Only LinkedIn requires manual action - WhatsApp flows through executeStep()
-    if (channel === 'linkedin') {
-      await supabase
-        .from('sequence_instance_steps')
-        .update({
-          status: 'skipped',
-          executed_at: new Date().toISOString(),
-          error_message: 'Canal LinkedIn — action manuelle requise',
-        })
-        .eq('id', rawStep.id)
-      results.push({ step_id: rawStep.id, user_id: userId, status: 'skipped' })
-      continue
-    }
+    // All channels now flow through executeStep()
+    // LinkedIn is handled as guided manual action (stores message + creates is_honored: false interaction)
 
     const { data: prospect } = await supabase
       .from('prospects')

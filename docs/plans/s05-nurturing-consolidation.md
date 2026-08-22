@@ -52,7 +52,7 @@ Rendre la section Nurturing 100% fiable : température calculée par score cumul
 - **Keep:** LinkedIn still handled separately (task 4)
 - **Test:** Verify cron processes WhatsApp steps → calls sendWhatsAppMessage
 
-### 4. [ ] Implement LinkedIn as guided manual action
+### 4. [x] Implement LinkedIn as guided manual action
 - **File:** `src/lib/sequences/executor.ts`
 - **Change:** Replace LinkedIn skip (L49-51) with:
   - Status: `'sent'` (not 'skipped') — marks the step as actioned
