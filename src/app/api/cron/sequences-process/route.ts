@@ -13,18 +13,7 @@ export async function GET(req: NextRequest) {
   const supabase = createSupabaseCronClient()
 
   const { data: dueSteps, error: fetchErr } = await supabase
-    .from('sequence_instance_steps')
-    .select(`
-      id, instance_id, template_step_id, step_order, channel,
-      scheduled_at, executed_at, status, error_message, message_sent,
-      sequence_instances!inner (
-        id, user_id, prospect_id, status, template_id
-      )
-    `)
-    .lte('scheduled_at', new Date().toISOString())
-    .eq('status', 'pending')
-    .eq('sequence_instances.status', 'active')
-    .limit(50)
+    .rpc('get_due_steps_locked', { p_limit: 50 })
 
   if (fetchErr) return apiError(fetchErr.message)
   if (!dueSteps || dueSteps.length === 0) {
@@ -34,8 +23,7 @@ export async function GET(req: NextRequest) {
   const results: Array<{ step_id: string; user_id: string; status: string; error?: string }> = []
 
   for (const rawStep of dueSteps) {
-    const instance = rawStep.sequence_instances as any
-    const userId = instance?.user_id as string
+    const userId = rawStep.instance_user_id as string
 
     const channel = rawStep.channel as SequenceChannel
     if (channel === 'whatsapp' || channel === 'linkedin') {
@@ -54,7 +42,7 @@ export async function GET(req: NextRequest) {
     const { data: prospect } = await supabase
       .from('prospects')
       .select('id, full_name, phone, phone_normalized, email, pipeline_stage, linkedin_url, profession, city')
-      .eq('id', instance.prospect_id)
+      .eq('id', rawStep.instance_prospect_id)
       .single()
 
     if (!prospect) {
