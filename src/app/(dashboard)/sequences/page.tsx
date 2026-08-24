@@ -63,7 +63,7 @@ const SequencesStatsWidget = () => {
 
   return (
     <div style={{
-      background: C.bgCard, borderRadius: 12, padding: 20, marginBottom: 24,
+      background: C.surface1, borderRadius: 12, padding: 20, marginBottom: 24,
       border: `1px solid ${C.line}`
     }}>
       <div style={{
@@ -91,7 +91,7 @@ const SequencesStatsWidget = () => {
             fontSize: 28,
             fontWeight: 700,
             fontFamily: 'Oswald,sans-serif',
-            color: hasAlert ? C.error : C.green
+            color: hasAlert ? C.cyan : C.green
           }}>
             {stats.successRate24h}% {hasAlert ? '⚠️' : '✅'}
           </div>
