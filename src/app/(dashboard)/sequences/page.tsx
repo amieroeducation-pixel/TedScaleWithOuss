@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { C } from '@/lib/theme'
+import { formatDistanceToNow } from 'date-fns'
+import { fr } from 'date-fns/locale'
 
 type StepType = 'mail' | 'wa' | 'sms' | 'li'
 
@@ -27,6 +29,114 @@ interface Sequence {
 const STEP_ICONS: Record<StepType, string> = { mail: '✉', wa: '💬', sms: '📱', li: 'in' }
 const STEP_COLORS: Record<StepType, string> = { mail: C.indigo, wa: C.green, sms: C.gold, li: C.indigo }
 const STEP_LABELS: Record<StepType, string> = { mail: 'Email', wa: 'WhatsApp', sms: 'SMS', li: 'LinkedIn' }
+
+const SequencesStatsWidget = () => {
+  const [stats, setStats] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetch('/api/sequences/stats')
+      .then(r => r.json())
+      .then(data => {
+        setStats(data)
+        setLoading(false)
+      })
+      .catch(() => setLoading(false))
+  }, [])
+
+  if (loading) {
+    return (
+      <div style={{
+        background: C.surface1, borderRadius: 12, padding: 20, marginBottom: 24,
+        border: `1px solid ${C.line}`
+      }}>
+        <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 11, color: C.textMid }}>
+          Chargement stats...
+        </div>
+      </div>
+    )
+  }
+
+  if (!stats) return null
+
+  const hasAlert = stats.successRate24h < 95
+
+  return (
+    <div style={{
+      background: C.surface1, borderRadius: 12, padding: 20, marginBottom: 24,
+      border: `1px solid ${C.line}`
+    }}>
+      <div style={{
+        fontFamily: 'Oswald,sans-serif', fontSize: 16, fontWeight: 600,
+        color: C.textHi, marginBottom: 16, letterSpacing: '0.08em'
+      }}>
+        MONITORING SÉQUENCES
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+        <div>
+          <div style={{ fontSize: 10, color: C.textLo, marginBottom: 4, fontFamily: 'JetBrains Mono,monospace' }}>
+            Séquences actives
+          </div>
+          <div style={{ fontSize: 28, fontWeight: 700, fontFamily: 'Oswald,sans-serif', color: C.gold }}>
+            {stats.activeSequences}
+          </div>
+        </div>
+
+        <div>
+          <div style={{ fontSize: 10, color: C.textLo, marginBottom: 4, fontFamily: 'JetBrains Mono,monospace' }}>
+            Taux succès 24h
+          </div>
+          <div style={{
+            fontSize: 28,
+            fontWeight: 700,
+            fontFamily: 'Oswald,sans-serif',
+            color: hasAlert ? C.cyan : C.green
+          }}>
+            {stats.successRate24h}% {hasAlert ? '⚠️' : '✅'}
+          </div>
+        </div>
+
+        <div>
+          <div style={{ fontSize: 10, color: C.textLo, marginBottom: 4, fontFamily: 'JetBrains Mono,monospace' }}>
+            Dernière exécution
+          </div>
+          <div style={{ fontSize: 12, fontFamily: 'JetBrains Mono,monospace', color: C.textMid }}>
+            {stats.lastCron ? (
+              <>
+                {formatDistanceToNow(new Date(stats.lastCron.executedAt), {
+                  locale: fr,
+                  addSuffix: true
+                })}
+                <br />
+                <span style={{ fontSize: 10, color: C.textLo }}>
+                  ({stats.lastCron.sent} envois)
+                </span>
+              </>
+            ) : (
+              'Aucune exécution'
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div style={{ marginTop: 16, paddingTop: 16, borderTop: `1px solid ${C.lineSoft}` }}>
+        <a
+          href="/dashboard/sequences/logs"
+          style={{
+            color: C.gold,
+            textDecoration: 'none',
+            fontFamily: 'JetBrains Mono,monospace',
+            fontSize: 10,
+            cursor: 'pointer'
+          }}
+        >
+          → Voir logs détaillés
+        </a>
+      </div>
+    </div>
+  )
+}
 
 const SEQ_PROSPECTION: Sequence[] = [
   {
@@ -365,6 +475,9 @@ export default function SequencesPage() {
           + CRÉER SÉQUENCE
         </button>
       </div>
+
+      {/* Monitoring Widget */}
+      <SequencesStatsWidget />
 
       {/* Channel legend */}
       <div style={{ display: 'flex', gap: 16, marginBottom: 16, padding: '10px 14px', background: C.surface1, border: `1px solid ${C.lineSoft}`, borderRadius: 8 }}>

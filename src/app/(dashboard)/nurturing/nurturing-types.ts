@@ -33,6 +33,7 @@ export interface Contact {
   archived?: boolean
   forcedTemperature?: string | null
   timezone?: string
+  linkedin_url?: string | null
 }
 
 export interface Interaction {
@@ -190,11 +191,48 @@ export function computePressure(interactions: { channel: string; date: string }[
   return { score, badge: 'normal', label: '✓ Normale', color: '#4caf50' }
 }
 
+/**
+ * Compute cumulative temperature score based on interactions and silence.
+ * Rules:
+ * - +1 per interaction (email, sms, whatsapp, linkedin, appel)
+ * - +3 per RDV (rdv1, rdv2, rdv3)
+ * - -1 per complete week of silence since first contact
+ *
+ * @param now - Optional date for testing, defaults to current time
+ */
+export function computeTemperatureScore(
+  interactions: { type: string; occurred_at: string }[],
+  firstContactAt: string | null,
+  now?: Date
+): number {
+  let score = 0
+
+  // +1 per interaction, +3 per RDV
+  for (const interaction of interactions) {
+    const type = interaction.type.toLowerCase()
+    if (['rdv1', 'rdv2', 'rdv3'].includes(type)) {
+      score += 3
+    } else if (['email', 'sms', 'whatsapp', 'linkedin', 'appel'].includes(type)) {
+      score += 1
+    }
+  }
+
+  // -1 per complete week of silence since first contact
+  if (firstContactAt) {
+    const firstContactDate = new Date(firstContactAt)
+    const currentDate = now || new Date()
+    const diffMs = currentDate.getTime() - firstContactDate.getTime()
+    const diffDays = diffMs / (1000 * 60 * 60 * 24)
+    const completeWeeks = Math.floor(diffDays / 7)
+    score -= completeWeeks
+  }
+
+  return score
+}
+
 export function calculateTempCategory(
-  lastContactDays: number | null,
-  hasActiveSequence: boolean,
+  score: number,
   noResponseCount: number,
-  pressureScore: string | null,
   forcedTemperature?: string | null
 ): TempCategory {
   // Si température forcée manuellement, on la retourne directement
@@ -202,12 +240,13 @@ export function calculateTempCategory(
     return forcedTemperature as TempCategory
   }
 
-  // Sinon calcul automatique
-  if (pressureScore === 'a_stopper' || noResponseCount >= 5) return 'dead'
-  if (lastContactDays === null) return 'cold'
-  if (lastContactDays <= 3 || hasActiveSequence) return 'hot'
-  if (lastContactDays <= 7) return 'warm'
-  return 'cold'
+  // Dead if too many no-responses
+  if (noResponseCount >= 5) return 'dead'
+
+  // Score-based thresholds
+  if (score < 5) return 'cold'
+  if (score < 12) return 'warm'
+  return 'hot'
 }
 
 export function formatRelativeDate(date: Date): string {
