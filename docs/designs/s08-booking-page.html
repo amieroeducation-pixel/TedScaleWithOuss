@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>s08-booking-page — Settings Mockup</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #0a0e22;
+      color: #d8e1ff;
+      padding: 40px 20px;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      font-family: 'Oswald', sans-serif;
+      font-size: 22px;
+      font-weight: 600;
+      color: #ffffff;
+      margin-bottom: 32px;
+      letter-spacing: 0.05em;
+    }
+
+    .card {
+      background: #11163a;
+      border: 1px solid #3a4690;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .card-header .icon {
+      font-size: 20px;
+    }
+
+    .card-header .title {
+      font-family: 'Oswald', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      color: #ffffff;
+    }
+
+    .label {
+      font-size: 10px;
+      color: #8ea0d9;
+      margin-bottom: 8px;
+      display: block;
+    }
+
+    .input-readonly {
+      background: #1a2150;
+      color: #d8e1ff;
+      padding: 12px;
+      border-radius: 6px;
+      border: none;
+      width: 100%;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      margin-bottom: 12px;
+    }
+
+    .input {
+      background: #1a2150;
+      color: #d8e1ff;
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 1px solid transparent;
+      font-size: 11px;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .input:focus {
+      border-color: #ff6470;
+      outline: none;
+    }
+
+    .input-number {
+      width: 80px;
+    }
+
+    .input-time {
+      width: 120px;
+    }
+
+    .button {
+      background: #ff6470;
+      color: white;
+      padding: 8px 16px;
+      border-radius: 6px;
+      border: none;
+      font-size: 10px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: 'Oswald', sans-serif;
+      letter-spacing: 0.05em;
+    }
+
+    .button:hover {
+      background: #ff8088;
+    }
+
+    .button-primary {
+      width: 100%;
+      padding: 12px 24px;
+      font-size: 12px;
+      margin-top: 20px;
+    }
+
+    .checkbox-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-top: 8px;
+    }
+
+    .checkbox-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .checkbox {
+      width: 16px;
+      height: 16px;
+      background: #1a2150;
+      border-radius: 4px;
+      border: 1px solid #3a4690;
+      display: inline-block;
+      position: relative;
+    }
+
+    .checkbox.checked {
+      background: #ff6470;
+      border-color: #ff6470;
+    }
+
+    .checkbox.checked::after {
+      content: '✓';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: white;
+      font-size: 12px;
+      font-weight: bold;
+    }
+
+    .checkbox-label {
+      font-size: 10px;
+      color: #d8e1ff;
+      cursor: pointer;
+    }
+
+    .time-inputs {
+      display: flex;
+      gap: 20px;
+      align-items: center;
+      margin-top: 8px;
+    }
+
+    .time-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .time-group label {
+      font-size: 9px;
+      color: #8ea0d9;
+    }
+
+    .history-table {
+      margin-top: 12px;
+    }
+
+    .history-row {
+      background: #1a2150;
+      padding: 12px;
+      border-radius: 6px;
+      margin-bottom: 8px;
+      display: grid;
+      grid-template-columns: 1fr 1fr auto auto;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .history-date {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: #ffffff;
+    }
+
+    .history-contact {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .history-name {
+      font-size: 11px;
+      color: #ffffff;
+    }
+
+    .history-details {
+      font-size: 9px;
+      color: #8ea0d9;
+    }
+
+    .status-badge {
+      background: #4ade80;
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 8px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .status-badge.pending {
+      background: #d8884a;
+    }
+
+    .cancel-btn {
+      color: #c84048;
+      font-size: 9px;
+      text-decoration: underline;
+      cursor: pointer;
+      background: none;
+      border: none;
+      padding: 0;
+    }
+
+    .link {
+      color: #7a92e8;
+      font-size: 10px;
+      text-decoration: none;
+      margin-top: 12px;
+      display: inline-block;
+    }
+
+    .link:hover {
+      text-decoration: underline;
+    }
+
+    /* Error Screens */
+    .error-container {
+      max-width: 500px;
+      margin: 80px auto;
+      background: #11163a;
+      border: 1px solid #d8884a;
+      border-radius: 12px;
+      padding: 40px;
+      text-align: center;
+    }
+
+    .error-icon {
+      font-size: 48px;
+      margin-bottom: 20px;
+    }
+
+    .error-title {
+      font-family: 'Oswald', sans-serif;
+      font-size: 16px;
+      font-weight: 600;
+      color: #ffffff;
+      margin-bottom: 16px;
+    }
+
+    .error-body {
+      font-size: 10px;
+      color: #8ea0d9;
+      line-height: 1.6;
+      margin-bottom: 24px;
+    }
+
+    .error-highlight {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px;
+      color: #e8c878;
+      font-weight: 600;
+      margin: 16px 0;
+    }
+
+    .error-warning {
+      background: rgba(216, 136, 74, 0.1);
+      padding: 12px;
+      border-radius: 6px;
+      margin-top: 16px;
+      font-size: 9px;
+      color: #8ea0d9;
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .section-divider {
+      height: 40px;
+    }
+
+    .screen-label {
+      font-family: 'Oswald', sans-serif;
+      font-size: 18px;
+      color: #e8c878;
+      margin: 60px 0 20px 0;
+      text-align: center;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- SCREEN 1: Settings Booking Page -->
+  <div class="container">
+    <h1>PARAMÈTRES RÉSERVATION</h1>
+
+    <!-- Public Link Card -->
+    <div class="card">
+      <div class="card-header">
+        <span class="icon">🔗</span>
+        <span class="title">Lien Public</span>
+      </div>
+      <label class="label">Votre lien de prise de RDV :</label>
+      <input type="text" class="input-readonly" value="https://tedscale.com/booking/ted-leroux" readonly>
+      <button class="button">📋 Copier le lien</button>
+    </div>
+
+    <!-- Duration Card -->
+    <div class="card">
+      <div class="card-header">
+        <span class="icon">⏱️</span>
+        <span class="title">Durée des rendez-vous</span>
+      </div>
+      <label class="label">Durée par défaut :</label>
+      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
+        <input type="number" class="input input-number" value="30">
+        <span style="font-size: 10px; color: #8ea0d9;">minutes</span>
+      </div>
+      <label class="label">Durées disponibles :</label>
+      <div class="checkbox-group">
+        <div class="checkbox-item">
+          <span class="checkbox checked"></span>
+          <span class="checkbox-label">15 min</span>
+        </div>
+        <div class="checkbox-item">
+          <span class="checkbox checked"></span>
+          <span class="checkbox-label">30 min</span>
+        </div>
+        <div class="checkbox-item">
+          <span class="checkbox checked"></span>
+          <span class="checkbox-label">45 min</span>
+        </div>
+        <div class="checkbox-item">
+          <span class="checkbox checked"></span>
+          <span class="checkbox-label">60 min</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Time Slots Card -->
+    <div class="card">
+      <div class="card-header">
+        <span class="icon">📅</span>
+        <span class="title">Plages horaires</span>
+      </div>
+      <label class="label">Jours actifs :</label>
+      <div class="checkbox-group" style="margin-bottom: 16px;">
+        <div class="checkbox-item">
+          <span class="checkbox checked"></span>
+          <span class="checkbox-label">Lun</span>
+        </div>
+        <div class="checkbox-item">
+          <span class="checkbox checked"></span>
+          <span class="checkbox-label">Mar</span>
+        </div>
+        <div class="checkbox-item">
+          <span class="checkbox checked"></span>
+          <span class="checkbox-label">Mer</span>
+        </div>
+        <div class="checkbox-item">
+          <span class="checkbox checked"></span>
+          <span class="checkbox-label">Jeu</span>
+        </div>
+        <div class="checkbox-item">
+          <span class="checkbox checked"></span>
+          <span class="checkbox-label">Ven</span>
+        </div>
+        <div class="checkbox-item">
+          <span class="checkbox"></span>
+          <span class="checkbox-label">Sam</span>
+        </div>
+        <div class="checkbox-item">
+          <span class="checkbox"></span>
+          <span class="checkbox-label">Dim</span>
+        </div>
+      </div>
+      <label class="label">Horaires :</label>
+      <div class="time-inputs">
+        <div class="time-group">
+          <label>Début :</label>
+          <input type="time" class="input input-time" value="09:00">
+        </div>
+        <div class="time-group">
+          <label>Fin :</label>
+          <input type="time" class="input input-time" value="18:00">
+        </div>
+      </div>
+      <div style="margin-top: 16px;">
+        <label class="label">Pause déjeuner :</label>
+        <div class="checkbox-item">
+          <span class="checkbox checked"></span>
+          <span class="checkbox-label">Bloquer 12h-14h</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- History Card -->
+    <div class="card">
+      <div class="card-header">
+        <span class="icon">📊</span>
+        <span class="title">Historique</span>
+      </div>
+      <div class="history-table">
+        <div class="history-row">
+          <div>
+            <div class="history-date">18 août 2026, 14h30</div>
+            <div class="history-details">+33 6 12 34 56 78</div>
+          </div>
+          <div class="history-contact">
+            <div class="history-name">Jean Dupont</div>
+            <div class="history-details">jean@example.com</div>
+          </div>
+          <div class="status-badge">Confirmé</div>
+          <button class="cancel-btn">Annuler</button>
+        </div>
+        <div class="history-row">
+          <div>
+            <div class="history-date">20 août 2026, 10h00</div>
+            <div class="history-details">+33 6 98 76 54 32</div>
+          </div>
+          <div class="history-contact">
+            <div class="history-name">Marie Martin</div>
+            <div class="history-details">marie@example.com</div>
+          </div>
+          <div class="status-badge">Confirmé</div>
+          <button class="cancel-btn">Annuler</button>
+        </div>
+        <div class="history-row">
+          <div>
+            <div class="history-date">22 août 2026, 15h00</div>
+            <div class="history-details">+33 7 11 22 33 44</div>
+          </div>
+          <div class="history-contact">
+            <div class="history-name">Pierre Dubois</div>
+            <div class="history-details">pierre@example.com</div>
+          </div>
+          <div class="status-badge pending">Pending</div>
+          <button class="cancel-btn">Annuler</button>
+        </div>
+      </div>
+      <a href="#" class="link">Voir tous les rendez-vous →</a>
+    </div>
+
+    <!-- Save Button -->
+    <button class="button button-primary">ENREGISTRER LES MODIFICATIONS</button>
+  </div>
+
+  <!-- SCREEN 2: Token Expired Error -->
+  <div class="screen-label">Screen 2 — Token Expired</div>
+  <div class="error-container">
+    <div class="error-icon">⚠️</div>
+    <div class="error-title">Connexion Google Calendar expirée</div>
+    <div class="error-body">
+      Vos créneaux ne peuvent plus être synchronisés.<br>
+      Reconnectez votre compte Google pour activer les réservations.
+    </div>
+    <button class="button button-primary">🔗 Reconnecter Google Calendar</button>
+  </div>
+
+  <!-- SCREEN 3: Email Fail Success -->
+  <div class="screen-label">Screen 3 — Email Fail Warning</div>
+  <div class="error-container" style="border-color: #4ade80;">
+    <div class="error-icon">✅</div>
+    <div class="error-title">Rendez-vous confirmé</div>
+    <div class="error-body">
+      Votre rendez-vous est bien enregistré pour le :
+    </div>
+    <div class="error-highlight">18 août 2026 à 14h30</div>
+    <div class="error-warning">
+      <span>⚠️</span>
+      <div>
+        L'email de confirmation n'a pas pu être envoyé.<br>
+        Vous recevrez un rappel SMS 24h avant le RDV.
+      </div>
+    </div>
+    <button class="button button-primary">Retour à l'accueil</button>
+  </div>
+
+</body>
+</html>

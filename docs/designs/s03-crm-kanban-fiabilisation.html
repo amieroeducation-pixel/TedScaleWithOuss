@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>s03-crm-kanban-fiabilisation — Design Mockup</title>
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      /* PSG Cosmos Colors */
+      --bg-deep: #0a0e22;
+      --bg-mid: #14193d;
+      --surface1: #11163a;
+      --surface2: #1a2150;
+      --surface3: #252e68;
+      --line: #3a4690;
+      --line-soft: #1a2150;
+      --text-hi: #ffffff;
+      --text: #d8e1ff;
+      --text-mid: #8ea0d9;
+      --text-lo: #5a6ba8;
+      --text-vlo: #3a4885;
+      --cyan: #ff6470;
+      --indigo: #7a92e8;
+      --magenta: #c84048;
+      --gold: #e8c878;
+      --warn: #d8884a;
+      --green: #4ade80;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: var(--bg-deep);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      padding: 40px;
+      line-height: 1.4;
+    }
+
+    .mockup-title {
+      font-family: 'Oswald', sans-serif;
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--gold);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .mockup-subtitle {
+      font-size: 11px;
+      color: var(--text-lo);
+      margin-bottom: 32px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .component-section {
+      margin-bottom: 48px;
+    }
+
+    .component-label {
+      font-family: 'Oswald', sans-serif;
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text-hi);
+      margin-bottom: 16px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* Overlay */
+    .overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(10, 14, 34, 0.85);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    /* Modal */
+    .modal {
+      background: var(--surface1);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 20px;
+      max-width: 90%;
+      position: relative;
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .modal-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: 'Oswald', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-hi);
+    }
+
+    .modal-close {
+      font-size: 18px;
+      color: var(--text-lo);
+      cursor: pointer;
+      border: none;
+      background: none;
+    }
+
+    .modal-close:hover {
+      color: var(--text-hi);
+    }
+
+    /* Delete Dialog */
+    .delete-dialog {
+      width: 460px;
+    }
+
+    .delete-body {
+      margin-bottom: 20px;
+    }
+
+    .prospect-name {
+      font-size: 13px;
+      color: var(--gold);
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .warning-text {
+      font-size: 10px;
+      color: var(--text-mid);
+      margin-bottom: 6px;
+      line-height: 1.5;
+    }
+
+    .interaction-count {
+      font-size: 9px;
+      color: var(--warn);
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+
+    .btn {
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 10px;
+      font-weight: 600;
+      font-family: 'Oswald', sans-serif;
+      cursor: pointer;
+      transition: opacity 0.12s ease;
+    }
+
+    .btn:hover {
+      opacity: 0.9;
+    }
+
+    .btn-secondary {
+      background: var(--surface2);
+      color: var(--text-mid);
+      border: 1px solid var(--line);
+    }
+
+    .btn-danger {
+      background: var(--magenta);
+      color: var(--text-hi);
+      border: 1px solid var(--cyan);
+      font-weight: 700;
+    }
+
+    .btn-success {
+      background: rgba(74, 222, 128, 0.15);
+      color: var(--green);
+      border: 1px solid var(--green);
+      font-weight: 700;
+    }
+
+    /* Timeline */
+    .timeline-modal {
+      width: 600px;
+      max-height: 85vh;
+      overflow-y: auto;
+    }
+
+    .timeline-section {
+      border-top: 1px solid var(--line);
+      padding: 16px 20px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .timeline-header {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      color: var(--text-lo);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 12px;
+      font-weight: 600;
+    }
+
+    .timeline-count {
+      color: var(--gold);
+      margin-left: 4px;
+      font-size: 8px;
+    }
+
+    .timeline-items {
+      position: relative;
+    }
+
+    .timeline-item {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+      position: relative;
+    }
+
+    .timeline-icon {
+      width: 24px;
+      height: 24px;
+      background: var(--surface2);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      flex-shrink: 0;
+      z-index: 1;
+    }
+
+    .timeline-line {
+      position: absolute;
+      left: 12px;
+      top: 24px;
+      bottom: -8px;
+      width: 1px;
+      background: var(--line-soft);
+    }
+
+    .timeline-item:last-child .timeline-line {
+      display: none;
+    }
+
+    .timeline-content {
+      flex: 1;
+    }
+
+    .timeline-type {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-hi);
+      margin-bottom: 2px;
+    }
+
+    .timeline-date {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      color: var(--text-lo);
+      margin-bottom: 4px;
+    }
+
+    .timeline-notes {
+      font-size: 9px;
+      color: var(--text-mid);
+      font-style: italic;
+      line-height: 1.4;
+      margin-top: 4px;
+    }
+
+    .timeline-duration {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 8px;
+      color: var(--gold);
+      margin-top: 2px;
+    }
+
+    .timeline-empty {
+      text-align: center;
+      padding: 32px 0;
+    }
+
+    .timeline-empty-icon {
+      font-size: 24px;
+      margin-bottom: 8px;
+    }
+
+    .timeline-empty-text {
+      font-size: 10px;
+      color: var(--text-lo);
+    }
+
+    .timeline-action {
+      margin-top: 12px;
+    }
+
+    .btn-add {
+      background: var(--surface2);
+      color: var(--cyan);
+      border: 1px solid var(--cyan);
+      padding: 6px 12px;
+      font-size: 9px;
+    }
+
+    /* Add Interaction Modal */
+    .add-modal {
+      width: 520px;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 8px;
+      color: var(--text-lo);
+      display: block;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+    }
+
+    .type-buttons {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .type-btn {
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 10px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.12s ease;
+      flex: 1;
+    }
+
+    .type-btn.selected {
+      background: rgba(255, 100, 112, 0.15);
+      border: 1px solid var(--cyan);
+      color: var(--cyan);
+    }
+
+    .type-btn:not(.selected) {
+      background: var(--surface2);
+      border: 1px solid var(--line);
+      color: var(--text-mid);
+    }
+
+    .advanced-toggle {
+      font-size: 8px;
+      color: var(--text-lo);
+      cursor: pointer;
+      text-decoration: underline;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 6px 8px;
+      background: var(--surface2);
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      color: var(--text);
+      font-size: 10px;
+      font-family: 'Inter', sans-serif;
+      outline: none;
+    }
+
+    .form-input:focus {
+      border-color: var(--cyan);
+    }
+
+    .form-input-number {
+      width: 100px;
+      text-align: center;
+      color: var(--gold);
+      font-size: 11px;
+      font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    textarea.form-input {
+      min-height: 80px;
+      resize: vertical;
+      line-height: 1.4;
+    }
+
+    .inline-note {
+      font-size: 9px;
+      color: var(--text-vlo);
+      margin-top: 12px;
+      padding: 8px;
+      background: rgba(255, 255, 255, 0.02);
+      border-radius: 4px;
+      border-left: 2px solid var(--gold);
+    }
+  </style>
+</head>
+<body>
+  <div class="mockup-title">s03-crm-kanban-fiabilisation</div>
+  <div class="mockup-subtitle">Design Mockup — PSG Cosmos Champions</div>
+
+  <!-- Component 1: ProspectDeleteDialog -->
+  <div class="component-section">
+    <div class="component-label">1. ProspectDeleteDialog</div>
+    <div style="position: relative; height: 300px; background: var(--bg-mid); border-radius: 8px; overflow: hidden;">
+      <div class="overlay" style="position: absolute;">
+        <div class="modal delete-dialog">
+          <div class="modal-header">
+            <div class="modal-title">
+              <span>🗑️</span>
+              <span>Supprimer ce prospect ?</span>
+            </div>
+          </div>
+          <div class="delete-body">
+            <div class="prospect-name">Dr. Sophie Martin</div>
+            <div class="warning-text">
+              Cette action est irréversible. Toutes les interactions associées seront également supprimées.
+            </div>
+            <div class="interaction-count">
+              12 interactions seront supprimées
+            </div>
+          </div>
+          <div class="modal-actions">
+            <button class="btn btn-secondary">Annuler</button>
+            <button class="btn btn-danger">Supprimer définitivement</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Component 2: InteractionTimeline -->
+  <div class="component-section">
+    <div class="component-label">2. InteractionTimeline (dans ProspectDetailModal)</div>
+    <div style="position: relative; height: 500px; background: var(--bg-mid); border-radius: 8px; overflow: hidden;">
+      <div class="overlay" style="position: absolute;">
+        <div class="modal timeline-modal">
+          <div class="modal-header">
+            <div class="modal-title">
+              <span>👤</span>
+              <span>Dr. Sophie Martin</span>
+            </div>
+            <button class="modal-close">✕</button>
+          </div>
+
+          <!-- Existing sections (simulated) -->
+          <div style="padding: 16px 20px; border-top: 1px solid var(--line);">
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-lo); text-transform: uppercase; margin-bottom: 8px;">Contact</div>
+            <div style="font-size: 12px; color: var(--gold);">📞 06 12 34 56 78</div>
+            <div style="font-size: 12px; color: var(--text-mid); margin-top: 4px;">✉️ sophie.martin@cabinet.fr</div>
+          </div>
+
+          <!-- Timeline section (NEW) -->
+          <div class="timeline-section">
+            <div class="timeline-header">
+              Historique interactions <span class="timeline-count">(5)</span>
+            </div>
+            <div class="timeline-items">
+              <div class="timeline-item">
+                <div class="timeline-icon">📞</div>
+                <div class="timeline-line"></div>
+                <div class="timeline-content">
+                  <div class="timeline-type">Appel</div>
+                  <div class="timeline-date">15 août 2026, 14h30</div>
+                  <div class="timeline-notes">Premier contact téléphonique. Personne intéressée par un bilan patrimonial. RDV à planifier.</div>
+                  <div class="timeline-duration">Durée: 25min</div>
+                </div>
+              </div>
+
+              <div class="timeline-item">
+                <div class="timeline-icon">📅</div>
+                <div class="timeline-line"></div>
+                <div class="timeline-content">
+                  <div class="timeline-type">Rendez-vous</div>
+                  <div class="timeline-date">12 août 2026, 10h00</div>
+                  <div class="timeline-notes">RDV1 au cabinet. Bilan patrimoine complet effectué. Objectif retraite dans 15 ans.</div>
+                  <div class="timeline-duration">Durée: 90min</div>
+                </div>
+              </div>
+
+              <div class="timeline-item">
+                <div class="timeline-icon">✉️</div>
+                <div class="timeline-line"></div>
+                <div class="timeline-content">
+                  <div class="timeline-type">Email</div>
+                  <div class="timeline-date">10 août 2026, 16h22</div>
+                  <div class="timeline-notes">Envoi proposition PER + simulation.</div>
+                </div>
+              </div>
+
+              <div class="timeline-item">
+                <div class="timeline-icon">💬</div>
+                <div class="timeline-line"></div>
+                <div class="timeline-content">
+                  <div class="timeline-type">WhatsApp</div>
+                  <div class="timeline-date">8 août 2026, 11h45</div>
+                  <div class="timeline-notes">Message de suivi post-RDV. Questions sur fiscalité PER.</div>
+                </div>
+              </div>
+
+              <div class="timeline-item">
+                <div class="timeline-icon">📝</div>
+                <div class="timeline-content">
+                  <div class="timeline-type">Note</div>
+                  <div class="timeline-date">5 août 2026, 09h12</div>
+                  <div class="timeline-notes">Première prospection téléphonique. Intérêt confirmé.</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="timeline-action">
+              <button class="btn btn-add">➕ Ajouter une interaction</button>
+            </div>
+          </div>
+
+          <!-- Footer actions (simulated) -->
+          <div style="padding: 16px 20px; border-top: 1px solid var(--line); display: flex; justify-content: space-between;">
+            <button class="btn btn-danger" style="font-size: 9px; padding: 6px 12px;">🗑️ Supprimer</button>
+            <button class="btn btn-secondary" style="font-size: 9px; padding: 6px 12px;">Fermer</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Component 3: Empty Timeline State -->
+  <div class="component-section">
+    <div class="component-label">2b. InteractionTimeline (état vide)</div>
+    <div style="position: relative; height: 300px; background: var(--bg-mid); border-radius: 8px; overflow: hidden;">
+      <div class="overlay" style="position: absolute;">
+        <div class="modal" style="width: 600px;">
+          <div class="modal-header">
+            <div class="modal-title">
+              <span>👤</span>
+              <span>Jean Dupont</span>
+            </div>
+            <button class="modal-close">✕</button>
+          </div>
+
+          <div class="timeline-section">
+            <div class="timeline-header">
+              Historique interactions <span class="timeline-count">(0)</span>
+            </div>
+            <div class="timeline-empty">
+              <div class="timeline-empty-icon">📭</div>
+              <div class="timeline-empty-text">Aucune interaction enregistrée</div>
+            </div>
+            <div class="timeline-action">
+              <button class="btn btn-add">➕ Ajouter une interaction</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Component 4: AddInteractionModal -->
+  <div class="component-section">
+    <div class="component-label">3. AddInteractionModal</div>
+    <div style="position: relative; height: 600px; background: var(--bg-mid); border-radius: 8px; overflow: hidden;">
+      <div class="overlay" style="position: absolute;">
+        <div class="modal add-modal">
+          <div class="modal-header">
+            <div class="modal-title">
+              <span>➕</span>
+              <span>Ajouter une interaction</span>
+            </div>
+            <button class="modal-close">✕</button>
+          </div>
+
+          <form>
+            <div class="form-group">
+              <label class="form-label">Type</label>
+              <div class="type-buttons">
+                <button type="button" class="type-btn selected">📝 Note</button>
+                <button type="button" class="type-btn">📞 Appel</button>
+                <button type="button" class="type-btn">📅 Rendez-vous</button>
+              </div>
+              <div class="advanced-toggle">Autres types...</div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Date et heure</label>
+              <input type="datetime-local" class="form-input" value="2026-08-17T14:30">
+            </div>
+
+            <div class="form-group" style="display: none;">
+              <label class="form-label">Durée (minutes)</label>
+              <input type="number" class="form-input form-input-number" placeholder="30">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Notes</label>
+              <textarea class="form-input" placeholder="Détails de l'échange, points abordés, prochaines actions...">Première prospection téléphonique. Personne intéressée par un bilan patrimonial complet. A rappeler dans 2 semaines pour fixer RDV.</textarea>
+            </div>
+
+            <div class="inline-note">
+              💡 Conseil : Plus vous détaillez vos notes, plus le suivi sera facile.
+            </div>
+
+            <div class="modal-actions">
+              <button type="button" class="btn btn-secondary">Annuler</button>
+              <button type="submit" class="btn btn-success">Enregistrer</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Component 5: AddInteractionModal with Call type selected -->
+  <div class="component-section">
+    <div class="component-label">3b. AddInteractionModal (type Appel sélectionné)</div>
+    <div style="position: relative; height: 600px; background: var(--bg-mid); border-radius: 8px; overflow: hidden;">
+      <div class="overlay" style="position: absolute;">
+        <div class="modal add-modal">
+          <div class="modal-header">
+            <div class="modal-title">
+              <span>➕</span>
+              <span>Ajouter une interaction</span>
+            </div>
+            <button class="modal-close">✕</button>
+          </div>
+
+          <form>
+            <div class="form-group">
+              <label class="form-label">Type</label>
+              <div class="type-buttons">
+                <button type="button" class="type-btn">📝 Note</button>
+                <button type="button" class="type-btn selected">📞 Appel</button>
+                <button type="button" class="type-btn">📅 Rendez-vous</button>
+              </div>
+              <div class="advanced-toggle">Autres types...</div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Date et heure</label>
+              <input type="datetime-local" class="form-input" value="2026-08-17T14:30">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Durée (minutes)</label>
+              <input type="number" class="form-input form-input-number" placeholder="30" value="25">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Notes</label>
+              <textarea class="form-input" placeholder="Détails de l'échange, points abordés, prochaines actions...">Appel de suivi post-RDV1. Client satisfait du bilan patrimonial. Questions sur la fiscalité du PER et des SCPI. A réfléchir jusqu'à fin du mois.</textarea>
+            </div>
+
+            <div class="inline-note">
+              💡 Conseil : Notez les objections et questions pour le prochain contact.
+            </div>
+
+            <div class="modal-actions">
+              <button type="button" class="btn btn-secondary">Annuler</button>
+              <button type="submit" class="btn btn-success">Enregistrer</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="inline-note" style="max-width: 800px; margin-top: 48px;">
+    <strong>Note importante</strong> : Ce mockup HTML est une référence visuelle uniquement. En phase Execute, les composants seront construits avec les vrais composants React du boilerplate (Radix Dialog, React Hook Form, etc.) et ne doivent PAS être copiés-collés depuis ce fichier.
+  </div>
+</body>
+</html>
