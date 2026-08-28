@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
     )
 
   if (conflictingBookings && conflictingBookings.length > 0) {
-    return apiError('Ce créneau est déjà réservé', 409)
+    return apiError('Ce créneau vient d\'être réservé, veuillez en choisir un autre', 409)
   }
 
   // Créer l'événement Google Calendar si connecté
@@ -158,33 +158,39 @@ export async function POST(request: NextRequest) {
     timeZone: 'Europe/Paris',
   })
 
-  await sendBrevoEmail({
-    to: contact_email,
-    toName: contact_name,
-    subject: 'Confirmation de votre rendez-vous',
-    htmlContent: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #0a0e22;">Votre rendez-vous est confirmé ✅</h2>
-        <p>Bonjour ${contact_name},</p>
-        <p>Votre rendez-vous a bien été enregistré pour le :</p>
-        <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          <p style="font-size: 18px; font-weight: bold; margin: 0; color: #0a0e22;">
-            ${scheduledDateFormatted}
-          </p>
-          <p style="margin: 10px 0 0 0; color: #666;">
-            Durée : ${duration_minutes} minutes
+  // Try to send email, but don't fail the booking if it errors
+  try {
+    await sendBrevoEmail({
+      to: contact_email,
+      toName: contact_name,
+      subject: 'Confirmation de votre rendez-vous',
+      htmlContent: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #0a0e22;">Votre rendez-vous est confirmé ✅</h2>
+          <p>Bonjour ${contact_name},</p>
+          <p>Votre rendez-vous a bien été enregistré pour le :</p>
+          <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <p style="font-size: 18px; font-weight: bold; margin: 0; color: #0a0e22;">
+              ${scheduledDateFormatted}
+            </p>
+            <p style="margin: 10px 0 0 0; color: #666;">
+              Durée : ${duration_minutes} minutes
+            </p>
+          </div>
+          ${message ? `<p><strong>Votre message :</strong></p><p style="background: #f9f9f9; padding: 15px; border-left: 4px solid #e8c878;">${message}</p>` : ''}
+          <p>Un lien de visioconférence vous sera envoyé par email 24h avant le rendez-vous.</p>
+          <p>À très bientôt !</p>
+          <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;" />
+          <p style="font-size: 12px; color: #999;">
+            Si vous devez annuler ou modifier ce rendez-vous, merci de nous contacter directement.
           </p>
         </div>
-        ${message ? `<p><strong>Votre message :</strong></p><p style="background: #f9f9f9; padding: 15px; border-left: 4px solid #e8c878;">${message}</p>` : ''}
-        <p>Un lien de visioconférence vous sera envoyé par email 24h avant le rendez-vous.</p>
-        <p>À très bientôt !</p>
-        <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;" />
-        <p style="font-size: 12px; color: #999;">
-          Si vous devez annuler ou modifier ce rendez-vous, merci de nous contacter directement.
-        </p>
-      </div>
-    `,
-  })
+      `,
+    })
+  } catch (emailError) {
+    // Log the error but don't fail the booking
+    console.error('[Booking] Email confirmation failed:', emailError)
+  }
 
   return apiSuccess({
     booking: {
