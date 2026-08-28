@@ -36,16 +36,15 @@ export async function POST(request: NextRequest) {
     return apiError(firstError.message, 400)
   }
 
-  let { slug, contact_name, contact_email, contact_phone, message, scheduled_at, duration_minutes } = parsed.data
+  const { slug, contact_name, contact_email, message, scheduled_at, duration_minutes } = parsed.data
+  let phone: string | undefined
 
   // Valider et normaliser le téléphone si fourni
-  if (contact_phone && contact_phone.trim() !== '') {
-    if (!isValidPhoneFr(contact_phone)) {
+  if (parsed.data.contact_phone && parsed.data.contact_phone.trim() !== '') {
+    if (!isValidPhoneFr(parsed.data.contact_phone)) {
       return apiError('Format de téléphone invalide. Utilisez un numéro français valide (ex: 06 12 34 56 78)', 400)
     }
-    contact_phone = normalizePhoneFr(contact_phone)
-  } else {
-    contact_phone = undefined
+    phone = normalizePhoneFr(parsed.data.contact_phone) || undefined
   }
 
   const supabase = await createSupabaseServerClient()
@@ -95,7 +94,7 @@ export async function POST(request: NextRequest) {
     if (accessToken) {
       const eventPayload = {
         summary: `RDV avec ${contact_name}`,
-        description: message || `Rendez-vous avec ${contact_name}\nEmail: ${contact_email}${contact_phone ? `\nTéléphone: ${contact_phone}` : ''}`,
+        description: message || `Rendez-vous avec ${contact_name}\nEmail: ${contact_email}${phone ? `\nTéléphone: ${phone}` : ''}`,
         start: { dateTime: scheduled_at, timeZone: 'Europe/Paris' },
         end: { dateTime: slotEnd.toISOString(), timeZone: 'Europe/Paris' },
         attendees: [{ email: contact_email }],
@@ -131,7 +130,7 @@ export async function POST(request: NextRequest) {
       user_id: userId,
       contact_name,
       contact_email,
-      contact_phone: contact_phone || null,
+      contact_phone: phone || null,
       message: message || null,
       scheduled_at,
       duration_minutes,
