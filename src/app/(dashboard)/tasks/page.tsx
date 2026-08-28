@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import { C } from '@/lib/theme'
 import {
   DndContext,
@@ -427,7 +428,7 @@ export default function TasksPage() {
           if (attempts === maxAttempts) {
             // Rollback optimistic update
             setTasks(prev => prev.map(t => t.id === taskId ? { ...t, col: checked ? 'todo' : 'done' } : t))
-            console.error('Échec persistence checkbox après 3 tentatives')
+            toast.error('Erreur de mise à jour')
           } else {
             // Wait avant retry (100ms, 200ms, 400ms)
             await new Promise(resolve => setTimeout(resolve, 100 * Math.pow(2, attempts)))
@@ -437,7 +438,7 @@ export default function TasksPage() {
           if (attempts === maxAttempts) {
             // Rollback
             setTasks(prev => prev.map(t => t.id === taskId ? { ...t, col: checked ? 'todo' : 'done' } : t))
-            console.error('Erreur réseau persistence checkbox:', error)
+            toast.error('Erreur de mise à jour')
           } else {
             await new Promise(resolve => setTimeout(resolve, 100 * Math.pow(2, attempts)))
           }
@@ -483,12 +484,12 @@ export default function TasksPage() {
       if (!res.ok) {
         // Rollback
         setTasks(prev => prev.map(t => t.id === taskId ? { ...t, col: task.col } : t))
-        console.error('Échec déplacement tâche')
+        toast.error('Erreur lors du déplacement')
       }
     } catch (error) {
       // Rollback
       setTasks(prev => prev.map(t => t.id === taskId ? { ...t, col: task.col } : t))
-      console.error('Erreur réseau déplacement:', error)
+      toast.error('Erreur lors du déplacement')
     }
   }
 
@@ -516,8 +517,13 @@ export default function TasksPage() {
         setDbConnected(true)
         setShowNewTask(false)
         setNewForm(FORM_EMPTY)
+        toast.success('Tâche créée')
+      } else {
+        toast.error('Erreur lors de la création')
       }
-    } catch {}
+    } catch {
+      toast.error('Erreur lors de la création')
+    }
     setCreating(false)
   }
 
