@@ -3,6 +3,7 @@ import { apiSuccess, apiError } from '@/lib/api'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { sendBrevoEmail } from '@/lib/sequences/brevo'
 import { getValidGoogleToken, type TokenRow } from '@/lib/google/tokens'
+import { isValidPhoneFr, normalizePhoneFr } from '@/lib/phone'
 import { z } from 'zod'
 
 const BookingSchema = z.object({
@@ -35,7 +36,17 @@ export async function POST(request: NextRequest) {
     return apiError(firstError.message, 400)
   }
 
-  const { slug, contact_name, contact_email, contact_phone, message, scheduled_at, duration_minutes } = parsed.data
+  let { slug, contact_name, contact_email, contact_phone, message, scheduled_at, duration_minutes } = parsed.data
+
+  // Valider et normaliser le téléphone si fourni
+  if (contact_phone && contact_phone.trim() !== '') {
+    if (!isValidPhoneFr(contact_phone)) {
+      return apiError('Format de téléphone invalide. Utilisez un numéro français valide (ex: 06 12 34 56 78)', 400)
+    }
+    contact_phone = normalizePhoneFr(contact_phone)
+  } else {
+    contact_phone = undefined
+  }
 
   const supabase = await createSupabaseServerClient()
 
