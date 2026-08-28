@@ -1,8 +1,8 @@
 ---
 story: s08-booking-page
 date: 2026-08-18
-status: draft
-validated: no
+status: active
+validated: yes
 complexity: 3
 tasks_total: 9
 ---
