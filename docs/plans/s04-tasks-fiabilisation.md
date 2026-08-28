@@ -34,13 +34,13 @@ Branch: `feature/s04-tasks-fiabilisation`
 
 ## Definition of Done
 
-- [ ] `INITIAL_TASKS` supprimé du code — aucune donnée mockée ne subsiste
-- [ ] Page charge uniquement depuis la DB — si DB vide, affiche empty state
-- [ ] Si API en erreur, affiche un message d'erreur explicite (pas de fallback silencieux)
-- [ ] Drag-drop persiste en DB (vérifiable après refresh)
-- [ ] Checkbox "terminée" persiste en DB (vérifiable après refresh)
-- [ ] Création de tâche persiste en DB (vérifiable après refresh)
-- [ ] Deadline éditable et persisté via PATCH
-- [ ] Toast notifications sur actions principales
-- [ ] `npm run build` passe sans erreur
-- [ ] Tests non-stubs (soit implémentés, soit fichier supprimé)
+- [x] `INITIAL_TASKS` supprimé du code — aucune donnée mockée ne subsiste
+- [x] Page charge uniquement depuis la DB — si DB vide, affiche empty state
+- [x] Si API en erreur, affiche un message d'erreur explicite (pas de fallback silencieux)
+- [x] Drag-drop persiste en DB (vérifiable après refresh)
+- [x] Checkbox "terminée" persiste en DB (vérifiable après refresh)
+- [x] Création de tâche persiste en DB (vérifiable après refresh)
+- [x] Deadline éditable et persisté via PATCH
+- [x] Toast notifications sur actions principales
+- [x] `npm run build` passe sans erreur
+- [x] Tests non-stubs (soit implémentés, soit fichier supprimé)
