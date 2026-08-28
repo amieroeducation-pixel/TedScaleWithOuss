@@ -117,6 +117,8 @@ const PatchSettingsSchema = z.object({
   mobile_bottom_menu: z.boolean().optional(),
   // Menu sections visibility (s01-menu-dynamique)
   menu_sections_visible: z.record(z.string(), z.boolean()).optional(),
+  // Booking (s08-booking-page)
+  booking_slug: z.string().optional(),
 })
 
 export async function GET(_request: NextRequest) {
