@@ -11,10 +11,10 @@ Branch: `feature/s04-tasks-fiabilisation`
 
 ## Tasks (ordered)
 
-1. [ ] **Supprimer INITIAL_TASKS** — Retirer le tableau de tâches mockées (~lignes 49-68 de page.tsx). Remplacer par un empty state explicite quand la DB retourne 0 tâches.
-2. [ ] **Distinguer erreur vs vide** — Ajouter un état `error: string | null` dans la page. Si l'API échoue → afficher un message d'erreur (pas de données mock). Si l'API retourne un tableau vide → afficher un empty state "Aucune tâche — créez votre première tâche".
-3. [ ] **Ajouter `deadline` au PATCH** — Dans `src/app/api/tasks/[id]/route.ts`, ajouter `'deadline'` à la liste `allowed` des champs modifiables.
-4. [ ] **Ajouter toast notifications** — Importer `toast` depuis `sonner` dans page.tsx. Afficher un toast sur : création réussie, erreur de drag-drop, erreur de checkbox, erreur de création.
+1. [x] **Supprimer INITIAL_TASKS** — Retirer le tableau de tâches mockées (~lignes 49-68 de page.tsx). Remplacer par un empty state explicite quand la DB retourne 0 tâches.
+2. [x] **Distinguer erreur vs vide** — Ajouter un état `error: string | null` dans la page. Si l'API échoue → afficher un message d'erreur (pas de données mock). Si l'API retourne un tableau vide → afficher un empty state "Aucune tâche — créez votre première tâche".
+3. [x] **Ajouter `deadline` au PATCH** — Dans `src/app/api/tasks/[id]/route.ts`, ajouter `'deadline'` à la liste `allowed` des champs modifiables.
+4. [x] **Ajouter toast notifications** — Importer `toast` depuis `sonner` dans page.tsx. Afficher un toast sur : création réussie, erreur de drag-drop, erreur de checkbox, erreur de création.
 5. [ ] **Nettoyer les tests stubs** — Dans `route.test.ts`, soit implémenter des tests basiques (POST crée, GET retourne, PATCH modifie), soit supprimer le fichier stub pour éviter les faux positifs.
 6. [ ] **Vérifier le build** — `npm run build` doit passer sans erreur TypeScript ni warning bloquant.
 
