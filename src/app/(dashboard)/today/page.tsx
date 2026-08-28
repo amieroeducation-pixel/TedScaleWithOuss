@@ -597,6 +597,29 @@ function TodayPageContent() {
       .finally(() => setSignalLoading(false))
   }, [])
 
+  // ─── Bookings today state ──────────────────────────────────────────────────
+  type Booking = {
+    id: string
+    contact_name: string
+    contact_email: string
+    contact_phone?: string | null
+    scheduled_at: string
+    duration_minutes: number
+    status: string
+  }
+  const [bookings, setBookings] = useState<Booking[]>([])
+  const [bookingsLoading, setBookingsLoading] = useState(true)
+
+  useEffect(() => {
+    fetch('/api/booking')
+      .then(r => r.json())
+      .then((j: { data?: { bookings: Booking[] } }) => {
+        if (j.data?.bookings) setBookings(j.data.bookings)
+      })
+      .catch(() => {})
+      .finally(() => setBookingsLoading(false))
+  }, [])
+
   // Live clock
   useEffect(() => {
     const tick = () => {
@@ -1132,6 +1155,45 @@ function TodayPageContent() {
         </div>
 
       </div>
+
+      {/* ─── BOOKINGS TODAY ────────────────────────────────────────────────── */}
+      {!bookingsLoading && bookings.length > 0 && (
+        <div style={{ background: C.surface1, border: `0.5px solid ${C.line}`, borderRadius: 10, padding: '14px 16px', marginBottom: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+            <div style={{ fontFamily: 'Oswald, sans-serif', fontSize: 11, fontWeight: 600, color: C.gold, textTransform: 'uppercase', letterSpacing: 1 }}>
+              📅 Rendez-vous Booking
+            </div>
+            <div style={{ fontSize: 9, color: C.textMid }}>{bookings.length} RDV aujourd&apos;hui</div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 8 }}>
+            {bookings.map(booking => {
+              const scheduledTime = new Date(booking.scheduled_at)
+              const timeStr = scheduledTime.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+
+              return (
+                <div key={booking.id} style={{ background: C.bgMid, border: `0.5px solid ${C.lineSoft}`, borderRadius: 6, padding: '10px 12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 6 }}>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: C.textHi }}>{booking.contact_name}</div>
+                    <span style={{ fontSize: 7, padding: '2px 5px', borderRadius: 3, fontWeight: 700, background: `${C.green}15`, color: C.green, border: `0.5px solid ${C.green}40`, textTransform: 'uppercase', flexShrink: 0 }}>
+                      {booking.status === 'confirmed' ? 'CONFIRMÉ' : 'EN ATTENTE'}
+                    </span>
+                  </div>
+
+                  <div style={{ fontSize: 9, color: C.gold, fontWeight: 600, marginBottom: 4 }}>
+                    {timeStr} • {booking.duration_minutes} min
+                  </div>
+
+                  <div style={{ fontSize: 9, color: C.textMid }}>{booking.contact_email}</div>
+                  {booking.contact_phone && (
+                    <div style={{ fontSize: 9, color: C.textMid }}>{booking.contact_phone}</div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Tab bar */}
       <div style={{ marginBottom: 16 }}>

@@ -201,3 +201,58 @@ export async function POST(request: NextRequest) {
     message: 'Rendez-vous confirmé avec succès',
   })
 }
+
+/**
+ * GET /api/booking?date=YYYY-MM-DD
+ * Récupère les bookings pour une date donnée (défaut: aujourd'hui).
+ * Endpoint authentifié (pour CGP).
+ */
+export async function GET(request: NextRequest) {
+  const supabase = await createSupabaseServerClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return apiError('Non authentifié', 401)
+  }
+
+  const { searchParams } = new URL(request.url)
+  const dateStr = searchParams.get('date')
+
+  // Définir les bornes du jour
+  let dayStart: Date
+  let dayEnd: Date
+
+  if (dateStr) {
+    dayStart = new Date(dateStr + 'T00:00:00.000Z')
+    dayEnd = new Date(dateStr + 'T23:59:59.999Z')
+  } else {
+    // Aujourd'hui par défaut (timezone Europe/Paris)
+    const now = new Date()
+    dayStart = new Date(now)
+    dayStart.setHours(0, 0, 0, 0)
+    dayEnd = new Date(now)
+    dayEnd.setHours(23, 59, 59, 999)
+  }
+
+  const { data: bookings, error } = await supabase
+    .from('bookings')
+    .select('id, contact_name, contact_email, contact_phone, message, scheduled_at, duration_minutes, status, google_event_id')
+    .eq('user_id', user.id)
+    .in('status', ['pending', 'confirmed'])
+    .gte('scheduled_at', dayStart.toISOString())
+    .lte('scheduled_at', dayEnd.toISOString())
+    .order('scheduled_at', { ascending: true })
+
+  if (error) {
+    console.error('[Booking GET] Error:', error)
+    return apiError('Erreur lors de la récupération des bookings', 500)
+  }
+
+  return apiSuccess({
+    bookings: bookings || [],
+    date: dateStr || dayStart.toISOString().split('T')[0],
+  })
+}
