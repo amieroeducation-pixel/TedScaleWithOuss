@@ -2,53 +2,8 @@ import { NextRequest } from 'next/server'
 import { apiSuccess, apiError } from '@/lib/api'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { sendBrevoEmail } from '@/lib/sequences/brevo'
+import { getValidGoogleToken, type TokenRow } from '@/lib/google/tokens'
 import { z } from 'zod'
-
-type TokenRow = {
-  google_calendar_refresh_token: string | null
-  google_calendar_access_token: string | null
-  google_calendar_token_expiry: number | null
-}
-
-async function getValidToken(
-  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
-  userId: string,
-  row: TokenRow
-): Promise<string | null> {
-  const { google_calendar_access_token, google_calendar_refresh_token, google_calendar_token_expiry } = row
-
-  if (google_calendar_access_token && google_calendar_token_expiry && Date.now() < google_calendar_token_expiry - 60_000) {
-    return google_calendar_access_token
-  }
-
-  if (!google_calendar_refresh_token) return null
-
-  const res = await fetch('https://oauth2.googleapis.com/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      refresh_token: google_calendar_refresh_token,
-      client_id: process.env.GOOGLE_CLIENT_ID!,
-      client_secret: process.env.GOOGLE_CLIENT_SECRET!,
-      grant_type: 'refresh_token',
-    }),
-  })
-
-  if (!res.ok) return null
-
-  const tokens = (await res.json()) as { access_token: string; expires_in: number }
-
-  await supabase
-    .from('user_settings')
-    .update({
-      google_calendar_access_token: tokens.access_token,
-      google_calendar_token_expiry: Date.now() + tokens.expires_in * 1000,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', userId)
-
-  return tokens.access_token
-}
 
 const BookingSchema = z.object({
   slug: z.string().min(1, 'Slug utilisateur requis'),
@@ -124,7 +79,7 @@ export async function POST(request: NextRequest) {
   let googleEventId: string | null = null
 
   if (userSettings.google_calendar_refresh_token) {
-    const accessToken = await getValidToken(supabase, userId, userSettings as TokenRow)
+    const accessToken = await getValidGoogleToken(supabase, userId, userSettings as TokenRow)
 
     if (accessToken) {
       const eventPayload = {

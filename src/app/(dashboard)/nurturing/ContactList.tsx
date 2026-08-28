@@ -139,6 +139,13 @@ export default function ContactList({
                   <div style={{ height: '1px', background: V.line, margin: '4px 0' }} />
                   <div onClick={() => { onSetLibraryOpen(true); onSetOpenMenuIdx(null) }} style={{ padding: '8px 12px', borderRadius: '6px', fontSize: '11px', color: V.text, cursor: 'pointer' }}>📄 Envoyer document</div>
                   <div style={{ height: '1px', background: V.line, margin: '4px 0' }} />
+                  <div onClick={() => { onArchiveContact(contact.id, true); onSetOpenMenuIdx(null) }} style={{ padding: '8px 12px', borderRadius: '6px', fontSize: '11px', color: V.green, cursor: 'pointer' }}>
+                    ✅ Deal fait (archiver)
+                  </div>
+                  <div onClick={() => { if (confirm(`Supprimer ${contact.name} ? (plus de relance à faire)`)) { onDeleteContact(contact.id); onSetOpenMenuIdx(null) } }} style={{ padding: '8px 12px', borderRadius: '6px', fontSize: '11px', color: V.warn, cursor: 'pointer' }}>
+                    🚫 Plus de relance (supprimer)
+                  </div>
+                  <div style={{ height: '1px', background: V.line, margin: '4px 0' }} />
                   <div onClick={() => { onArchiveContact(contact.id, !contact.archived); onSetOpenMenuIdx(null) }} style={{ padding: '8px 12px', borderRadius: '6px', fontSize: '11px', color: contact.archived ? V.green : V.textLo, cursor: 'pointer' }}>
                     {contact.archived ? '📤 Désarchiver' : '📦 Archiver'}
                   </div>
