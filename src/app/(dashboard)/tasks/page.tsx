@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import { C } from '@/lib/theme'
 import {
   DndContext,
@@ -46,26 +47,6 @@ const COLS: { id: KanbanCol; label: string; color: string }[] = [
   { id: 'done', label: 'Terminées', color: C.green },
 ]
 
-const INITIAL_TASKS: Task[] = [
-  { id: 't1', title: 'Préparer dossier Dr. Rousseau', sub: 'RDV 3 mercredi — proposition PER + AV', priority: 4, time: '2h', badge: 'premium', col: 'todo', urgency: 'urgent', thisWeek: true },
-  { id: 't2', title: 'Relancer Sophie Renaud', sub: '34j sans contact — client premium', priority: 4, time: '30min', badge: 'premium', col: 'todo', urgency: 'urgent', thisWeek: true },
-  { id: 't3', title: 'Proposition upsell Antoine', sub: 'SCPI diversification patrimoine', priority: 3, time: '1h30', badge: 'premium', col: 'todo', urgency: 'normal', thisWeek: true },
-  { id: 't4', title: 'Extraire TNS Paris 17e', sub: 'Nouvelle zone prospection', priority: 2, time: '45min', badge: '', col: 'todo', urgency: 'normal', thisWeek: false },
-  { id: 't5', title: 'Mettre à jour CRM', sub: 'Synchroniser contacts semaine', priority: 1, time: '20min', badge: '', col: 'todo', urgency: 'normal', thisWeek: true },
-  { id: 't6', title: 'Étude patrimoine M. Bernard', sub: 'Analyse complète + recommandations', priority: 3, time: '3h', badge: 'prospect', col: 'inprogress', urgency: 'normal', thisWeek: true },
-  { id: 't7', title: 'Séquence email RDV 1', sub: '4 prospects à relancer post-RDV', priority: 2, time: '1h', badge: '', col: 'inprogress', urgency: 'normal', thisWeek: true },
-  { id: 't8', title: 'Préparer rapport hebdo', sub: 'KPIs + actions semaine prochaine', priority: 2, time: '1h', badge: '', col: 'inprogress', urgency: 'normal', thisWeek: true },
-  { id: 't9', title: 'Recherche SCPI Europe', sub: 'Comparatif 5 produits pour Antoine', priority: 1, time: '45min', badge: '', col: 'inprogress', urgency: 'normal', thisWeek: false },
-  { id: 't10', title: 'Valider proposition Lucie', sub: 'Attente retour client', priority: 2, time: '30min', badge: 'client', col: 'waiting', urgency: 'normal', thisWeek: true },
-  { id: 't11', title: 'Rendez-vous comptable', sub: 'Bilan trimestriel à planifier', priority: 1, time: '2h', badge: '', col: 'waiting', urgency: 'normal', thisWeek: false },
-  { id: 't12', title: 'Formation PER Madelin', sub: 'Nouvelle réglementation 2026', priority: 1, time: '1h30', badge: '', col: 'waiting', urgency: 'normal', thisWeek: false },
-  { id: 't13', title: 'Closing Dr. Martin', sub: 'En attente réponse depuis 5j', priority: 4, time: '1h', badge: 'prospect', col: 'blocked', urgency: 'urgent', thisWeek: true },
-  { id: 't14', title: 'Simulation fiscale TNS', sub: 'Besoin infos comptables client', priority: 2, time: '2h', badge: '', col: 'blocked', urgency: 'normal', thisWeek: false },
-  { id: 't15', title: 'Email intro 12 TNS', sub: 'Campagne prospection envoyée', priority: 2, time: '1h', badge: 'done', col: 'done', urgency: 'normal', thisWeek: true },
-  { id: 't16', title: 'Mise à jour scoring', sub: 'Nouvelle grille validée', priority: 1, time: '30min', badge: 'done', col: 'done', urgency: 'normal', thisWeek: true },
-  { id: 't17', title: 'RDV 1 F. Dubois', sub: 'Rendez-vous effectué jeudi', priority: 3, time: '1h', badge: 'done', col: 'done', urgency: 'normal', thisWeek: true },
-  { id: 't18', title: 'Proposition PER radiologie', sub: 'Document envoyé', priority: 2, time: '2h', badge: 'done', col: 'done', urgency: 'normal', thisWeek: false },
-]
 
 const BADGE_STYLES: Record<Badge, { bg: string; color: string; label: string }> = {
   premium: { bg: '#e8c87818', color: '#e8c878', label: 'Premium' },
@@ -370,6 +351,7 @@ export default function TasksPage() {
   const [tasks, setTasks] = useState<Task[]>([])
   const [dbConnected, setDbConnected] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [showNewTask, setShowNewTask] = useState(false)
   const [newForm, setNewForm] = useState(FORM_EMPTY)
   const [creating, setCreating] = useState(false)
@@ -385,19 +367,23 @@ export default function TasksPage() {
 
   useEffect(() => {
     fetch('/api/tasks')
-      .then(r => r.json())
+      .then(r => {
+        if (!r.ok) {
+          throw new Error('Impossible de charger les tâches')
+        }
+        return r.json()
+      })
       .then(d => {
         if (d.success && Array.isArray(d.data)) {
           setTasks(d.data.map(mapDbTask))
           setDbConnected(true)
+          setError(null)
         } else {
-          // Fallback sur INITIAL_TASKS si API fail ou table vide en prod
-          setTasks(INITIAL_TASKS)
+          setError('Réponse invalide du serveur')
         }
       })
       .catch(() => {
-        // Fallback sur INITIAL_TASKS si fetch échoue
-        setTasks(INITIAL_TASKS)
+        setError('Impossible de charger les tâches. Vérifiez votre connexion.')
       })
       .finally(() => setLoading(false))
   }, [])
@@ -442,7 +428,7 @@ export default function TasksPage() {
           if (attempts === maxAttempts) {
             // Rollback optimistic update
             setTasks(prev => prev.map(t => t.id === taskId ? { ...t, col: checked ? 'todo' : 'done' } : t))
-            console.error('Échec persistence checkbox après 3 tentatives')
+            toast.error('Erreur de mise à jour')
           } else {
             // Wait avant retry (100ms, 200ms, 400ms)
             await new Promise(resolve => setTimeout(resolve, 100 * Math.pow(2, attempts)))
@@ -452,7 +438,7 @@ export default function TasksPage() {
           if (attempts === maxAttempts) {
             // Rollback
             setTasks(prev => prev.map(t => t.id === taskId ? { ...t, col: checked ? 'todo' : 'done' } : t))
-            console.error('Erreur réseau persistence checkbox:', error)
+            toast.error('Erreur de mise à jour')
           } else {
             await new Promise(resolve => setTimeout(resolve, 100 * Math.pow(2, attempts)))
           }
@@ -498,12 +484,12 @@ export default function TasksPage() {
       if (!res.ok) {
         // Rollback
         setTasks(prev => prev.map(t => t.id === taskId ? { ...t, col: task.col } : t))
-        console.error('Échec déplacement tâche')
+        toast.error('Erreur lors du déplacement')
       }
     } catch (error) {
       // Rollback
       setTasks(prev => prev.map(t => t.id === taskId ? { ...t, col: task.col } : t))
-      console.error('Erreur réseau déplacement:', error)
+      toast.error('Erreur lors du déplacement')
     }
   }
 
@@ -531,8 +517,13 @@ export default function TasksPage() {
         setDbConnected(true)
         setShowNewTask(false)
         setNewForm(FORM_EMPTY)
+        toast.success('Tâche créée')
+      } else {
+        toast.error('Erreur lors de la création')
       }
-    } catch {}
+    } catch {
+      toast.error('Erreur lors de la création')
+    }
     setCreating(false)
   }
 
@@ -641,46 +632,79 @@ export default function TasksPage() {
         </div>
       </div>
 
-      {/* Kanban board - Phase 1B : Drag-drop enabled */}
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
-      >
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: colsToShow.length === 1 ? '1fr' : colsToShow.length === 5 ? 'repeat(5,1fr)' : `repeat(${colsToShow.length},1fr)`,
-          gap: 10,
-        }}>
-          {colsToShow.map(col => {
-            const colTasks = tasksByCol(col.id)
-            return (
-              <SortableContext key={col.id} items={[col.id, ...colTasks.map(t => t.id)]} strategy={verticalListSortingStrategy}>
-                <DroppableColumn id={col.id} label={col.label} color={col.color} count={colTasks.length}>
-                  {colTasks.map(task => (
-                    <SortableTaskCard
-                      key={task.id}
-                      task={task}
-                      onCheck={dbConnected ? (checked) => handleCheck(task.id, checked) : undefined}
-                      onOpen={() => setSelectedTask(task)}
-                    />
-                  ))}
-                  {colTasks.length === 0 && (
-                    <div style={{ padding: '16px 0', textAlign: 'center', fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.textVlo, fontStyle: 'italic' }}>
-                      Aucune tâche
-                    </div>
-                  )}
-                </DroppableColumn>
-              </SortableContext>
-            )
-          })}
+      {/* Error state */}
+      {error && (
+        <div style={{ padding: 40, textAlign: 'center', background: C.surface1, border: `1px solid ${C.warn}`, borderRadius: 10, marginBottom: 16 }}>
+          <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 16, fontWeight: 600, color: C.warn, marginBottom: 8 }}>⚠️ Erreur</div>
+          <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 11, color: C.textMid, marginBottom: 16 }}>{error}</div>
+          <button
+            onClick={() => window.location.reload()}
+            style={{ fontFamily: 'Oswald,sans-serif', fontSize: 11, fontWeight: 500, color: C.bgDeep, background: C.gold, border: 'none', borderRadius: 6, padding: '8px 16px', cursor: 'pointer' }}
+          >
+            RÉESSAYER
+          </button>
         </div>
+      )}
 
-        <DragOverlay>
-          {activeTask && <TaskCard task={activeTask} />}
-        </DragOverlay>
-      </DndContext>
+      {/* Empty state */}
+      {!error && !loading && tasks.length === 0 && (
+        <div style={{ padding: 60, textAlign: 'center', background: C.surface1, border: `1px solid ${C.lineSoft}`, borderRadius: 10 }}>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>📋</div>
+          <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 18, fontWeight: 600, color: C.textHi, marginBottom: 8 }}>Aucune tâche</div>
+          <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 11, color: C.textMid, marginBottom: 20 }}>
+            Créez votre première tâche pour commencer à organiser votre travail
+          </div>
+          <button
+            onClick={() => setShowNewTask(true)}
+            style={{ fontFamily: 'Oswald,sans-serif', fontSize: 11, fontWeight: 500, color: C.bgDeep, background: `linear-gradient(90deg,${C.green},${C.indigo})`, border: 'none', borderRadius: 8, padding: '10px 20px', cursor: 'pointer', letterSpacing: '0.1em' }}
+          >
+            ➕ CRÉER MA PREMIÈRE TÂCHE
+          </button>
+        </div>
+      )}
+
+      {/* Kanban board - Phase 1B : Drag-drop enabled */}
+      {!error && !loading && tasks.length > 0 && (
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: colsToShow.length === 1 ? '1fr' : colsToShow.length === 5 ? 'repeat(5,1fr)' : `repeat(${colsToShow.length},1fr)`,
+            gap: 10,
+          }}>
+            {colsToShow.map(col => {
+              const colTasks = tasksByCol(col.id)
+              return (
+                <SortableContext key={col.id} items={[col.id, ...colTasks.map(t => t.id)]} strategy={verticalListSortingStrategy}>
+                  <DroppableColumn id={col.id} label={col.label} color={col.color} count={colTasks.length}>
+                    {colTasks.map(task => (
+                      <SortableTaskCard
+                        key={task.id}
+                        task={task}
+                        onCheck={dbConnected ? (checked) => handleCheck(task.id, checked) : undefined}
+                        onOpen={() => setSelectedTask(task)}
+                      />
+                    ))}
+                    {colTasks.length === 0 && (
+                      <div style={{ padding: '16px 0', textAlign: 'center', fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.textVlo, fontStyle: 'italic' }}>
+                        Aucune tâche
+                      </div>
+                    )}
+                  </DroppableColumn>
+                </SortableContext>
+              )
+            })}
+          </div>
+
+          <DragOverlay>
+            {activeTask && <TaskCard task={activeTask} />}
+          </DragOverlay>
+        </DndContext>
+      )}
 
       {/* Modal nouvelle tâche */}
       {showNewTask && (
