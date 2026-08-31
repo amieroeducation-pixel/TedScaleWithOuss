@@ -118,7 +118,7 @@ export default function ContactList({
                   position: 'absolute', top: '8px', right: '8px', width: '24px', height: '24px',
                   borderRadius: '6px', border: 'none', background: 'transparent', color: V.textLo,
                   cursor: 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  opacity: idx === selectedContactIdx || openMenuIdx === idx ? 1 : 0, transition: 'opacity 0.15s',
+                  opacity: idx === selectedContactIdx || openMenuIdx === idx ? 1 : 0.4, transition: 'opacity 0.15s',
                 }}
               >
                 ⋮
@@ -138,6 +138,13 @@ export default function ContactList({
                   <div onClick={() => { onSetSelectedChannel('email'); onSetDetailTab('sequence'); onSetOpenMenuIdx(null) }} style={{ padding: '8px 12px', borderRadius: '6px', fontSize: '11px', color: V.text, cursor: 'pointer' }}>✉️ Envoyer un email</div>
                   <div style={{ height: '1px', background: V.line, margin: '4px 0' }} />
                   <div onClick={() => { onSetLibraryOpen(true); onSetOpenMenuIdx(null) }} style={{ padding: '8px 12px', borderRadius: '6px', fontSize: '11px', color: V.text, cursor: 'pointer' }}>📄 Envoyer document</div>
+                  <div style={{ height: '1px', background: V.line, margin: '4px 0' }} />
+                  <div onClick={() => { onArchiveContact(contact.id, true); onSetOpenMenuIdx(null) }} style={{ padding: '8px 12px', borderRadius: '6px', fontSize: '11px', color: V.green, cursor: 'pointer' }}>
+                    ✅ Deal fait (archiver)
+                  </div>
+                  <div onClick={() => { if (confirm(`Supprimer ${contact.name} ? (plus de relance à faire)`)) { onDeleteContact(contact.id); onSetOpenMenuIdx(null) } }} style={{ padding: '8px 12px', borderRadius: '6px', fontSize: '11px', color: V.warn, cursor: 'pointer' }}>
+                    🚫 Plus de relance (supprimer)
+                  </div>
                   <div style={{ height: '1px', background: V.line, margin: '4px 0' }} />
                   <div onClick={() => { onArchiveContact(contact.id, !contact.archived); onSetOpenMenuIdx(null) }} style={{ padding: '8px 12px', borderRadius: '6px', fontSize: '11px', color: contact.archived ? V.green : V.textLo, cursor: 'pointer' }}>
                     {contact.archived ? '📤 Désarchiver' : '📦 Archiver'}

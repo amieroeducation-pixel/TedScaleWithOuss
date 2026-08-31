@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { C } from '@/lib/theme'
 import { UserSettings } from '@/hooks/useUserSettings'
 
-export type Tab = 'general' | 'kpi' | 'notifications' | 'integrations' | 'sections' | 'mobile' | 'sequences' | 'variantes' | 'triggers' | 'scripts' | 'menu' | 'rappels'
+export type Tab = 'general' | 'kpi' | 'notifications' | 'integrations' | 'sections' | 'mobile' | 'sequences' | 'variantes' | 'triggers' | 'scripts' | 'menu' | 'rappels' | 'booking'
 
 export type TabProps = {
   settings: UserSettings | null
@@ -20,6 +20,7 @@ export const TABS: { id: Tab; label: string }[] = [
   { id: 'menu', label: '📂 Menu' },
   { id: 'sections', label: '👁️ Sections' },
   { id: 'mobile', label: '📱 Mobile' },
+  { id: 'booking', label: '📅 Booking' },
   { id: 'sequences', label: '🔗 Séquences' },
   { id: 'variantes', label: '🎯 Variantes' },
   { id: 'triggers', label: '⚡ Triggers' },
@@ -231,5 +232,133 @@ export function SetBtn({ onClick, color, bg, children }: { onClick?: () => void;
     >
       {children}
     </button>
+  )
+}
+
+export function TabBooking({ settings, save, saving }: TabProps) {
+  const [slug, setSlug] = useState(settings?.booking_slug || '')
+  const [generating, setGenerating] = useState(false)
+  const [copySuccess, setCopySuccess] = useState(false)
+
+  const generateSlug = async () => {
+    if (generating) return
+    setGenerating(true)
+
+    // Generate slug from user name or random string
+    const baseName = settings?.nom?.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') || 'booking'
+    const randomSuffix = Math.random().toString(36).substring(2, 6)
+    const suggested = `${baseName}-${randomSuffix}`
+
+    setSlug(suggested)
+    await save({ booking_slug: suggested })
+    setGenerating(false)
+  }
+
+  const handleBlur = async () => {
+    if (slug !== settings?.booking_slug) {
+      await save({ booking_slug: slug })
+    }
+  }
+
+  const bookingUrl = slug ? `${typeof window !== 'undefined' ? window.location.origin : ''}/booking/${slug}` : ''
+
+  const copyToClipboard = () => {
+    if (bookingUrl && typeof navigator !== 'undefined') {
+      navigator.clipboard.writeText(bookingUrl).then(() => {
+        setCopySuccess(true)
+        setTimeout(() => setCopySuccess(false), 2000)
+      })
+    }
+  }
+
+  return (
+    <SectionPanel title="Lien de Réservation">
+      <div style={{ fontSize: 9, color: C.textLo, marginBottom: 14, fontFamily: 'JetBrains Mono,monospace' }}>
+        Partagez ce lien pour recevoir des demandes de rendez-vous en ligne. Les prospects peuvent sélectionner un créneau disponible directement.
+      </div>
+
+      <SetRow>
+        <SetLabel
+          label="Votre slug de booking"
+          desc="Identifiant unique pour votre page de réservation"
+        />
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <input
+            type="text"
+            value={slug}
+            onChange={(e) => setSlug(e.target.value)}
+            onBlur={handleBlur}
+            placeholder="mon-nom"
+            style={{
+              flex: '0 0 200px',
+              background: C.surface2,
+              border: `1px solid ${C.line}`,
+              borderRadius: 6,
+              padding: '8px 12px',
+              color: C.textHi,
+              fontSize: 11,
+              fontFamily: 'JetBrains Mono,monospace',
+            }}
+          />
+          <button
+            onClick={generateSlug}
+            disabled={generating || saving}
+            style={{
+              background: generating ? C.textVlo : C.indigo,
+              color: C.textHi,
+              border: 'none',
+              borderRadius: 6,
+              padding: '8px 16px',
+              fontSize: 10,
+              fontWeight: 600,
+              cursor: generating ? 'not-allowed' : 'pointer',
+              fontFamily: 'Oswald,sans-serif',
+            }}
+          >
+            {generating ? 'Génération...' : 'Générer'}
+          </button>
+        </div>
+      </SetRow>
+
+      {bookingUrl && (
+        <SetRow>
+          <SetLabel label="URL complète" desc="Copiez ce lien pour le partager avec vos prospects" />
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flex: 1 }}>
+            <input
+              type="text"
+              value={bookingUrl}
+              readOnly
+              style={{
+                flex: 1,
+                background: C.surface2,
+                border: `1px solid ${C.line}`,
+                borderRadius: 6,
+                padding: '8px 12px',
+                color: C.gold,
+                fontSize: 10,
+                fontFamily: 'JetBrains Mono,monospace',
+              }}
+            />
+            <button
+              onClick={copyToClipboard}
+              style={{
+                background: copySuccess ? C.green : C.indigo,
+                color: copySuccess ? C.bgDeep : C.textHi,
+                border: 'none',
+                borderRadius: 6,
+                padding: '8px 16px',
+                fontSize: 10,
+                fontWeight: 600,
+                cursor: 'pointer',
+                fontFamily: 'Oswald,sans-serif',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {copySuccess ? '✓ Copié' : '📋 Copier'}
+            </button>
+          </div>
+        </SetRow>
+      )}
+    </SectionPanel>
   )
 }
