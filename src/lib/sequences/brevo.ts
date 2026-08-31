@@ -1,4 +1,4 @@
-export type BrevoResult = { success: boolean; error?: string }
+export type BrevoResult = { success: boolean; httpCode?: number; error?: string }
 
 export async function sendBrevoEmail(args: {
   to: string
@@ -28,9 +28,9 @@ export async function sendBrevoEmail(args: {
     })
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: `HTTP ${res.status}` }))
-      return { success: false, error: err.message || `HTTP ${res.status}` }
+      return { success: false, httpCode: res.status, error: err.message || `HTTP ${res.status}` }
     }
-    return { success: true }
+    return { success: true, httpCode: res.status }
   } catch (e) {
     return { success: false, error: e instanceof Error ? e.message : 'Erreur réseau Brevo' }
   }
@@ -61,9 +61,9 @@ export async function sendBrevoSms(args: {
     })
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: `HTTP ${res.status}` }))
-      return { success: false, error: err.message || `HTTP ${res.status}` }
+      return { success: false, httpCode: res.status, error: err.message || `HTTP ${res.status}` }
     }
-    return { success: true }
+    return { success: true, httpCode: res.status }
   } catch (e) {
     return { success: false, error: e instanceof Error ? e.message : 'Erreur réseau Brevo SMS' }
   }
@@ -99,9 +99,9 @@ export async function sendWhatsAppMessage(args: {
     )
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: `HTTP ${res.status}` }))
-      return { success: false, error: err.message || `WhatsApp HTTP ${res.status}` }
+      return { success: false, httpCode: res.status, error: err.message || `WhatsApp HTTP ${res.status}` }
     }
-    return { success: true }
+    return { success: true, httpCode: res.status }
   } catch (e) {
     return { success: false, error: e instanceof Error ? e.message : 'Erreur réseau WhatsApp' }
   }

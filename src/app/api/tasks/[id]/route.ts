@@ -14,7 +14,7 @@ export async function PATCH(
   let body: Record<string, unknown>
   try { body = await request.json() } catch { return apiError('Corps invalide', 400) }
 
-  const allowed = ['title', 'description', 'priority', 'col', 'estimated_time', 'badge', 'urgency', 'this_week']
+  const allowed = ['title', 'description', 'priority', 'col', 'estimated_time', 'badge', 'urgency', 'this_week', 'deadline']
   const patch: Record<string, unknown> = { updated_at: new Date().toISOString() }
   for (const k of allowed) {
     if (k in body) patch[k] = body[k]

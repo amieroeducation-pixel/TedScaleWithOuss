@@ -2,16 +2,38 @@ import { NextRequest } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { apiSuccess, apiError, apiUnauthorized } from '@/lib/api'
 
-export async function GET(_request: NextRequest) {
+export async function GET(request: NextRequest) {
   const supabase = await createSupabaseServerClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return apiUnauthorized()
 
-  const { data, error } = await supabase
+  // Extract query params
+  const { searchParams } = new URL(request.url)
+  const urgency = searchParams.get('urgency')
+  const deadline = searchParams.get('deadline')
+
+  // Build query
+  let query = supabase
     .from('tasks')
     .select('*')
     .eq('user_id', user.id)
-    .order('created_at', { ascending: false })
+
+  // Apply filters
+  if (urgency) {
+    query = query.eq('urgency', urgency)
+  }
+
+  if (deadline === 'today') {
+    const today = new Date().toISOString().split('T')[0]
+    query = query.eq('deadline', today)
+  } else if (deadline) {
+    // Support other date formats if needed
+    query = query.eq('deadline', deadline)
+  }
+
+  query = query.order('created_at', { ascending: false })
+
+  const { data, error } = await query
   if (error) return apiError(error.message, 500)
   return apiSuccess(data ?? [])
 }

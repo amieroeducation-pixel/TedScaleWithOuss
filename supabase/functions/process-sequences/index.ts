@@ -9,10 +9,10 @@ const CRON_SECRET = Deno.env.get('CRON_SECRET') ?? ''
 // Si Deno.cron n'est pas disponible, cette Edge Function peut être invoquée manuellement
 // via `supabase functions invoke process-sequences`
 try {
-  Deno.cron('process-sequences-daily', '0 7 * * *', async () => {
-    console.log('[process-sequences] Démarrage cron quotidien 7h UTC')
+  Deno.cron('process-sequences-5min', '*/5 * * * *', async () => {
+    console.log('[process-sequences] Démarrage cron 5 min')
     try {
-      const res = await fetch(`${NEXT_APP_URL}/api/crm/sequences/process`, {
+      const res = await fetch(`${NEXT_APP_URL}/api/cron/sequences-process`, {
         method: 'GET',
         headers: {
           'x-cron-secret': CRON_SECRET,

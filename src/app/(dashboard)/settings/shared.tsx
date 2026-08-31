@@ -168,6 +168,7 @@ export function TabMenu({ settings, save }: TabProps) {
       pilotage: true,
     }
   )
+  const [status, setStatus] = useState<string>('')
 
   const sections = [
     { key: 'principal', label: 'Principal', desc: 'Dashboard, Aujourd\'hui, Global' },
@@ -180,7 +181,18 @@ export function TabMenu({ settings, save }: TabProps) {
   async function handleToggle(key: string, value: boolean) {
     const next = { ...visible, [key]: value }
     setVisible(next)
-    await save({ menu_sections_visible: next })
+    setStatus('Sauvegarde...')
+    try {
+      const result = await save({ menu_sections_visible: next })
+      if (result) {
+        setStatus('✅ Sauvegardé — rechargement...')
+        setTimeout(() => window.location.reload(), 600)
+      } else {
+        setStatus('❌ Erreur de sauvegarde')
+      }
+    } catch (err) {
+      setStatus('❌ Erreur: ' + (err instanceof Error ? err.message : 'inconnue'))
+    }
   }
 
   return (
@@ -188,6 +200,11 @@ export function TabMenu({ settings, save }: TabProps) {
       <div style={{ fontSize: 9, color: C.textLo, marginBottom: 14, fontFamily: 'JetBrains Mono,monospace' }}>
         Masquez les sections du menu latéral que vous n'utilisez pas.
       </div>
+      {status && (
+        <div style={{ fontSize: 10, color: status.includes('❌') ? '#ff6470' : C.green, marginBottom: 10, fontFamily: 'JetBrains Mono,monospace' }}>
+          {status}
+        </div>
+      )}
       {sections.map(s => (
         <SetRow key={s.key}>
           <SetLabel label={s.label} desc={s.desc} />

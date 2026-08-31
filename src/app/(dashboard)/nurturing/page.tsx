@@ -156,15 +156,12 @@ export default function NurturingPage() {
       if (!json.data) { setLoading(false); return 0 }
 
       const contactList: Contact[] = json.data.map((p: any) => {
-        const lastContactDays = p.last_contact_at
-          ? Math.floor((Date.now() - new Date(p.last_contact_at).getTime()) / (1000 * 60 * 60 * 24))
-          : null
+        // Use actual temperature_score computed by backend cron
+        const temperatureScore = p.temperature_score || 0
 
         const temp = calculateTempCategory(
-          lastContactDays,
-          !!p.sequence_active,
+          temperatureScore,
           p.nb_relances_sans_reponse || 0,
-          p.pressure_score,
           p.forced_temperature
         )
 
@@ -205,6 +202,7 @@ export default function NurturingPage() {
           archived: p.nurturing_archived || false,
           forcedTemperature: p.forced_temperature || null,
           timezone: p.timezone || 'Europe/Paris',
+          linkedin_url: p.linkedin_url || null,
         }
       })
 

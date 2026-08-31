@@ -51,6 +51,14 @@ function getDefaultSettings() {
     mobile_font_size: 'medium' as const,
     mobile_compact: false,
     mobile_bottom_menu: true,
+    // Menu dynamique (s01) - Toutes sections visibles par défaut
+    menu_sections_visible: {
+      principal: true,
+      clients: true,
+      acquisition: true,
+      outils: true,
+      pilotage: true,
+    },
   }
 }
 

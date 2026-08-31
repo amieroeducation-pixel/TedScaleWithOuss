@@ -8,6 +8,7 @@ export interface AgendaEvent {
   title: string
   client?: string
   type: AgendaEventType
+  isCalendarEvent?: boolean  // true if from Google Calendar API
 }
 
 export const AGENDA_COLORS: Record<AgendaEventType, { bg: string; border: string; text: string }> = {

@@ -104,6 +104,36 @@ export default function SequencePanel({
                       &quot;{step.message_sent.slice(0, 100)}{step.message_sent.length > 100 ? '...' : ''}&quot;
                     </div>
                   )}
+                  {/* LinkedIn manual action button */}
+                  {step.channel === 'linkedin' && isDone && step.message_sent && (
+                    <div style={{ marginTop: '8px' }}>
+                      <button onClick={async () => {
+                        const contact = contacts[selectedContactIdx]
+                        if (!contact || !contact.linkedin_url) {
+                          showToast('URL LinkedIn manquante', 'error')
+                          return
+                        }
+                        // Copy message to clipboard
+                        try {
+                          await navigator.clipboard.writeText(step.message_sent!)
+                          showToast('Message copié dans le presse-papiers')
+                        } catch (e) {
+                          showToast('Erreur copie presse-papiers', 'error')
+                          return
+                        }
+                        // Open LinkedIn profile
+                        window.open(contact.linkedin_url, '_blank')
+                        // Mark interaction as honored
+                        await fetch('/api/interactions/honor', {
+                          method: 'PATCH',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ step_id: step.id })
+                        })
+                      }} style={{ padding: '4px 10px', fontSize: '10px', borderRadius: '5px', border: `1px solid ${V.indigo}`, background: 'rgba(129,140,248,0.08)', color: V.indigo, fontWeight: 600, cursor: 'pointer' }}>
+                        📋 Copier + Ouvrir LinkedIn
+                      </button>
+                    </div>
+                  )}
                   {isCurrent && (
                     <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
                       <button onClick={async () => {
