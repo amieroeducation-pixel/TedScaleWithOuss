@@ -55,6 +55,9 @@ export type UserSettings = {
   reminder_delay_1h?: number
   // Menu sections visibility
   menu_sections_visible?: Record<string, boolean>
+  // Booking page
+  booking_slug?: string
+  nom?: string
 }
 
 export function useUserSettings() {

@@ -2,53 +2,9 @@ import { NextRequest } from 'next/server'
 import { apiSuccess, apiError } from '@/lib/api'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { sendBrevoEmail } from '@/lib/sequences/brevo'
+import { getValidGoogleToken, type TokenRow } from '@/lib/google/tokens'
+import { isValidPhoneFr, normalizePhoneFr } from '@/lib/phone'
 import { z } from 'zod'
-
-type TokenRow = {
-  google_calendar_refresh_token: string | null
-  google_calendar_access_token: string | null
-  google_calendar_token_expiry: number | null
-}
-
-async function getValidToken(
-  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
-  userId: string,
-  row: TokenRow
-): Promise<string | null> {
-  const { google_calendar_access_token, google_calendar_refresh_token, google_calendar_token_expiry } = row
-
-  if (google_calendar_access_token && google_calendar_token_expiry && Date.now() < google_calendar_token_expiry - 60_000) {
-    return google_calendar_access_token
-  }
-
-  if (!google_calendar_refresh_token) return null
-
-  const res = await fetch('https://oauth2.googleapis.com/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      refresh_token: google_calendar_refresh_token,
-      client_id: process.env.GOOGLE_CLIENT_ID!,
-      client_secret: process.env.GOOGLE_CLIENT_SECRET!,
-      grant_type: 'refresh_token',
-    }),
-  })
-
-  if (!res.ok) return null
-
-  const tokens = (await res.json()) as { access_token: string; expires_in: number }
-
-  await supabase
-    .from('user_settings')
-    .update({
-      google_calendar_access_token: tokens.access_token,
-      google_calendar_token_expiry: Date.now() + tokens.expires_in * 1000,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', userId)
-
-  return tokens.access_token
-}
 
 const BookingSchema = z.object({
   slug: z.string().min(1, 'Slug utilisateur requis'),
@@ -80,7 +36,16 @@ export async function POST(request: NextRequest) {
     return apiError(firstError.message, 400)
   }
 
-  const { slug, contact_name, contact_email, contact_phone, message, scheduled_at, duration_minutes } = parsed.data
+  const { slug, contact_name, contact_email, message, scheduled_at, duration_minutes } = parsed.data
+  let phone: string | undefined
+
+  // Valider et normaliser le téléphone si fourni
+  if (parsed.data.contact_phone && parsed.data.contact_phone.trim() !== '') {
+    if (!isValidPhoneFr(parsed.data.contact_phone)) {
+      return apiError('Format de téléphone invalide. Utilisez un numéro français valide (ex: 06 12 34 56 78)', 400)
+    }
+    phone = normalizePhoneFr(parsed.data.contact_phone) || undefined
+  }
 
   const supabase = await createSupabaseServerClient()
 
@@ -117,19 +82,19 @@ export async function POST(request: NextRequest) {
     )
 
   if (conflictingBookings && conflictingBookings.length > 0) {
-    return apiError('Ce créneau est déjà réservé', 409)
+    return apiError('Ce créneau vient d\'être réservé, veuillez en choisir un autre', 409)
   }
 
   // Créer l'événement Google Calendar si connecté
   let googleEventId: string | null = null
 
   if (userSettings.google_calendar_refresh_token) {
-    const accessToken = await getValidToken(supabase, userId, userSettings as TokenRow)
+    const accessToken = await getValidGoogleToken(supabase, userId, userSettings as TokenRow)
 
     if (accessToken) {
       const eventPayload = {
         summary: `RDV avec ${contact_name}`,
-        description: message || `Rendez-vous avec ${contact_name}\nEmail: ${contact_email}${contact_phone ? `\nTéléphone: ${contact_phone}` : ''}`,
+        description: message || `Rendez-vous avec ${contact_name}\nEmail: ${contact_email}${phone ? `\nTéléphone: ${phone}` : ''}`,
         start: { dateTime: scheduled_at, timeZone: 'Europe/Paris' },
         end: { dateTime: slotEnd.toISOString(), timeZone: 'Europe/Paris' },
         attendees: [{ email: contact_email }],
@@ -165,7 +130,7 @@ export async function POST(request: NextRequest) {
       user_id: userId,
       contact_name,
       contact_email,
-      contact_phone: contact_phone || null,
+      contact_phone: phone || null,
       message: message || null,
       scheduled_at,
       duration_minutes,
@@ -192,33 +157,39 @@ export async function POST(request: NextRequest) {
     timeZone: 'Europe/Paris',
   })
 
-  await sendBrevoEmail({
-    to: contact_email,
-    toName: contact_name,
-    subject: 'Confirmation de votre rendez-vous',
-    htmlContent: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #0a0e22;">Votre rendez-vous est confirmé ✅</h2>
-        <p>Bonjour ${contact_name},</p>
-        <p>Votre rendez-vous a bien été enregistré pour le :</p>
-        <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          <p style="font-size: 18px; font-weight: bold; margin: 0; color: #0a0e22;">
-            ${scheduledDateFormatted}
-          </p>
-          <p style="margin: 10px 0 0 0; color: #666;">
-            Durée : ${duration_minutes} minutes
+  // Try to send email, but don't fail the booking if it errors
+  try {
+    await sendBrevoEmail({
+      to: contact_email,
+      toName: contact_name,
+      subject: 'Confirmation de votre rendez-vous',
+      htmlContent: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #0a0e22;">Votre rendez-vous est confirmé ✅</h2>
+          <p>Bonjour ${contact_name},</p>
+          <p>Votre rendez-vous a bien été enregistré pour le :</p>
+          <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <p style="font-size: 18px; font-weight: bold; margin: 0; color: #0a0e22;">
+              ${scheduledDateFormatted}
+            </p>
+            <p style="margin: 10px 0 0 0; color: #666;">
+              Durée : ${duration_minutes} minutes
+            </p>
+          </div>
+          ${message ? `<p><strong>Votre message :</strong></p><p style="background: #f9f9f9; padding: 15px; border-left: 4px solid #e8c878;">${message}</p>` : ''}
+          <p>Un lien de visioconférence vous sera envoyé par email 24h avant le rendez-vous.</p>
+          <p>À très bientôt !</p>
+          <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;" />
+          <p style="font-size: 12px; color: #999;">
+            Si vous devez annuler ou modifier ce rendez-vous, merci de nous contacter directement.
           </p>
         </div>
-        ${message ? `<p><strong>Votre message :</strong></p><p style="background: #f9f9f9; padding: 15px; border-left: 4px solid #e8c878;">${message}</p>` : ''}
-        <p>Un lien de visioconférence vous sera envoyé par email 24h avant le rendez-vous.</p>
-        <p>À très bientôt !</p>
-        <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;" />
-        <p style="font-size: 12px; color: #999;">
-          Si vous devez annuler ou modifier ce rendez-vous, merci de nous contacter directement.
-        </p>
-      </div>
-    `,
-  })
+      `,
+    })
+  } catch (emailError) {
+    // Log the error but don't fail the booking
+    console.error('[Booking] Email confirmation failed:', emailError)
+  }
 
   return apiSuccess({
     booking: {
@@ -228,5 +199,60 @@ export async function POST(request: NextRequest) {
       status: booking.status,
     },
     message: 'Rendez-vous confirmé avec succès',
+  })
+}
+
+/**
+ * GET /api/booking?date=YYYY-MM-DD
+ * Récupère les bookings pour une date donnée (défaut: aujourd'hui).
+ * Endpoint authentifié (pour CGP).
+ */
+export async function GET(request: NextRequest) {
+  const supabase = await createSupabaseServerClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return apiError('Non authentifié', 401)
+  }
+
+  const { searchParams } = new URL(request.url)
+  const dateStr = searchParams.get('date')
+
+  // Définir les bornes du jour
+  let dayStart: Date
+  let dayEnd: Date
+
+  if (dateStr) {
+    dayStart = new Date(dateStr + 'T00:00:00.000Z')
+    dayEnd = new Date(dateStr + 'T23:59:59.999Z')
+  } else {
+    // Aujourd'hui par défaut (timezone Europe/Paris)
+    const now = new Date()
+    dayStart = new Date(now)
+    dayStart.setHours(0, 0, 0, 0)
+    dayEnd = new Date(now)
+    dayEnd.setHours(23, 59, 59, 999)
+  }
+
+  const { data: bookings, error } = await supabase
+    .from('bookings')
+    .select('id, contact_name, contact_email, contact_phone, message, scheduled_at, duration_minutes, status, google_event_id')
+    .eq('user_id', user.id)
+    .in('status', ['pending', 'confirmed'])
+    .gte('scheduled_at', dayStart.toISOString())
+    .lte('scheduled_at', dayEnd.toISOString())
+    .order('scheduled_at', { ascending: true })
+
+  if (error) {
+    console.error('[Booking GET] Error:', error)
+    return apiError('Erreur lors de la récupération des bookings', 500)
+  }
+
+  return apiSuccess({
+    bookings: bookings || [],
+    date: dateStr || dayStart.toISOString().split('T')[0],
   })
 }
