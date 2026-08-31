@@ -118,7 +118,7 @@ export default function ContactList({
                   position: 'absolute', top: '8px', right: '8px', width: '24px', height: '24px',
                   borderRadius: '6px', border: 'none', background: 'transparent', color: V.textLo,
                   cursor: 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  opacity: idx === selectedContactIdx || openMenuIdx === idx ? 1 : 0, transition: 'opacity 0.15s',
+                  opacity: idx === selectedContactIdx || openMenuIdx === idx ? 1 : 0.4, transition: 'opacity 0.15s',
                 }}
               >
                 ⋮
