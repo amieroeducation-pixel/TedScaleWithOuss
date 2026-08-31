@@ -721,11 +721,12 @@ function TodayPageContent() {
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                   {(signal?.rdvSemaine ?? []).map(rdv => {
-                    const rdvColor = rdv.type === 'rdv1' ? C.indigo : rdv.type === 'rdv2' ? C.green : C.gold
+                    const rdvColor = rdv.type === 'rdv1' ? C.indigo : rdv.type === 'rdv2' ? C.green : rdv.type === 'booking' ? C.cyan : C.gold
+                    const rdvTarget = rdv.type === 'booking' ? '/settings' : '/pipeline'
                     return (
                       <div
                         key={rdv.id}
-                        onClick={() => router.push('/pipeline')}
+                        onClick={() => router.push(rdvTarget)}
                         style={{
                           display: 'flex',
                           alignItems: 'center',
