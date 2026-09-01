@@ -1,5 +1,7 @@
 'use client'
 
+export const dynamic = 'force-dynamic'
+
 import { useState, useEffect, useRef } from 'react'
 import { useDebouncedCallback } from 'use-debounce'
 import { toZonedTime, fromZonedTime } from 'date-fns-tz'

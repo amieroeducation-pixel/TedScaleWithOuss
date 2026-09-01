@@ -103,10 +103,45 @@ export async function GET(_request: NextRequest) {
     }
   })
 
+  // DATA-08 — Bookings de la semaine (RDV pris via page publique /booking)
+  const { data: bookingsData } = await supabase
+    .from('bookings')
+    .select('id, contact_name, contact_email, contact_phone, scheduled_at, duration_minutes, status, message')
+    .eq('user_id', user.id)
+    .in('status', ['confirmed', 'pending'])
+    .gte('scheduled_at', weekStart)
+    .lte('scheduled_at', weekEnd)
+    .order('scheduled_at', { ascending: true })
+
+  // Convertir les bookings en RdvRow pour les afficher dans la section RDV semaine
+  const bookingRdvs: RdvRow[] = (bookingsData ?? []).map(b => {
+    const scheduledAt = new Date(b.scheduled_at)
+    const dayName = DAY_LABELS[scheduledAt.getDay()]
+    const dateStr = format(scheduledAt, 'dd/MM', { locale: fr })
+    const timeStr = format(scheduledAt, 'HH:mm', { locale: fr })
+    const day_label = `${dayName} ${dateStr} ${timeStr}`
+
+    return {
+      id: b.id,
+      type: 'booking',
+      occurred_at: b.scheduled_at,
+      notes: b.message ?? null,
+      prospect_id: '',
+      prospect_name: b.contact_name,
+      profession: null,
+      day_label,
+    }
+  })
+
+  // Fusionner RDV interactions + bookings, triés par date
+  const allRdvSemaine = [...rdvSemaine, ...bookingRdvs].sort(
+    (a, b) => new Date(a.occurred_at).getTime() - new Date(b.occurred_at).getTime()
+  )
+
   return apiSuccess({
     relances,
-    rdvSemaine,
+    rdvSemaine: allRdvSemaine,
     todayCount: relances.filter(r => r.days_until === 0).length,
-    weekRdvCount: rdvSemaine.length,
+    weekRdvCount: allRdvSemaine.length,
   })
 }

@@ -121,10 +121,10 @@ Le Diagnostique est un **AUDIT du BOILERPLATE existant** (pas du développement)
 
 ### Résultats Actuels
 
-- **294 actions documentées** sur 9 stories killer-saas
-- **283 actions opérationnelles** (96%)
-- **6 actions partielles** (2%)
-- **20 actions manquantes** (8%)
+- **309 actions documentées** sur 9 stories killer-saas
+- **309 actions opérationnelles** (100%)
+- **0 actions partielles** (0%)
+- **0 actions manquantes** (0%)
 
 Voir détails : `docs/DIAGNOSTIQUE-SYNTHESE-GLOBALE.md`
 

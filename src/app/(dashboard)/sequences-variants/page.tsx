@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { toast } from 'sonner'
 import { C } from '@/lib/theme'
 
 type Variant = string
@@ -220,9 +221,15 @@ export default function SequencesVariantsPage() {
                     {/* Bouton pour installer cette variante */}
                     <div style={{ marginTop: 20, paddingTop: 20, borderTop: `1px solid ${C.lineSoft}` }}>
                       <button
-                        onClick={() => {
-                          // TODO: Implémenter la sauvegarde de la variante choisie
-                          alert(`Variante ${String.fromCharCode(65 + selectedVariant)} sélectionnée!\n\nProchaine étape: sauvegarder dans sequence_template_steps.message_template`)
+                        onClick={async () => {
+                          const variantText = currentStep.variants[selectedVariant]
+                          try {
+                            await navigator.clipboard.writeText(variantText)
+                            toast.success(`Variante ${String.fromCharCode(65 + selectedVariant)} copiée — collez-la dans Settings → Séquences`)
+                          } catch {
+                            // Fallback si clipboard non disponible
+                            toast.success(`Variante ${String.fromCharCode(65 + selectedVariant)} sélectionnée — copiez le texte ci-dessus`)
+                          }
                         }}
                         style={{
                           padding: '10px 20px',

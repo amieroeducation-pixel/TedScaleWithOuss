@@ -8,13 +8,13 @@
 
 | Métrique | Valeur |
 |----------|--------|
-| **Actions totales** | 0 (page à créer) |
-| ✅ Opérationnel | 0 |
+| **Actions totales** | 8 |
+| ✅ Opérationnel | 8 |
 | ⚠️ Partiel | 0 |
-| ❌ Non implémenté | 8 |
-| **Taux de fonctionnalité** | **0%** |
+| ❌ Non implémenté | 0 |
+| **Taux de fonctionnalité** | **100%** |
 
-**Statut** : ❌ **PAGE À CRÉER** — Story non démarrée
+**Statut** : ✅ **IMPLÉMENTÉ** — Story complète (commit a64f7f3 + fix/diagnostique-100-percent)
 
 ---
 
