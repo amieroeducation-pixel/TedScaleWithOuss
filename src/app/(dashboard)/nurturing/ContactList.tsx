@@ -112,17 +112,38 @@ export default function ContactList({
               onMouseEnter={(e) => e.currentTarget.style.background = V.surface1}
               onMouseLeave={(e) => { if (idx !== selectedContactIdx) e.currentTarget.style.background = 'transparent' }}
             >
-              <button
-                onClick={(e) => { e.stopPropagation(); onSetOpenMenuIdx(openMenuIdx === idx ? null : idx) }}
-                style={{
-                  position: 'absolute', top: '8px', right: '8px', width: '24px', height: '24px',
-                  borderRadius: '6px', border: 'none', background: 'transparent', color: V.textLo,
-                  cursor: 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  opacity: idx === selectedContactIdx || openMenuIdx === idx ? 1 : 0.4, transition: 'opacity 0.15s',
-                }}
-              >
-                ⋮
-              </button>
+              <div style={{ position: 'absolute', top: '6px', right: '6px', display: 'flex', gap: '2px' }}>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    if (confirm(`Supprimer ${contact.name} ?`)) {
+                      onDeleteContact(contact.id)
+                    }
+                  }}
+                  style={{
+                    width: '22px', height: '22px', borderRadius: '6px', border: 'none',
+                    background: 'transparent', color: V.red, cursor: 'pointer', fontSize: '12px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    opacity: 0.3, transition: 'opacity 0.15s',
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.background = `${V.red}15` }}
+                  onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.3'; e.currentTarget.style.background = 'transparent' }}
+                  title="Supprimer ce contact"
+                >
+                  ✕
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); onSetOpenMenuIdx(openMenuIdx === idx ? null : idx) }}
+                  style={{
+                    width: '22px', height: '22px', borderRadius: '6px', border: 'none',
+                    background: 'transparent', color: V.textLo, cursor: 'pointer', fontSize: '14px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    opacity: idx === selectedContactIdx || openMenuIdx === idx ? 1 : 0.4, transition: 'opacity 0.15s',
+                  }}
+                >
+                  ⋮
+                </button>
+              </div>
 
               {openMenuIdx === idx && (
                 <div
