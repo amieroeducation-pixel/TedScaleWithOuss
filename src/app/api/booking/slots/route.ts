@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { apiSuccess, apiError } from '@/lib/api'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { createSupabaseCronClient } from '@/lib/supabase/cron-client'
 import { getValidGoogleToken, type TokenRow } from '@/lib/google/tokens'
 
 /**
@@ -27,10 +28,11 @@ export async function GET(request: NextRequest) {
     return apiError('Format de date invalide (attendu: YYYY-MM-DD)', 400)
   }
 
-  const supabase = await createSupabaseServerClient()
+  // Endpoint public : utiliser anon client pour query user_settings (RLS public read OK)
+  const supabaseAnon = await createSupabaseServerClient()
 
   // Trouver l'utilisateur par son booking_slug
-  const { data: userSettings, error: userError } = await supabase
+  const { data: userSettings, error: userError } = await supabaseAnon
     .from('user_settings')
     .select('id, google_calendar_refresh_token, google_calendar_access_token, google_calendar_token_expiry')
     .eq('booking_slug', slug)
@@ -42,6 +44,9 @@ export async function GET(request: NextRequest) {
 
   const userId = userSettings.id
 
+  // Service role client pour query bookings (bypass RLS)
+  const supabase = createSupabaseCronClient()
+
   // Vérifier si Google Calendar est connecté
   if (!userSettings.google_calendar_refresh_token) {
     return apiSuccess({
@@ -51,7 +56,7 @@ export async function GET(request: NextRequest) {
     })
   }
 
-  // Obtenir un token valide
+  // Obtenir un token valide (utiliser service role pour update tokens si besoin)
   const accessToken = await getValidGoogleToken(supabase, userId, userSettings as TokenRow)
   if (!accessToken) {
     return apiError('Token Google Calendar invalide', 401)

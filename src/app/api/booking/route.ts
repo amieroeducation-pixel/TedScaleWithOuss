@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { apiSuccess, apiError } from '@/lib/api'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { createSupabaseCronClient } from '@/lib/supabase/cron-client'
 import { sendBrevoEmail } from '@/lib/sequences/brevo'
 import { getValidGoogleToken, type TokenRow } from '@/lib/google/tokens'
 import { isValidPhoneFr, normalizePhoneFr } from '@/lib/phone'
@@ -47,10 +48,11 @@ export async function POST(request: NextRequest) {
     phone = normalizePhoneFr(parsed.data.contact_phone) || undefined
   }
 
-  const supabase = await createSupabaseServerClient()
+  // Endpoint public : utiliser anon client pour query user_settings (RLS public read autorisé)
+  const supabaseAnon = await createSupabaseServerClient()
 
   // Trouver l'utilisateur par son booking_slug
-  const { data: userSettings, error: userError } = await supabase
+  const { data: userSettings, error: userError } = await supabaseAnon
     .from('user_settings')
     .select('id, google_calendar_refresh_token, google_calendar_access_token, google_calendar_token_expiry')
     .eq('booking_slug', slug)
@@ -61,6 +63,9 @@ export async function POST(request: NextRequest) {
   }
 
   const userId = userSettings.id
+
+  // Service role client pour INSERT booking (bypass RLS)
+  const supabase = createSupabaseCronClient()
 
   // Vérifier que le créneau est dans le futur
   const scheduledDate = new Date(scheduled_at)
