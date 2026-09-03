@@ -38,6 +38,10 @@ const METIERS_CONFIG: Record<string, { label: string; naf: string }> = {
   podologue:            { label: 'Podologue',                 naf: '86.90B' },
   ergotherapeute:       { label: 'Ergothérapeute',            naf: '86.90B' },
   orthoptiste:          { label: 'Orthoptiste',               naf: '86.90B' },
+  pedicure:             { label: 'Pédicure-podologue',        naf: '86.90B' },
+  psychomotricien:      { label: 'Psychomotricien',           naf: '86.90B' },
+  audioprothesiste:     { label: 'Audioprothésiste',          naf: '47.74Z' },
+  opticien:             { label: 'Opticien-lunetier',         naf: '47.78A' },
   // Pratiques alternatives
   kinesiologue:         { label: 'Kinésiologue',              naf: '86.90D' },
   naturopathe:          { label: 'Naturopathe',               naf: '86.90D' },
@@ -81,9 +85,9 @@ type GouvernResult = {
  * Infère le métier réel à partir du libellé d'activité principale de l'API.
  * Utile quand plusieurs métiers partagent le même code NAF (ex: 86.22A).
  */
-function inferMetierFromLibelle(libelle: string | undefined, requestedLabel: string): string {
-  if (!libelle) return requestedLabel
-  const l = libelle.toLowerCase().normalize('NFD').replace(/\p{Mn}/gu, '')
+function inferMetierFromLibelle(libelle: string | undefined, requestedLabel: string, entreprise?: string): string {
+  if (!libelle && !entreprise) return requestedLabel
+  const l = [libelle ?? '', entreprise ?? ''].join(' ').toLowerCase().normalize('NFD').replace(/\p{Mn}/gu, '')
 
   // Mapping mots-clés → métier réel
   const KEYWORD_MAP: [string[], string][] = [
@@ -127,6 +131,19 @@ function inferMetierFromLibelle(libelle: string | undefined, requestedLabel: str
     [['dietetici', 'nutrition'], 'Diététicien'],
     [['ergotherap'], 'Ergothérapeute'],
     [['orthoptist'], 'Orthoptiste'],
+    [['psychomotric'], 'Psychomotricien'],
+    [['audiopro', 'audioprothes', 'prothese auditive', 'appareil auditif'], 'Audioprothésiste'],
+    [['opticien', 'lunetier', 'optique', 'lunettes'], 'Opticien-lunetier'],
+    [['pedicur'], 'Pédicure-podologue'],
+    [['kinesiol'], 'Kinésiologue'],
+    [['homeopath'], 'Homéopathe'],
+    [['psychotherap'], 'Psychothérapeute'],
+    [['huissier', 'commissaire de justice'], 'Huissier de justice'],
+    [['commissaire aux comptes'], 'Commissaire aux comptes'],
+    [['geometre', 'topograph'], 'Géomètre-expert'],
+    [['agent immobil', 'agence immobil'], 'Agent immobilier'],
+    [['coach sport', 'preparation physique'], 'Coach sportif'],
+    [['conseil', 'consulting'], 'Consultant'],
   ]
 
   for (const [keywords, metier] of KEYWORD_MAP) {
@@ -190,6 +207,8 @@ const PROFESSION_SCORES: Record<string, number> = {
   'Psychothérapeute': 65, 'Acupuncteur': 58, 'Chiropracteur': 60,
   'Diététicien': 55, 'Kinésiologue': 55, 'Homéopathe': 60,
   'Géomètre-expert': 70, 'Orthodontiste': 88,
+  'Pédicure-podologue': 65, 'Psychomotricien': 65,
+  'Audioprothésiste': 68, 'Opticien-lunetier': 62,
 }
 
 const ZONE_BONUS: [string[], number][] = [
@@ -220,29 +239,42 @@ async function canalDataGouv(
   departement: string,
   pappersKey: string | undefined,
   googleKey: string | undefined,
+  limite: number = 25,
+  pageOffset: number = 0,
 ): Promise<Prospect[]> {
-  const params = new URLSearchParams({
-    activite_principale: naf,
-    etat_administratif: 'A',
-    tranche_effectif_salarie: 'NN',
-    per_page: '25',
-    page: '1',
-  })
-  if (ville) params.set('q', ville)
-  if (departement) params.set('departement', departement)
+  const perPage = 25
+  const totalPages = Math.ceil(Math.max(limite, 1) / perPage)
 
   let rawResults: GouvernResult[] = []
-  try {
-    const res = await fetch(`https://recherche-entreprises.api.gouv.fr/search?${params}`, {
-      headers: { 'User-Agent': 'TedScaleApp/1.0' },
-      cache: 'no-store',
-      signal: AbortSignal.timeout(8000),
+  const fetchPage = async (page: number): Promise<GouvernResult[]> => {
+    const params = new URLSearchParams({
+      activite_principale: naf,
+      etat_administratif: 'A',
+      tranche_effectif_salarie: 'NN',
+      per_page: String(perPage),
+      page: String(page),
     })
-    if (res.ok) {
-      const data = await res.json() as { results?: GouvernResult[] }
-      rawResults = data.results ?? []
-    }
-  } catch { return [] }
+    if (ville) params.set('q', ville)
+    if (departement) params.set('departement', departement)
+
+    try {
+      const res = await fetch(`https://recherche-entreprises.api.gouv.fr/search?${params}`, {
+        headers: { 'User-Agent': 'TedScaleApp/1.0' },
+        cache: 'no-store',
+        signal: AbortSignal.timeout(8000),
+      })
+      if (res.ok) {
+        const data = await res.json() as { results?: GouvernResult[] }
+        return data.results ?? []
+      }
+    } catch { /* continue */ }
+    return []
+  }
+
+  const startPage = 1 + pageOffset
+  const pagePromises = Array.from({ length: totalPages }, (_, i) => fetchPage(startPage + i))
+  const pageResults = await Promise.all(pagePromises)
+  rawResults = pageResults.flat()
 
   // Post-filtrage géographique : data.gouv cherche dans le nom de société aussi,
   // donc "Cabinet Paris" domicilié en Bourgogne peut remonter sur q=Paris.
@@ -312,7 +344,7 @@ async function canalDataGouv(
       if (!telephone) return null
 
       // Inférer le vrai métier à partir du libellé d'activité (évite les faux positifs NAF partagés)
-      const realMetier = inferMetierFromLibelle(e.libelle_activite_principale, metierLabel)
+      const realMetier = inferMetierFromLibelle(e.libelle_activite_principale, metierLabel, entreprise)
       const initials = nomDisplay.split(' ').map((w: string) => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase() || '??'
       const pjQuery = encodeURIComponent(realMetier)
       const pjVille = encodeURIComponent(villeDisplay)
@@ -383,7 +415,9 @@ async function canalGooglePlaces(
             )
             if (!detailRes.ok) return null
             const detail = await detailRes.json() as GoogleDetailResult
-            const tel = detail.result?.formatted_phone_number
+            const rawTel = detail.result?.formatted_phone_number
+            if (!rawTel) return null
+            const tel = normalizePhoneFR(rawTel)
             if (!tel) return null
 
             const nom = detail.result?.name ?? place.name ?? 'Professionnel'
@@ -431,10 +465,10 @@ export async function POST(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return apiUnauthorized()
 
-  let body: { metier?: string; ville?: string; departement?: string; limite?: number; mobileOnly?: boolean }
+  let body: { metier?: string; ville?: string; departement?: string; limite?: number; mobileOnly?: boolean; page_offset?: number }
   try { body = await request.json() } catch { return apiError('Corps invalide', 400) }
 
-  const { metier = '', ville = '', departement = '', limite = 10, mobileOnly = false } = body
+  const { metier = '', ville = '', departement = '', limite = 10, mobileOnly = false, page_offset = 0 } = body
   const config = METIERS_CONFIG[metier]
   if (!config) return apiError(`Métier non reconnu: ${metier}`, 400)
 
@@ -443,15 +477,17 @@ export async function POST(request: NextRequest) {
 
   // ── Les 3 canaux tournent en parallèle ──
   const [fromDataGouv, fromGoogle] = await Promise.all([
-    canalDataGouv(config.label, config.naf, ville, departement, pappersKey, googleKey),
+    canalDataGouv(config.label, config.naf, ville, departement, pappersKey, googleKey, limite, page_offset),
     googleKey ? canalGooglePlaces(config.label, ville || departement, googleKey) : Promise.resolve([]),
   ])
 
-  // ── Normalisation des téléphones ──
-  const normalized = [...fromDataGouv, ...fromGoogle].map(p => {
-    const norm = normalizePhoneFR(p.telephone)
-    return norm ? { ...p, telephone: norm } : p
-  })
+  // ── Normalisation des téléphones — exclure les invalides ──
+  const normalized = [...fromDataGouv, ...fromGoogle]
+    .map(p => {
+      const norm = normalizePhoneFR(p.telephone)
+      return norm ? { ...p, telephone: norm } : null
+    })
+    .filter((p): p is Prospect => p !== null)
 
   // ── Filtre mobile uniquement si demandé ──
   const filtered = mobileOnly

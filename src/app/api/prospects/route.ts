@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
       .from('prospects')
       .select('id, full_name, phone, pipeline_stage')
       .eq('user_id', user.id)
-      .eq('phone', prospectData.phone)
+      .eq('phone_normalized', phoneNormalized)
       .maybeSingle()
 
     if (existing) {
