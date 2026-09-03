@@ -125,6 +125,11 @@ const PatchSettingsSchema = z.object({
   mobile_bottom_menu: z.boolean().optional(),
   // Menu sections visibility (s01-menu-dynamique)
   menu_sections_visible: z.record(z.string(), z.boolean()).optional(),
+  // Rappels SMS (s09)
+  reminder_enabled: z.boolean().optional(),
+  reminder_delay_24h: z.number().int().min(1).max(72).optional(),
+  reminder_delay_1h: z.number().min(0.5).max(12).optional(),
+  cabinet_location: z.string().max(200).optional(),
   // Booking (s08-booking-page)
   booking_slug: z.string().optional(),
 })
