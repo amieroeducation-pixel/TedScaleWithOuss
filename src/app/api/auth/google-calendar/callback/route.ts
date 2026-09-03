@@ -5,11 +5,23 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const code = searchParams.get('code')
   const error = searchParams.get('error')
+  const state = searchParams.get('state')
   const origin = new URL(request.url).origin
   const settingsUrl = `${origin}/settings?tab=integrations`
 
-  if (error || !code) {
+  if (error || !code || !state) {
     return NextResponse.redirect(`${settingsUrl}&calendar_error=1`)
+  }
+
+  // CSRF protection: verify state matches current user
+  const supabase = await createSupabaseServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.redirect(`${origin}/login`)
+
+  const expectedState = Buffer.from(user.id).toString('base64url')
+  if (state !== expectedState) {
+    // State mismatch = CSRF attack attempt
+    return NextResponse.redirect(`${settingsUrl}&calendar_error=csrf`)
   }
 
   const redirectUri = `${origin}/api/auth/google-calendar/callback`
@@ -35,10 +47,6 @@ export async function GET(request: NextRequest) {
     refresh_token?: string
     expires_in: number
   }
-
-  const supabase = await createSupabaseServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.redirect(`${origin}/login`)
 
   await supabase.from('user_settings').upsert({
     id: user.id,

@@ -8,3 +8,4 @@ ALTER TABLE daily_kpis ADD COLUMN IF NOT EXISTS blocks integer NOT NULL DEFAULT 
 ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS google_calendar_access_token text;
 ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS google_calendar_refresh_token text;
 ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS google_calendar_token_expiry bigint;
+ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS google_calendar_connected_at timestamptz;

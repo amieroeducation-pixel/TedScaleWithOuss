@@ -71,17 +71,32 @@ export async function POST(request: NextRequest) {
   // Vérifier la disponibilité du créneau
   const slotEnd = new Date(scheduledDate.getTime() + duration_minutes * 60 * 1000)
 
-  const { data: conflictingBookings } = await supabase
+  // Récupérer tous les bookings actifs pour vérifier les chevauchements
+  // On ne peut pas calculer (scheduled_at + duration_minutes) directement dans PostgREST,
+  // donc on récupère tous les bookings dans une large fenêtre et on vérifie côté serveur
+  const { data: existingBookings } = await supabase
     .from('bookings')
-    .select('id')
+    .select('id, scheduled_at, duration_minutes')
     .eq('user_id', userId)
     .in('status', ['pending', 'confirmed'])
-    .or(
-      `and(scheduled_at.lte.${scheduled_at},scheduled_at.gte.${new Date(scheduledDate.getTime() - duration_minutes * 60 * 1000).toISOString()})` +
-      `,and(scheduled_at.gte.${scheduled_at},scheduled_at.lte.${slotEnd.toISOString()})`
-    )
+    // Large fenêtre: bookings qui commencent avant la fin de notre nouveau slot
+    .lte('scheduled_at', slotEnd.toISOString())
+    // Et qui ne sont pas trop anciens (on suppose max 8h de durée)
+    .gte('scheduled_at', new Date(scheduledDate.getTime() - 8 * 60 * 60 * 1000).toISOString())
 
-  if (conflictingBookings && conflictingBookings.length > 0) {
+  // Vérifier les chevauchements côté serveur en calculant la fin de chaque booking existant
+  const conflictingBookings = existingBookings?.filter(b => {
+    const existingStart = new Date(b.scheduled_at).getTime()
+    const existingEnd = existingStart + b.duration_minutes * 60 * 1000
+    const newStart = scheduledDate.getTime()
+    const newEnd = slotEnd.getTime()
+
+    // Deux créneaux se chevauchent si:
+    // Le nouveau commence avant la fin de l'existant ET le nouveau se termine après le début de l'existant
+    return newStart < existingEnd && newEnd > existingStart
+  }) || []
+
+  if (conflictingBookings.length > 0) {
     return apiError('Ce créneau vient d\'être réservé, veuillez en choisir un autre', 409)
   }
 

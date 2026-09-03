@@ -76,11 +76,7 @@ export default function NurturingPage() {
 
   useEffect(() => {
     saveLastSection('/nurturing')
-    loadContacts().then(count => {
-      if (count === 0) {
-        fetch('/api/nurturing/seed', { method: 'POST' }).then(() => loadContacts())
-      }
-    })
+    loadContacts()
     loadMessages()
     loadSequenceTemplates()
     loadKpis()
