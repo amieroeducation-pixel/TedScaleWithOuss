@@ -14,6 +14,7 @@ export function RappelsSmsTab({ settings, save, saving }: TabProps) {
   const [enabled, setEnabled] = useState(settings?.reminder_enabled ?? true)
   const [delay24h, setDelay24h] = useState(settings?.reminder_delay_24h ?? 24)
   const [delay1h, setDelay1h] = useState(settings?.reminder_delay_1h ?? 1)
+  const [cabinetLocation, setCabinetLocation] = useState(settings?.cabinet_location ?? 'Mon cabinet')
   const [template24h, setTemplate24h] = useState('')
   const [template1h, setTemplate1h] = useState('')
   const [loadingTemplates, setLoadingTemplates] = useState(true)
@@ -48,7 +49,8 @@ export function RappelsSmsTab({ settings, save, saving }: TabProps) {
     await save({
       reminder_enabled: enabled,
       reminder_delay_24h: delay24h,
-      reminder_delay_1h: delay1h
+      reminder_delay_1h: delay1h,
+      cabinet_location: cabinetLocation
     })
     toast.success('Paramètres sauvegardés')
   }
@@ -165,13 +167,36 @@ export function RappelsSmsTab({ settings, save, saving }: TabProps) {
           </div>
         </SetRow>
 
+        <SetRow>
+          <SetLabel
+            label="Lieu du cabinet"
+            desc="Utilisé dans la variable {{lieu}} des templates SMS"
+          />
+          <input
+            type="text"
+            value={cabinetLocation}
+            onChange={(e) => setCabinetLocation(e.target.value)}
+            style={{
+              padding: '6px 10px',
+              background: C.surface2,
+              border: `1px solid ${C.line}`,
+              borderRadius: 6,
+              color: C.textHi,
+              fontSize: 11,
+              fontFamily: 'JetBrains Mono,monospace',
+              width: 260,
+            }}
+            placeholder="Ex: 12 rue de la Paix, Paris"
+          />
+        </SetRow>
+
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
           <SetBtn
             onClick={handleSaveSettings}
             color={C.gold}
             bg={C.surface2}
           >
-            {saving ? 'Sauvegarde...' : '💾 Sauvegarder délais'}
+            {saving ? 'Sauvegarde...' : '💾 Sauvegarder paramètres'}
           </SetBtn>
         </div>
       </SectionPanel>

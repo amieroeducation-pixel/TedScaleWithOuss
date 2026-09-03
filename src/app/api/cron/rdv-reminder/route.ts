@@ -35,6 +35,7 @@ interface UserSettings {
   reminder_delay_24h?: number
   reminder_delay_1h?: number
   reminder_enabled?: boolean
+  cabinet_location?: string
 }
 
 export async function GET(req: NextRequest) {
@@ -83,7 +84,7 @@ export async function GET(req: NextRequest) {
     // Récupérer les settings pour chaque user (delays personnalisés)
     const { data: settings } = await supabase
       .from('user_settings')
-      .select('id, reminder_delay_24h, reminder_delay_1h, reminder_enabled')
+      .select('id, reminder_delay_24h, reminder_delay_1h, reminder_enabled, cabinet_location')
       .in('id', userIds)
 
     // Organiser templates et settings par user_id
@@ -121,7 +122,8 @@ export async function GET(req: NextRequest) {
         settingsByUser[s.id] = {
           reminder_delay_24h: s.reminder_delay_24h ?? 24,
           reminder_delay_1h: s.reminder_delay_1h ?? 1,
-          reminder_enabled: s.reminder_enabled ?? true
+          reminder_enabled: s.reminder_enabled ?? true,
+          cabinet_location: s.cabinet_location ?? 'Mon cabinet'
         }
       })
     }
@@ -192,7 +194,7 @@ export async function GET(req: NextRequest) {
             nom: booking.contact_name,
             date: format(scheduledAt, 'eeee d MMMM yyyy', { locale: fr }),
             heure: format(scheduledAt, 'HH:mm', { locale: fr }),
-            lieu: 'Mon cabinet' // TODO: rendre configurable
+            lieu: settingsByUser[booking.user_id]?.cabinet_location ?? 'Mon cabinet'
           }
 
           // Compiler le template

@@ -53,6 +53,7 @@ export type UserSettings = {
   reminder_enabled?: boolean
   reminder_delay_24h?: number
   reminder_delay_1h?: number
+  cabinet_location?: string
   // Menu sections visibility
   menu_sections_visible?: Record<string, boolean>
   // Booking page
