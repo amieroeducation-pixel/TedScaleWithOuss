@@ -151,14 +151,26 @@ function AnalyticsPageContent() {
           {/* Section 1 : KPI Cards */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 20 }}>
             {/* Total prospects */}
-            <div style={{
+            <div
+              onClick={() => router.push('/crm')}
+              style={{
               background: C.surface1,
               border: `1px solid ${C.line}`,
               borderRadius: 10,
               padding: '14px 16px',
-            }}>
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+            }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = C.indigo
+                e.currentTarget.style.transform = 'translateY(-2px)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = C.line
+                e.currentTarget.style.transform = 'translateY(0)'
+              }}>
               <div style={{ fontSize: 10, color: C.textLo, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 1, fontFamily: 'JetBrains Mono,monospace' }}>
-                Total prospects
+                Total prospects →
               </div>
               <div style={{ fontSize: 26, fontWeight: 700, color: C.textHi, fontFamily: 'Oswald,sans-serif' }}>
                 {closing.totalProspects}
@@ -166,14 +178,26 @@ function AnalyticsPageContent() {
             </div>
 
             {/* Convertis */}
-            <div style={{
+            <div
+              onClick={() => router.push('/clients')}
+              style={{
               background: C.surface1,
               border: `1px solid ${C.line}`,
               borderRadius: 10,
               padding: '14px 16px',
-            }}>
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+            }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = C.green
+                e.currentTarget.style.transform = 'translateY(-2px)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = C.line
+                e.currentTarget.style.transform = 'translateY(0)'
+              }}>
               <div style={{ fontSize: 10, color: C.textLo, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 1, fontFamily: 'JetBrains Mono,monospace' }}>
-                Convertis
+                Convertis →
               </div>
               <div style={{ fontSize: 26, fontWeight: 700, color: C.green, fontFamily: 'Oswald,sans-serif' }}>
                 {closing.convertedTotal}
@@ -181,14 +205,26 @@ function AnalyticsPageContent() {
             </div>
 
             {/* Perdus */}
-            <div style={{
+            <div
+              onClick={() => router.push('/crm?stage=perdu')}
+              style={{
               background: C.surface1,
               border: `1px solid ${C.line}`,
               borderRadius: 10,
               padding: '14px 16px',
-            }}>
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+            }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = C.warn
+                e.currentTarget.style.transform = 'translateY(-2px)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = C.line
+                e.currentTarget.style.transform = 'translateY(0)'
+              }}>
               <div style={{ fontSize: 10, color: C.textLo, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 1, fontFamily: 'JetBrains Mono,monospace' }}>
-                Perdus
+                Perdus →
               </div>
               <div style={{ fontSize: 26, fontWeight: 700, color: C.warn, fontFamily: 'Oswald,sans-serif' }}>
                 {closing.lostTotal}

@@ -203,13 +203,27 @@ export default function ScoringPage() {
                     <span style={{ fontSize: 9, color: C.textVlo, width: 14, textAlign: 'right', fontFamily: 'JetBrains Mono,monospace' }}>{i + 1}</span>
                     <div
                       style={{ flex: 1, cursor: 'pointer' }}
-                      onClick={() => router.push('/crm')}
+                      onClick={() => router.push(`/crm?prospect=${p.id}`)}
                     >
                       <div style={{ fontSize: 10, color: C.textHi, fontWeight: 600 }}>
                         {p.full_name} <span style={{ color: C.cyan, fontSize: 8 }}>→</span>
                       </div>
                       {(p.profession || p.city) && (
-                        <div style={{ fontSize: 8, color: C.textLo }}>{[p.profession, p.city].filter(Boolean).join(' — ')}</div>
+                        <div style={{ fontSize: 8, color: C.textLo }}>
+                          <span
+                            onClick={(e) => { e.stopPropagation(); router.push('/simulator') }}
+                            style={{ cursor: 'pointer' }}
+                            onMouseEnter={(e) => { e.currentTarget.style.color = C.gold }}
+                            onMouseLeave={(e) => { e.currentTarget.style.color = C.textLo }}
+                          >{p.profession}</span>
+                          {p.profession && p.city && ' — '}
+                          <span
+                            onClick={(e) => { e.stopPropagation(); router.push(`/map?ville=${encodeURIComponent(p.city ?? '')}`) }}
+                            style={{ cursor: 'pointer' }}
+                            onMouseEnter={(e) => { e.currentTarget.style.color = C.cyan }}
+                            onMouseLeave={(e) => { e.currentTarget.style.color = C.textLo }}
+                          >{p.city}</span>
+                        </div>
                       )}
                     </div>
                     <div style={{ fontSize: 8, color: C.textLo, fontFamily: 'JetBrains Mono,monospace' }}>
