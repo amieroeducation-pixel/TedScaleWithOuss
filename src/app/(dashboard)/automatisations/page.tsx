@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { C } from '@/lib/theme'
+import { LinkChip } from '@/lib/cross-links'
 
 interface Automation {
   id: string
@@ -274,7 +275,7 @@ export default function AutomatisationsPage() {
               'rdv-reminder': 'Rappel RDV J-1',
               'revenue-alert': 'Alerte CA',
             }
-            const targetPage = log.job_name === 'weekly-report' ? '/global' : log.job_name === 'client-health' ? '/clients' : log.job_name === 'rdv-reminder' ? '/today' : log.job_name === 'revenue-alert' ? '/revenue' : null
+            const targetPage = log.job_name === 'weekly-report' ? '/revenue' : log.job_name === 'client-health' ? '/clients?view=alerts' : log.job_name === 'rdv-reminder' ? '/settings?tab=rappels' : log.job_name === 'revenue-alert' ? '/revenue' : null
             const actionSummary = buildActionSummary(log)
             const ts = new Date(log.executed_at).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
             const isSuccess = log.status === 'success'
