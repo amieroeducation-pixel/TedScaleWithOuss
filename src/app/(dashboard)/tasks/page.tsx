@@ -124,7 +124,7 @@ function TaskCard({ task, onCheck, onOpen }: { task: Task; onCheck?: (checked: b
   // Détection de liens contextuels
   function handleBadgeClick(e: React.MouseEvent) {
     e.stopPropagation()
-    if (task.badge === 'premium') router.push('/clients')
+    if (task.badge === 'premium') router.push('/clients?tier=premium')
     else if (task.badge === 'prospect') router.push('/crm')
     else if (task.badge === 'client') router.push('/clients')
   }

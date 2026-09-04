@@ -194,8 +194,16 @@ export default function CommercePage() {
                 key={v.id}
                 onClick={() => {
                   toggleVideo(v.id)
-                  if (v.title.toLowerCase().includes('tns')) {
+                  // Context links based on video topic
+                  const lower = v.title.toLowerCase()
+                  if (lower.includes('tns')) {
                     router.push('/prospection/tns')
+                  } else if (lower.includes('linkedin')) {
+                    router.push('/crm')
+                  } else if (lower.includes('closing') || lower.includes('urgence')) {
+                    router.push('/pipeline')
+                  } else if (lower.includes('objection') || lower.includes('déjà un conseiller')) {
+                    router.push('/sequences')
                   }
                 }}
                 style={{

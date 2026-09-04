@@ -622,7 +622,7 @@ export default function TnsPage() {
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 11, color: C.textHi, fontWeight: 500 }}>{r.nom}</div>
                   <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.textLo }}>
-                    {r.metier} · <span onClick={(e) => { e.stopPropagation(); router.push(`/map?ville=${encodeURIComponent(r.ville)}`) }} style={{ color: C.indigo, textDecoration: 'underline', cursor: 'pointer' }}>{r.ville}</span>{r.codePostal ? ` (${r.codePostal})` : ''}
+                    <span onClick={(e) => { e.stopPropagation(); router.push('/simulator') }} style={{ color: C.gold, cursor: 'pointer' }}>{r.metier}</span> · <span onClick={(e) => { e.stopPropagation(); router.push(`/map?ville=${encodeURIComponent(r.ville)}`) }} style={{ color: C.indigo, textDecoration: 'underline', cursor: 'pointer' }}>{r.ville}</span>{r.codePostal ? ` (${r.codePostal})` : ''}
                   </div>
                   {r.adresse && <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 7.5, color: C.textLo }}>{r.adresse}</div>}
                 </div>

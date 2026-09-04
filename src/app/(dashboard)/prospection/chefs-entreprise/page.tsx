@@ -501,7 +501,7 @@ export default function ChefsEntreprisePage() {
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 11, color: C.textHi, fontWeight: 600, marginBottom: 1 }}>{lead.nom}</div>
                         <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.textLo }}>
-                          {lead.forme} · <span onClick={(e) => { e.stopPropagation(); router.push(`/map?ville=${encodeURIComponent(lead.ville)}`) }} style={{ color: C.indigo, textDecoration: 'underline', cursor: 'pointer' }}>{lead.ville}</span>{lead.codePostal ? ` (${lead.codePostal})` : ''}{lead.dateCreation ? ` · Créé ${new Date(lead.dateCreation).toLocaleDateString('fr-FR')}` : ''}
+                          <span onClick={(e) => { e.stopPropagation(); router.push('/commerce') }} style={{ color: C.gold, cursor: 'pointer' }}>{lead.forme}</span> · <span onClick={(e) => { e.stopPropagation(); router.push(`/map?ville=${encodeURIComponent(lead.ville)}`) }} style={{ color: C.indigo, textDecoration: 'underline', cursor: 'pointer' }}>{lead.ville}</span>{lead.codePostal ? ` (${lead.codePostal})` : ''}{lead.dateCreation ? ` · Créé ${new Date(lead.dateCreation).toLocaleDateString('fr-FR')}` : ''}
                         </div>
                       </div>
                       <span style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, padding: '2px 7px', borderRadius: 6, background: lead.scoreColor + '20', color: lead.scoreColor, border: `1px solid ${lead.scoreColor}40`, whiteSpace: 'nowrap' as const }}>

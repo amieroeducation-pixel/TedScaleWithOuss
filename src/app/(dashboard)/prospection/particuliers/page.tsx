@@ -400,7 +400,7 @@ export default function ParticuliersPage() {
             <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.textLo, wordBreak: 'break-all' }}>{p.email}</div>
             <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.textMid }}>{p.ville}</div>
             <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.textLo }}>{p.age} ans</div>
-            <div onClick={() => router.push('/scoring')} style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.green, cursor: 'pointer', textDecoration: 'underline' }}>{p.patrimoine}</div>
+            <div onClick={() => router.push('/simulator')} style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, color: C.green, cursor: 'pointer', textDecoration: 'underline' }}>{p.patrimoine}</div>
             <select
               value={p.status}
               onChange={e => changeStatus(p.id, e.target.value as Status)}
