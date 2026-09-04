@@ -290,8 +290,16 @@ export default function RevenuePage() {
             {stats.contractCount}
           </div>
           <div
-            onClick={() => router.push('/clients')}
+            onClick={(e) => { e.stopPropagation(); router.push('/clients') }}
             style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4, cursor: 'pointer' }}
+            onMouseEnter={(e) => {
+              const span = e.currentTarget.querySelector('span')
+              if (span) span.style.color = C.cyan
+            }}
+            onMouseLeave={(e) => {
+              const span = e.currentTarget.querySelector('span')
+              if (span) span.style.color = C.textLo
+            }}
           >
             <span style={{ fontSize: 11, color: C.textLo, textDecoration: 'underline' }}>
               {stats.clientCount} clients →

@@ -195,7 +195,14 @@ function CardContent({ prospect, isDragging }: { prospect: Prospect; isDragging?
         >{prospect.leadScore}</div>
       </div>
       <div style={{ fontSize: 9, color: C.textLo, marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-        {prospect.profession} —{' '}
+        <span
+          onClick={(e) => { e.stopPropagation(); router.push('/simulator') }}
+          style={{ color: C.gold, cursor: 'pointer' }}
+          onMouseEnter={(e) => { e.currentTarget.style.textDecoration = 'underline' }}
+          onMouseLeave={(e) => { e.currentTarget.style.textDecoration = 'none' }}
+        >
+          {prospect.profession}
+        </span> —{' '}
         <span
           onClick={(e) => { e.stopPropagation(); router.push(`/map?ville=${encodeURIComponent(prospect.ville)}`) }}
           style={{ color: C.cyan, cursor: 'pointer', textDecoration: 'underline' }}

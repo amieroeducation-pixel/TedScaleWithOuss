@@ -673,7 +673,14 @@ function TodayPageContent() {
                           >
                             {r.full_name} →
                           </div>
-                          {r.profession && <div style={{ fontSize: 9, color: C.textLo }}>{r.profession}</div>}
+                          {r.profession && (
+                            <div
+                              onClick={(e) => { e.stopPropagation(); router.push('/simulator') }}
+                              style={{ fontSize: 9, color: C.textLo, cursor: 'pointer' }}
+                              onMouseEnter={(e) => { e.currentTarget.style.color = C.gold }}
+                              onMouseLeave={(e) => { e.currentTarget.style.color = C.textLo }}
+                            >{r.profession} →</div>
+                          )}
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
                           {r.pipeline_stage && (

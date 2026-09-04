@@ -367,9 +367,19 @@ export default function PipelinePage() {
                       <div style={{ fontSize: 8, color: C.textLo, fontFamily: 'JetBrains Mono,monospace' }}>{timeLabel}</div>
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 10, color: C.textHi, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.title}</div>
+                      <div
+                        onClick={() => router.push('/today')}
+                        style={{ fontSize: 10, color: C.textHi, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'pointer' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.color = C.gold }}
+                        onMouseLeave={(e) => { e.currentTarget.style.color = C.textHi }}
+                      >{ev.title} →</div>
                       {ev.location && (
-                        <div style={{ fontSize: 8, color: C.textLo, marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>📍 {ev.location}</div>
+                        <div
+                          onClick={() => router.push(`/map?ville=${encodeURIComponent(ev.location ?? '')}`)}
+                          style={{ fontSize: 8, color: C.textLo, marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'pointer' }}
+                          onMouseEnter={(e) => { e.currentTarget.style.color = C.cyan }}
+                          onMouseLeave={(e) => { e.currentTarget.style.color = C.textLo }}
+                        >📍 {ev.location} →</div>
                       )}
                     </div>
                   </div>

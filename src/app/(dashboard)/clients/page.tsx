@@ -333,20 +333,41 @@ function ClientsPageContent() {
                 }}
               >
                 <div>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: C.text }}>{c.full_name}</div>
+                  <div
+                    onClick={() => router.push(`/crm?prospect=${c.id}`)}
+                    style={{ fontSize: 12, fontWeight: 600, color: C.text, cursor: 'pointer' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.color = C.gold }}
+                    onMouseLeave={(e) => { e.currentTarget.style.color = C.text }}
+                  >{c.full_name} →</div>
                   {c.tags.length > 0 && (
                     <div style={{ display: 'flex', gap: 4, marginTop: 3, flexWrap: 'wrap' as const }}>
                       {c.tags.slice(0, 2).map(tag => (
-                        <span key={tag} style={{
-                          fontSize: 9, padding: '1px 5px', borderRadius: 3,
-                          background: `${C.indigo}22`, color: C.indigo,
-                        }}>{tag}</span>
+                        <span
+                          key={tag}
+                          onClick={() => router.push('/sequences')}
+                          style={{
+                            fontSize: 9, padding: '1px 5px', borderRadius: 3,
+                            background: `${C.indigo}22`, color: C.indigo, cursor: 'pointer',
+                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.7' }}
+                          onMouseLeave={(e) => { e.currentTarget.style.opacity = '1' }}
+                        >{tag}</span>
                       ))}
                     </div>
                   )}
                 </div>
-                <div style={{ fontSize: 11, color: C.textMid }}>{c.profession ?? '—'}</div>
-                <div style={{ fontSize: 11, color: C.textLo }}>{c.city ?? '—'}</div>
+                <div
+                  onClick={() => router.push('/simulator')}
+                  style={{ fontSize: 11, color: C.textMid, cursor: 'pointer' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.color = C.gold }}
+                  onMouseLeave={(e) => { e.currentTarget.style.color = C.textMid }}
+                >{c.profession ?? '—'}</div>
+                <div
+                  onClick={() => router.push(`/map?ville=${encodeURIComponent(c.city ?? '')}`)}
+                  style={{ fontSize: 11, color: C.textLo, cursor: c.city ? 'pointer' : 'default' }}
+                  onMouseEnter={(e) => { if (c.city) e.currentTarget.style.color = C.cyan }}
+                  onMouseLeave={(e) => { e.currentTarget.style.color = C.textLo }}
+                >{c.city ?? '—'}</div>
                 <div onClick={() => router.push('/revenue')} style={{ fontSize: 12, fontWeight: 700, color: C.gold, cursor: 'pointer' }}>{formatAUM(c.total_aum)}{c.total_aum > 0 ? ' →' : ''}</div>
                 <div style={{ fontSize: 11, color }}>
                   {formatDays(c.days_without_contact)}
