@@ -242,15 +242,6 @@ function TodayPageContent() {
     }
   }, [])
 
-  // Listener pour incrémenter contacts depuis CallingSessionPanel
-  useEffect(() => {
-    const handleIncrement = () => {
-      setContactsW(v => v + 1)
-    }
-    window.addEventListener('increment-contact', handleIncrement)
-    return () => window.removeEventListener('increment-contact', handleIncrement)
-  }, [setContactsW])
-
   useEffect(() => {
     const t = loadStoredTargets()
     setTargets(t)
@@ -262,14 +253,7 @@ function TodayPageContent() {
   const [showAgendaModal, setShowAgendaModal] = useState(false)
   const [agendaForm, setAgendaForm] = useState({ time: '09:00', title: '', type: 'rdv' as AgendaEventType })
 
-  // Chargement des compteurs du jour au montage
-  useEffect(() => {
-    const c = loadCounters()
-    setContacts(c.contacts)
-    setCalls(c.calls)
-    setRdv1(c.rdv1)
-    setRdv2(c.rdv2)
-  }, [])
+  // Chargement des compteurs supprimé — désormais chargé depuis DB (ligne 383-405)
 
   // Load agenda from DB + Calendar API
   const [calendarConnected, setCalendarConnected] = useState(true)
@@ -375,12 +359,8 @@ function TodayPageContent() {
     })
   }
 
-  // Counters — source de vérité = DB, localStorage = cache
+  // Counters — source de vérité = DB uniquement
   const COUNTERS_KEY = `today_counters_${new Date().toDateString()}`
-  function loadCounters() {
-    try { const s = localStorage.getItem(COUNTERS_KEY); if (s) return JSON.parse(s) } catch { /* ignore */ }
-    return { contacts: 0, calls: 0, rdv1: 0, rdv2: 0 }
-  }
   const [contacts, setContacts] = useState(0)
   const [calls, setCalls] = useState(0)
   const [rdv1, setRdv1] = useState(0)
@@ -406,9 +386,9 @@ function TodayPageContent() {
         }
         initialLoadDone.current = true
       })
-      .catch(() => {
-        const c = loadCounters()
-        setContacts(c.contacts); setCalls(c.calls); setRdv1(c.rdv1); setRdv2(c.rdv2)
+      .catch((err) => {
+        console.error('Failed to load KPIs from DB:', err)
+        // Les compteurs restent à 0 si la DB est inaccessible (pas de fallback localStorage)
         initialLoadDone.current = true
       })
   }, [])
@@ -463,6 +443,15 @@ function TodayPageContent() {
       return next
     })
   }, [targets.rdv2, celebrate])
+
+  // ─── Listener pour incrémenter contacts depuis CallingSessionPanel ───────
+  useEffect(() => {
+    const handleIncrement = () => {
+      setContactsW(v => v + 1)
+    }
+    window.addEventListener('increment-contact', handleIncrement)
+    return () => window.removeEventListener('increment-contact', handleIncrement)
+  }, [setContactsW])
 
   // ─── Journée parfaite — tous les objectifs atteints ──────────────────────
   useEffect(() => {

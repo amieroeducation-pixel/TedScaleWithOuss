@@ -3,6 +3,7 @@ import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { apiSuccess, apiError, apiUnauthorized } from '@/lib/api'
 import { z } from 'zod'
 import { triggerSequenceForStage } from '@/lib/sequences/trigger'
+import { todayParis } from '@/lib/date-utils'
 
 const moveSchema = z.object({
   prospect_id: z.string().uuid(),
@@ -68,6 +69,30 @@ export async function POST(request: NextRequest) {
     prospectId: prospect_id,
     toStage: to_stage,
   })
+
+  // Incrémenter le compteur daily_kpis.contacts si le prospect passe à un stade actif
+  // (tout sauf 'a_contacter' = prospect contacté)
+  if (to_stage !== 'a_contacter' && prospect?.pipeline_stage === 'a_contacter') {
+    const today = todayParis()
+
+    // Récupérer les KPIs du jour
+    const { data: kpi } = await supabase
+      .from('daily_kpis')
+      .select('contacts')
+      .eq('user_id', user.id)
+      .eq('date', today)
+      .maybeSingle()
+
+    // Incrémenter le compteur contacts
+    await supabase
+      .from('daily_kpis')
+      .upsert({
+        user_id: user.id,
+        date: today,
+        contacts: (kpi?.contacts ?? 0) + 1,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'user_id,date' })
+  }
 
   // Conversion auto : créer un client quand le prospect passe à 'converti'
   if (to_stage === 'converti') {
