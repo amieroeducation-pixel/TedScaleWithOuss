@@ -1,0 +1,313 @@
+#0 building with "desktop-linux" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 1.51kB 0.0s done
+#1 DONE 0.1s
+
+#2 [internal] load metadata for docker.io/library/node:20-alpine
+#2 DONE 1.3s
+
+#3 [deps 1/4] FROM docker.io/library/node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293
+#3 resolve docker.io/library/node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293 0.1s done
+#3 DONE 0.1s
+
+#4 [internal] load .dockerignore
+#4 transferring context: 160B 0.0s done
+#4 DONE 0.1s
+
+#5 [internal] load build context
+#5 transferring context: 21.37MB 4.9s
+#5 transferring context: 49.99MB 9.9s
+#5 transferring context: 71.95MB 15.0s
+#5 transferring context: 79.40MB 16.8s done
+#5 DONE 16.9s
+
+#6 [deps 2/4] WORKDIR /app
+#6 CACHED
+
+#7 [builder 3/5] COPY --from=deps /app/node_modules ./node_modules
+#7 CACHED
+
+#8 [builder 3/5] COPY --from=deps /app/node_modules ./node_modules
+#8 CACHED
+
+#9 [deps 3/4] COPY package.json package-lock.json* ./
+#9 CACHED
+
+#10 [deps 4/4] RUN npm ci
+#10 CACHED
+
+#11 [builder 4/5] COPY . .
+#11 DONE 7.8s
+
+#12 [builder 5/5] RUN npm run build
+#12 1.815 
+#12 1.815 > ted-scale-with-ouss@0.1.0 build
+#12 1.815 > next build
+#12 1.815 
+#12 4.615 Attention: Next.js now collects completely anonymous telemetry regarding usage.
+#12 4.617 This information is used to shape Next.js' roadmap and prioritize features.
+#12 4.617 You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+#12 4.617 https://nextjs.org/telemetry
+#12 4.617 
+#12 5.039    ▲ Next.js 15.5.18
+#12 5.040    - Environments: .env.local
+#12 5.040 
+#12 5.782    Creating an optimized production build ...
+#12 64.33  ⚠ Compiled with warnings in 55s
+#12 64.33 
+#12 64.34 ./node_modules/handlebars/lib/index.js
+#12 64.34 require.extensions is not supported by webpack. Use a loader instead.
+#12 64.34 
+#12 64.34 Import trace for requested module:
+#12 64.34 ./node_modules/handlebars/lib/index.js
+#12 64.34 ./src/lib/nurturing/interpolate.ts
+#12 64.34 ./src/app/(dashboard)/nurturing/page.tsx
+#12 64.34 
+#12 64.34 ./node_modules/handlebars/lib/index.js
+#12 64.34 require.extensions is not supported by webpack. Use a loader instead.
+#12 64.34 
+#12 64.34 Import trace for requested module:
+#12 64.34 ./node_modules/handlebars/lib/index.js
+#12 64.34 ./src/lib/nurturing/interpolate.ts
+#12 64.34 ./src/app/(dashboard)/nurturing/page.tsx
+#12 64.34 
+#12 64.34 ./node_modules/handlebars/lib/index.js
+#12 64.34 require.extensions is not supported by webpack. Use a loader instead.
+#12 64.34 
+#12 64.34 Import trace for requested module:
+#12 64.34 ./node_modules/handlebars/lib/index.js
+#12 64.34 ./src/lib/nurturing/interpolate.ts
+#12 64.34 ./src/app/(dashboard)/nurturing/page.tsx
+#12 64.34 
+#12 64.34 ./node_modules/handlebars/lib/index.js
+#12 64.34 require.extensions is not supported by webpack. Use a loader instead.
+#12 64.34 
+#12 64.34 Import trace for requested module:
+#12 64.34 ./node_modules/handlebars/lib/index.js
+#12 64.34 ./src/app/api/cron/rdv-reminder/route.ts
+#12 64.34 
+#12 64.34 ./node_modules/handlebars/lib/index.js
+#12 64.34 require.extensions is not supported by webpack. Use a loader instead.
+#12 64.34 
+#12 64.34 Import trace for requested module:
+#12 64.34 ./node_modules/handlebars/lib/index.js
+#12 64.34 ./src/app/api/cron/rdv-reminder/route.ts
+#12 64.34 
+#12 64.34 ./node_modules/handlebars/lib/index.js
+#12 64.34 require.extensions is not supported by webpack. Use a loader instead.
+#12 64.34 
+#12 64.34 Import trace for requested module:
+#12 64.34 ./node_modules/handlebars/lib/index.js
+#12 64.34 ./src/app/api/cron/rdv-reminder/route.ts
+#12 64.34 
+#12 73.39 <w> [webpack.cache.PackFileCacheStrategy] Serializing big strings (101kiB) impacts deserialization performance (consider using Buffer instead and decode when needed)
+#12 73.40 <w> [webpack.cache.PackFileCacheStrategy] Serializing big strings (231kiB) impacts deserialization performance (consider using Buffer instead and decode when needed)
+#12 110.5  ✓ Compiled successfully in 95s
+#12 110.5    Linting and checking validity of types ...
+#12 179.2    Collecting page data ...
+#12 189.3    Generating static pages (0/120) ...
+#12 190.9    Generating static pages (30/120) 
+#12 191.5    Generating static pages (60/120) 
+#12 192.0    Generating static pages (90/120) 
+#12 193.0  ✓ Generating static pages (120/120)
+#12 196.0    Finalizing page optimization ...
+#12 196.0    Collecting build traces ...
+#12 225.2  ⚠ Failed to copy traced files for /app/.next/server/app/(dashboard)/page.js [Error: ENOENT: no such file or directory, copyfile '/app/.next/server/app/(dashboard)/page_client-reference-manifest.js' -> '/app/.next/standalone/.next/server/app/(dashboard)/page_client-reference-manifest.js'] {
+#12 225.2   errno: -2,
+#12 225.2   code: 'ENOENT',
+#12 225.2   syscall: 'copyfile',
+#12 225.2   path: '/app/.next/server/app/(dashboard)/page_client-reference-manifest.js',
+#12 225.2   dest: '/app/.next/standalone/.next/server/app/(dashboard)/page_client-reference-manifest.js'
+#12 225.2 }
+#12 226.1 
+#12 226.2 Route (app)                                              Size  First Load JS
+#12 226.2 ┌ ○ /                                                   390 B         103 kB
+#12 226.2 ├ ○ /_not-found                                          1 kB         103 kB
+#12 226.2 ├ ○ /achievements                                     2.02 kB         104 kB
+#12 226.2 ├ ○ /analytics                                        2.54 kB         211 kB
+#12 226.2 ├ ƒ /api/achievements                                   390 B         103 kB
+#12 226.2 ├ ƒ /api/achievements/check                             390 B         103 kB
+#12 226.2 ├ ƒ /api/analytics/closing                              390 B         103 kB
+#12 226.2 ├ ƒ /api/analytics/pipeline                             390 B         103 kB
+#12 226.2 ├ ƒ /api/auth/google-calendar                           390 B         103 kB
+#12 226.2 ├ ƒ /api/auth/google-calendar/callback                  390 B         103 kB
+#12 226.2 ├ ƒ /api/auth/signout                                   390 B         103 kB
+#12 226.2 ├ ƒ /api/booking                                        390 B         103 kB
+#12 226.2 ├ ƒ /api/booking/my-slug                                390 B         103 kB
+#12 226.2 ├ ƒ /api/booking/slots                                  390 B         103 kB
+#12 226.2 ├ ƒ /api/calendar/events                                390 B         103 kB
+#12 226.2 ├ ƒ /api/call-analytics/improve-script                  390 B         103 kB
+#12 226.2 ├ ƒ /api/call-objections                                390 B         103 kB
+#12 226.2 ├ ƒ /api/call-objections/[id]                           390 B         103 kB
+#12 226.2 ├ ƒ /api/call-scripts                                   390 B         103 kB
+#12 226.2 ├ ƒ /api/call-scripts/[id]                              390 B         103 kB
+#12 226.2 ├ ƒ /api/call-scripts/seed                              390 B         103 kB
+#12 226.2 ├ ƒ /api/calling-sessions                               390 B         103 kB
+#12 226.2 ├ ƒ /api/calling-sessions/[id]                          390 B         103 kB
+#12 226.2 ├ ƒ /api/calling-sessions/[id]/bilan                    390 B         103 kB
+#12 226.2 ├ ƒ /api/calling-sessions/[id]/contacts                 390 B         103 kB
+#12 226.2 ├ ƒ /api/calling-sessions/[id]/contacts/[contactId]     390 B         103 kB
+#12 226.2 ├ ƒ /api/clients/health                                 390 B         103 kB
+#12 226.2 ├ ƒ /api/clients/list                                   390 B         103 kB
+#12 226.2 ├ ƒ /api/crm/actions/email                              390 B         103 kB
+#12 226.2 ├ ƒ /api/crm/actions/email-manual                       390 B         103 kB
+#12 226.2 ├ ƒ /api/crm/actions/sms                                390 B         103 kB
+#12 226.2 ├ ƒ /api/crm/sequences/[instanceId]                     390 B         103 kB
+#12 226.2 ├ ƒ /api/crm/sequences/by-prospect/[prospectId]         390 B         103 kB
+#12 226.2 ├ ƒ /api/crm/sequences/process                          390 B         103 kB
+#12 226.2 ├ ƒ /api/crm/sequences/seed-library                     390 B         103 kB
+#12 226.2 ├ ƒ /api/crm/sequences/start                            390 B         103 kB
+#12 226.2 ├ ƒ /api/crm/sequences/templates                        390 B         103 kB
+#12 226.2 ├ ƒ /api/crm/sequences/templates/[id]                   390 B         103 kB
+#12 226.2 ├ ƒ /api/crm/sequences/templates/[id]/duplicate         390 B         103 kB
+#12 226.2 ├ ƒ /api/crm/sequences/templates/[id]/steps             390 B         103 kB
+#12 226.2 ├ ƒ /api/crm/sequences/templates/[id]/steps/[stepId]    390 B         103 kB
+#12 226.2 ├ ƒ /api/cron/client-health                             390 B         103 kB
+#12 226.2 ├ ƒ /api/cron/gojiberry-sync                            390 B         103 kB
+#12 226.2 ├ ƒ /api/cron/logs                                      390 B         103 kB
+#12 226.2 ├ ƒ /api/cron/nurturing-daily-reminder                  390 B         103 kB
+#12 226.2 ├ ƒ /api/cron/nurturing-temperature                     390 B         103 kB
+#12 226.2 ├ ƒ /api/cron/post-call-sms                             390 B         103 kB
+#12 226.2 ├ ƒ /api/cron/rdv-reminder                              390 B         103 kB
+#12 226.2 ├ ƒ /api/cron/revenue-alert                             390 B         103 kB
+#12 226.2 ├ ƒ /api/cron/seed-data                                 390 B         103 kB
+#12 226.2 ├ ƒ /api/cron/send-scheduled                            390 B         103 kB
+#12 226.2 ├ ƒ /api/cron/sequences-process                         390 B         103 kB
+#12 226.2 ├ ƒ /api/cron/toggles                                   390 B         103 kB
+#12 226.2 ├ ƒ /api/cron/weekly-report                             390 B         103 kB
+#12 226.2 ├ ƒ /api/dashboard/weekly                               390 B         103 kB
+#12 226.2 ├ ƒ /api/donnees/stats                                  390 B         103 kB
+#12 226.2 ├ ƒ /api/enrichissement                                 390 B         103 kB
+#12 226.2 ├ ƒ /api/export/rdv                                     390 B         103 kB
+#12 226.2 ├ ƒ /api/global/commerce                                390 B         103 kB
+#12 226.2 ├ ƒ /api/global/interpro                                390 B         103 kB
+#12 226.2 ├ ƒ /api/global/kpi                                     390 B         103 kB
+#12 226.2 ├ ƒ /api/global/kpi/history                             390 B         103 kB
+#12 226.2 ├ ƒ /api/global/kpi/objectives                          390 B         103 kB
+#12 226.2 ├ ƒ /api/global/kpi/week-scores                         390 B         103 kB
+#12 226.2 ├ ƒ /api/global/stats                                   390 B         103 kB
+#12 226.2 ├ ƒ /api/interactions                                   390 B         103 kB
+#12 226.2 ├ ƒ /api/interactions/honor                             390 B         103 kB
+#12 226.2 ├ ƒ /api/nurturing/contact-config                       390 B         103 kB
+#12 226.2 ├ ƒ /api/nurturing/contacts                             390 B         103 kB
+#12 226.2 ├ ƒ /api/nurturing/contacts/archive                     390 B         103 kB
+#12 226.2 ├ ƒ /api/nurturing/contacts/delete                      390 B         103 kB
+#12 226.2 ├ ƒ /api/nurturing/contacts/export                      390 B         103 kB
+#12 226.2 ├ ƒ /api/nurturing/contacts/import                      390 B         103 kB
+#12 226.2 ├ ƒ /api/nurturing/document-sends                       390 B         103 kB
+#12 226.2 ├ ƒ /api/nurturing/documents                            390 B         103 kB
+#12 226.2 ├ ƒ /api/nurturing/documents/upload                     390 B         103 kB
+#12 226.2 ├ ƒ /api/nurturing/drafts                               390 B         103 kB
+#12 226.2 ├ ƒ /api/nurturing/interactions                         390 B         103 kB
+#12 226.2 ├ ƒ /api/nurturing/interactions/export                  390 B         103 kB
+#12 226.2 ├ ƒ /api/nurturing/kpis                                 390 B         103 kB
+#12 226.2 ├ ƒ /api/nurturing/messages                             390 B         103 kB
+#12 226.2 ├ ƒ /api/nurturing/prospect-themes                      390 B         103 kB
+#12 226.2 ├ ƒ /api/nurturing/scheduled                            390 B         103 kB
+#12 226.2 ├ ƒ /api/nurturing/seed                                 390 B         103 kB
+#12 226.2 ├ ƒ /api/nurturing/send-message                         390 B         103 kB
+#12 226.2 ├ ƒ /api/nurturing/themes                               390 B         103 kB
+#12 226.2 ├ ƒ /api/partners                                       390 B         103 kB
+#12 226.2 ├ ƒ /api/partners/[id]                                  390 B         103 kB
+#12 226.2 ├ ƒ /api/pipeline/move                                  390 B         103 kB
+#12 226.2 ├ ƒ /api/pipeline/on-convert                            390 B         103 kB
+#12 226.2 ├ ƒ /api/playbooks/[id]/run                             390 B         103 kB
+#12 226.2 ├ ƒ /api/playbooks/[id]/runs                            390 B         103 kB
+#12 226.2 ├ ƒ /api/playbooks/linkedin-signal                      390 B         103 kB
+#12 226.2 ├ ƒ /api/playbooks/validate                             390 B         103 kB
+#12 226.2 ├ ƒ /api/prospection/chefs/workflow                     390 B         103 kB
+#12 226.2 ├ ƒ /api/prospection/tns                                390 B         103 kB
+#12 226.2 ├ ƒ /api/prospects                                      390 B         103 kB
+#12 226.2 ├ ƒ /api/prospects/[id]                                 390 B         103 kB
+#12 226.2 ├ ƒ /api/prospects/batch                                390 B         103 kB
+#12 226.2 ├ ƒ /api/revenue/products                               390 B         103 kB
+#12 226.2 ├ ƒ /api/revenue/stats                                  390 B         103 kB
+#12 226.2 ├ ƒ /api/sequences/logs                                 390 B         103 kB
+#12 226.2 ├ ƒ /api/sequences/stats                                390 B         103 kB
+#12 226.2 ├ ƒ /api/settings                                       390 B         103 kB
+#12 226.2 ├ ƒ /api/settings/reminder-templates                    390 B         103 kB
+#12 226.2 ├ ƒ /api/tasks                                          390 B         103 kB
+#12 226.2 ├ ƒ /api/tasks/[id]                                     390 B         103 kB
+#12 226.2 ├ ƒ /api/telegram/webhook                               390 B         103 kB
+#12 226.2 ├ ƒ /api/today/agenda                                   390 B         103 kB
+#12 226.2 ├ ƒ /api/today/kpis                                     390 B         103 kB
+#12 226.2 ├ ƒ /api/today/relances                                 390 B         103 kB
+#12 226.2 ├ ƒ /api/today/signal                                   390 B         103 kB
+#12 226.2 ├ ƒ /api/videos                                         390 B         103 kB
+#12 226.2 ├ ○ /assistant                                        3.94 kB         106 kB
+#12 226.2 ├ ○ /automatisations                                   3.8 kB         106 kB
+#12 226.2 ├ ƒ /booking/[slug]                                   3.32 kB         106 kB
+#12 226.2 ├ ○ /cercle                                           7.73 kB         110 kB
+#12 226.2 ├ ○ /champions                                        10.7 kB         113 kB
+#12 226.2 ├ ○ /clients                                          4.92 kB         107 kB
+#12 226.2 ├ ○ /commerce                                         4.19 kB         106 kB
+#12 226.2 ├ ○ /crm                                              16.9 kB         157 kB
+#12 226.2 ├ ○ /dashboard                                        5.34 kB         108 kB
+#12 226.2 ├ ○ /donnees                                          8.25 kB         111 kB
+#12 226.2 ├ ○ /global                                           8.24 kB         228 kB
+#12 226.2 ├ ○ /login                                            2.13 kB         168 kB
+#12 226.2 ├ ○ /map                                              5.33 kB         108 kB
+#12 226.2 ├ ○ /nurturing                                         176 kB         355 kB
+#12 226.2 ├ ○ /pipeline                                          3.9 kB         210 kB
+#12 226.2 ├ ○ /playbooks                                        3.38 kB         109 kB
+#12 226.2 ├ ƒ /playbooks/[id]                                   3.99 kB         106 kB
+#12 226.2 ├ ○ /prospection/chefs-entreprise                     7.42 kB         116 kB
+#12 226.2 ├ ○ /prospection/particuliers                         4.54 kB         107 kB
+#12 226.2 ├ ○ /prospection/tns                                   8.4 kB         117 kB
+#12 226.2 ├ ○ /revenue                                          4.77 kB         222 kB
+#12 226.2 ├ ○ /scoring                                           3.7 kB         106 kB
+#12 226.2 ├ ○ /scripts-reset                                    1.53 kB         113 kB
+#12 226.2 ├ ○ /sequences                                        9.46 kB         116 kB
+#12 226.2 ├ ○ /sequences-variants                               2.04 kB         114 kB
+#12 226.2 ├ ○ /sequences/logs                                   5.62 kB         112 kB
+#12 226.2 ├ ○ /settings                                         23.2 kB         135 kB
+#12 226.2 ├ ○ /simulator                                        4.42 kB         107 kB
+#12 226.2 ├ ○ /tasks                                            6.07 kB         134 kB
+#12 226.2 └ ○ /today                                            18.6 kB         121 kB
+#12 226.2 + First Load JS shared by all                          102 kB
+#12 226.2   ├ chunks/1255-eae4096fb21f1304.js                     46 kB
+#12 226.2   ├ chunks/4bd1b696-100b9d70ed4e49c1.js               54.2 kB
+#12 226.2   └ other shared chunks (total)                       2.09 kB
+#12 226.2 
+#12 226.2 
+#12 226.2 ƒ Middleware                                          89.4 kB
+#12 226.2 
+#12 226.2 ○  (Static)   prerendered as static content
+#12 226.2 ƒ  (Dynamic)  server-rendered on demand
+#12 226.2 
+#12 226.2 npm notice
+#12 226.2 npm notice New major version of npm available! 10.8.2 -> 12.0.2
+#12 226.2 npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.0.2
+#12 226.2 npm notice To update run: npm install -g npm@12.0.2
+#12 226.2 npm notice
+#12 DONE 226.3s
+
+#13 [runner 4/7] RUN adduser --system --uid 1001 nextjs
+#13 CACHED
+
+#14 [runner 3/7] RUN addgroup --system --gid 1001 nodejs
+#14 CACHED
+
+#15 [runner 5/7] COPY --from=builder /app/public ./public
+#15 CACHED
+
+#16 [runner 6/7] COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+#16 DONE 1.0s
+
+#17 [runner 7/7] COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+#17 DONE 0.4s
+
+#18 exporting to image
+#18 exporting layers
+#18 exporting layers 3.0s done
+#18 exporting manifest sha256:0b154a6bae208f8ea0a5f220c8a1c2075761cef6cf6072bde9f8013043b47cf7 0.0s done
+#18 exporting config sha256:99b5354cf69247f5669d3dd6f6c58e065b3b7b3bd173eb04d6caefc823ca6fc3 0.0s done
+#18 exporting attestation manifest sha256:b23d38cb3c3bc05876b4443e1295209b514056f4a4341ad4a4fafc5d942ca546
+#18 exporting attestation manifest sha256:b23d38cb3c3bc05876b4443e1295209b514056f4a4341ad4a4fafc5d942ca546 0.1s done
+#18 exporting manifest list sha256:55702a48d922700ec2c054662f5dc1699569f9bd0d850af1e96e17fabf6e7dae 0.0s done
+#18 naming to gcr.io/integration-make-365608/ted-scale-with-ouss:latest
+#18 naming to gcr.io/integration-make-365608/ted-scale-with-ouss:latest done
+#18 unpacking to gcr.io/integration-make-365608/ted-scale-with-ouss:latest
+#18 unpacking to gcr.io/integration-make-365608/ted-scale-with-ouss:latest 1.4s done
+#18 DONE 4.7s

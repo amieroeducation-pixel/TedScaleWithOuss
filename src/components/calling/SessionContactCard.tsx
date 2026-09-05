@@ -53,6 +53,22 @@ export default function SessionContactCard({ contact, script, objections, onUpda
     })
   }
 
+  async function addToCalendar() {
+    if (!rappelDate) return
+    try {
+      await fetch('/api/today/agenda', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: `📞 Rappel ${contact.nom} — ${contact.entreprise ?? ''}`,
+          time: '09:00',
+          type: 'rdv',
+          date: rappelDate.replace(/-/g, ''),
+        }),
+      })
+    } catch { /* silently */ }
+  }
+
   async function addToCRM() {
     await onUpdate(contact.id, { added_to_crm: true })
     await fetch('/api/prospects', {
@@ -127,18 +143,29 @@ export default function SessionContactCard({ contact, script, objections, onUpda
           rows={2}
           style={{ width: '100%', background: 'transparent', border: 'none', color: C.textMid, fontSize: 9, fontFamily: 'JetBrains Mono,monospace', resize: 'none', outline: 'none', boxSizing: 'border-box' }}
         />
-        <div style={{ display: 'flex', gap: 8, marginTop: 6, alignItems: 'center' }}>
-          <input
-            type="date"
-            value={rappelDate}
-            onChange={e => setRappelDate(e.target.value)}
-            onBlur={saveNote}
-            style={{ flex: 1, padding: '4px 8px', background: C.surface2, border: `1px solid ${C.lineSoft}`, borderRadius: 5, color: C.textMid, fontSize: 8, fontFamily: 'JetBrains Mono,monospace' }}
-          />
+        <div style={{ display: 'flex', gap: 6, marginTop: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 4, alignItems: 'center', flex: '1 1 auto' }}>
+            <label style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 7, color: C.textLo, flexShrink: 0 }}>📅 Rappel:</label>
+            <input
+              type="date"
+              value={rappelDate}
+              onChange={e => setRappelDate(e.target.value)}
+              onBlur={saveNote}
+              style={{ flex: 1, minWidth: 100, padding: '4px 6px', background: C.surface2, border: `1px solid ${C.lineSoft}`, borderRadius: 5, color: C.textMid, fontSize: 8, fontFamily: 'JetBrains Mono,monospace' }}
+            />
+            {rappelDate && (
+              <button
+                onClick={addToCalendar}
+                style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 7, padding: '3px 7px', borderRadius: 4, background: '#0d1a2e', border: `1px solid ${C.indigo}40`, color: C.indigo, cursor: 'pointer', whiteSpace: 'nowrap' }}
+              >
+                → Agenda
+              </button>
+            )}
+          </div>
           <button
             onClick={addToCRM}
             disabled={contact.added_to_crm}
-            style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, padding: '4px 10px', borderRadius: 5, background: contact.added_to_crm ? '#0a1f0a' : C.surface2, border: `1px solid ${contact.added_to_crm ? C.green + '40' : C.lineSoft}`, color: contact.added_to_crm ? C.green : C.textLo, cursor: contact.added_to_crm ? 'default' : 'pointer' }}
+            style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, padding: '4px 10px', borderRadius: 5, background: contact.added_to_crm ? '#0a1f0a' : C.surface2, border: `1px solid ${contact.added_to_crm ? C.green + '40' : C.lineSoft}`, color: contact.added_to_crm ? C.green : C.textLo, cursor: contact.added_to_crm ? 'default' : 'pointer', whiteSpace: 'nowrap' }}
           >
             {contact.added_to_crm ? '✓ Dans le CRM' : '+ Ajouter au CRM'}
           </button>

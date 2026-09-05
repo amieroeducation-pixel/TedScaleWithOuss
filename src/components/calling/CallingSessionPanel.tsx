@@ -75,19 +75,32 @@ export default function CallingSessionPanel() {
     if (patch.called_at) {
       setCalledSinceLastBilan(prev => {
         const next = [...prev, contactId]
-        if (next.length >= 10) setShowBilan(true)
+        if (next.length >= 30) setShowBilan(true)
         return next
       })
       const isChaud = patch.statut_appel === 'chaud'
       const isPositive = patch.statut_appel !== 'pas_repondu' && patch.statut_appel !== 'pas_interesse'
-      if (!isChaud) celebrate('appel_passe')
-      setStreakCount(prev => {
-        const next = isPositive ? prev + 1 : 0
-        if (isPositive && next > 0 && next % 5 === 0) {
-          setTimeout(() => celebrate('streak', undefined, { count: next }), 600)
-        }
-        return next
-      })
+      const isContacte = patch.statut_appel === 'contacte'
+
+      // Célébrations : seulement pour contacts chauds ou série de 5
+      if (isChaud) {
+        celebrate('rdv_pris', 'CONTACT CHAUD !')
+      } else if (isPositive) {
+        setStreakCount(prev => {
+          const next = prev + 1
+          if (next > 0 && next % 5 === 0) {
+            setTimeout(() => celebrate('streak', undefined, { count: next }), 600)
+          }
+          return next
+        })
+      } else {
+        setStreakCount(0)
+      }
+
+      // Incrémenter compteur contacts du jour si "Contacté"
+      if (isContacte) {
+        window.dispatchEvent(new CustomEvent('increment-contact'))
+      }
       // Avancer au prochain contact non-appelé
       setSession(prev => {
         if (!prev) return prev
@@ -96,9 +109,6 @@ export default function CallingSessionPanel() {
         if (nextContact) setTimeout(() => setActiveContact(nextContact), 300)
         return { ...prev, contacts: updatedContacts }
       })
-    }
-    if (patch.statut_appel === 'chaud') {
-      celebrate('rdv_pris', 'CONTACT CHAUD !')
     }
   }, [session, celebrate])
 

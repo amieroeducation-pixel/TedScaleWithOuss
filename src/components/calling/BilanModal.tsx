@@ -63,7 +63,7 @@ export default function BilanModal({ sessionId, contactIds, objections, onClose 
         <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: C.ribbon, borderRadius: '14px 14px 0 0' }} />
 
         <div style={{ fontFamily: 'Oswald,sans-serif', fontSize: 15, fontWeight: 600, color: C.gold, marginBottom: 4, marginTop: 6 }}>
-          Bilan de session — 10 appels
+          Bilan de session — 30 appels
         </div>
         <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 8, color: C.textLo, marginBottom: 20 }}>
           Prenez 2 minutes pour noter ce qui a bien marché

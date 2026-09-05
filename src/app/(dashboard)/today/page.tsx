@@ -237,10 +237,19 @@ function TodayPageContent() {
       const resumeSec = Math.min(stored.timerSec + elapsed, BLOCK_DURATION - 1)
       setTimerSec(resumeSec)
       setTimerRunning(true)
-    } else {
+    } else if (stored.timerSec > 0) {
       setTimerSec(stored.timerSec)
     }
   }, [])
+
+  // Listener pour incrémenter contacts depuis CallingSessionPanel
+  useEffect(() => {
+    const handleIncrement = () => {
+      setContactsW(v => v + 1)
+    }
+    window.addEventListener('increment-contact', handleIncrement)
+    return () => window.removeEventListener('increment-contact', handleIncrement)
+  }, [setContactsW])
 
   useEffect(() => {
     const t = loadStoredTargets()
