@@ -13,7 +13,7 @@
    - Environments: .env.local
 
    Creating an optimized production build ...
- ⚠ Compiled with warnings in 18.7s
+ ⚠ Compiled with warnings in 49s
 
 ./node_modules/handlebars/lib/index.js
 require.extensions is not supported by webpack. Use a loader instead.
@@ -60,176 +60,18 @@ Import trace for requested module:
 ./node_modules/handlebars/lib/index.js
 ./src/app/api/cron/rdv-reminder/route.ts
 
- ✓ Compiled successfully in 30.9s
+ ✓ Compiled successfully in 69s
    Linting and checking validity of types ...
-   Collecting page data ...
-   Generating static pages (0/120) ...
-   Generating static pages (30/120) 
-   Generating static pages (60/120) 
-   Generating static pages (90/120) 
- ✓ Generating static pages (120/120)
-   Finalizing page optimization ...
-   Collecting build traces ...
- ⚠ Failed to copy traced files for C:\Users\Ted\Documents\GitHub\TedScaleWithOuss\.next\server\app\(dashboard)\page.js [Error: ENOENT: no such file or directory, copyfile 'C:\Users\Ted\Documents\GitHub\TedScaleWithOuss\.next\server\app\(dashboard)\page_client-reference-manifest.js' -> 'C:\Users\Ted\Documents\GitHub\TedScaleWithOuss\.next\standalone\Documents\GitHub\TedScaleWithOuss\.next\server\app\(dashboard)\page_client-reference-manifest.js'] {
-  errno: -4058,
-  code: 'ENOENT',
-  syscall: 'copyfile',
-  path: 'C:\\Users\\Ted\\Documents\\GitHub\\TedScaleWithOuss\\.next\\server\\app\\(dashboard)\\page_client-reference-manifest.js',
-  dest: 'C:\\Users\\Ted\\Documents\\GitHub\\TedScaleWithOuss\\.next\\standalone\\Documents\\GitHub\\TedScaleWithOuss\\.next\\server\\app\\(dashboard)\\page_client-reference-manifest.js'
-}
+Failed to compile.
 
-Route (app)                                              Size  First Load JS
-┌ ○ /                                                   390 B         103 kB
-├ ○ /_not-found                                          1 kB         103 kB
-├ ○ /achievements                                     2.02 kB         104 kB
-├ ○ /analytics                                        2.54 kB         212 kB
-├ ƒ /api/achievements                                   390 B         103 kB
-├ ƒ /api/achievements/check                             390 B         103 kB
-├ ƒ /api/analytics/closing                              390 B         103 kB
-├ ƒ /api/analytics/pipeline                             390 B         103 kB
-├ ƒ /api/auth/google-calendar                           390 B         103 kB
-├ ƒ /api/auth/google-calendar/callback                  390 B         103 kB
-├ ƒ /api/auth/signout                                   390 B         103 kB
-├ ƒ /api/booking                                        390 B         103 kB
-├ ƒ /api/booking/my-slug                                390 B         103 kB
-├ ƒ /api/booking/slots                                  390 B         103 kB
-├ ƒ /api/calendar/events                                390 B         103 kB
-├ ƒ /api/call-analytics/improve-script                  390 B         103 kB
-├ ƒ /api/call-objections                                390 B         103 kB
-├ ƒ /api/call-objections/[id]                           390 B         103 kB
-├ ƒ /api/call-scripts                                   390 B         103 kB
-├ ƒ /api/call-scripts/[id]                              390 B         103 kB
-├ ƒ /api/call-scripts/seed                              390 B         103 kB
-├ ƒ /api/calling-sessions                               390 B         103 kB
-├ ƒ /api/calling-sessions/[id]                          390 B         103 kB
-├ ƒ /api/calling-sessions/[id]/bilan                    390 B         103 kB
-├ ƒ /api/calling-sessions/[id]/contacts                 390 B         103 kB
-├ ƒ /api/calling-sessions/[id]/contacts/[contactId]     390 B         103 kB
-├ ƒ /api/clients/health                                 390 B         103 kB
-├ ƒ /api/clients/list                                   390 B         103 kB
-├ ƒ /api/crm/actions/email                              390 B         103 kB
-├ ƒ /api/crm/actions/email-manual                       390 B         103 kB
-├ ƒ /api/crm/actions/sms                                390 B         103 kB
-├ ƒ /api/crm/sequences/[instanceId]                     390 B         103 kB
-├ ƒ /api/crm/sequences/by-prospect/[prospectId]         390 B         103 kB
-├ ƒ /api/crm/sequences/process                          390 B         103 kB
-├ ƒ /api/crm/sequences/seed-library                     390 B         103 kB
-├ ƒ /api/crm/sequences/start                            390 B         103 kB
-├ ƒ /api/crm/sequences/templates                        390 B         103 kB
-├ ƒ /api/crm/sequences/templates/[id]                   390 B         103 kB
-├ ƒ /api/crm/sequences/templates/[id]/duplicate         390 B         103 kB
-├ ƒ /api/crm/sequences/templates/[id]/steps             390 B         103 kB
-├ ƒ /api/crm/sequences/templates/[id]/steps/[stepId]    390 B         103 kB
-├ ƒ /api/cron/client-health                             390 B         103 kB
-├ ƒ /api/cron/gojiberry-sync                            390 B         103 kB
-├ ƒ /api/cron/logs                                      390 B         103 kB
-├ ƒ /api/cron/nurturing-daily-reminder                  390 B         103 kB
-├ ƒ /api/cron/nurturing-temperature                     390 B         103 kB
-├ ƒ /api/cron/post-call-sms                             390 B         103 kB
-├ ƒ /api/cron/rdv-reminder                              390 B         103 kB
-├ ƒ /api/cron/revenue-alert                             390 B         103 kB
-├ ƒ /api/cron/seed-data                                 390 B         103 kB
-├ ƒ /api/cron/send-scheduled                            390 B         103 kB
-├ ƒ /api/cron/sequences-process                         390 B         103 kB
-├ ƒ /api/cron/toggles                                   390 B         103 kB
-├ ƒ /api/cron/weekly-report                             390 B         103 kB
-├ ƒ /api/dashboard/weekly                               390 B         103 kB
-├ ƒ /api/donnees/stats                                  390 B         103 kB
-├ ƒ /api/enrichissement                                 390 B         103 kB
-├ ƒ /api/export/rdv                                     390 B         103 kB
-├ ƒ /api/global/commerce                                390 B         103 kB
-├ ƒ /api/global/interpro                                390 B         103 kB
-├ ƒ /api/global/kpi                                     390 B         103 kB
-├ ƒ /api/global/kpi/history                             390 B         103 kB
-├ ƒ /api/global/kpi/objectives                          390 B         103 kB
-├ ƒ /api/global/kpi/week-scores                         390 B         103 kB
-├ ƒ /api/global/stats                                   390 B         103 kB
-├ ƒ /api/interactions                                   390 B         103 kB
-├ ƒ /api/interactions/honor                             390 B         103 kB
-├ ƒ /api/nurturing/contact-config                       390 B         103 kB
-├ ƒ /api/nurturing/contacts                             390 B         103 kB
-├ ƒ /api/nurturing/contacts/archive                     390 B         103 kB
-├ ƒ /api/nurturing/contacts/delete                      390 B         103 kB
-├ ƒ /api/nurturing/contacts/export                      390 B         103 kB
-├ ƒ /api/nurturing/contacts/import                      390 B         103 kB
-├ ƒ /api/nurturing/document-sends                       390 B         103 kB
-├ ƒ /api/nurturing/documents                            390 B         103 kB
-├ ƒ /api/nurturing/documents/upload                     390 B         103 kB
-├ ƒ /api/nurturing/drafts                               390 B         103 kB
-├ ƒ /api/nurturing/interactions                         390 B         103 kB
-├ ƒ /api/nurturing/interactions/export                  390 B         103 kB
-├ ƒ /api/nurturing/kpis                                 390 B         103 kB
-├ ƒ /api/nurturing/messages                             390 B         103 kB
-├ ƒ /api/nurturing/prospect-themes                      390 B         103 kB
-├ ƒ /api/nurturing/scheduled                            390 B         103 kB
-├ ƒ /api/nurturing/seed                                 390 B         103 kB
-├ ƒ /api/nurturing/send-message                         390 B         103 kB
-├ ƒ /api/nurturing/themes                               390 B         103 kB
-├ ƒ /api/partners                                       390 B         103 kB
-├ ƒ /api/partners/[id]                                  390 B         103 kB
-├ ƒ /api/pipeline/move                                  390 B         103 kB
-├ ƒ /api/pipeline/on-convert                            390 B         103 kB
-├ ƒ /api/playbooks/[id]/run                             390 B         103 kB
-├ ƒ /api/playbooks/[id]/runs                            390 B         103 kB
-├ ƒ /api/playbooks/linkedin-signal                      390 B         103 kB
-├ ƒ /api/playbooks/validate                             390 B         103 kB
-├ ƒ /api/prospection/chefs/workflow                     390 B         103 kB
-├ ƒ /api/prospection/tns                                390 B         103 kB
-├ ƒ /api/prospects                                      390 B         103 kB
-├ ƒ /api/prospects/[id]                                 390 B         103 kB
-├ ƒ /api/prospects/batch                                390 B         103 kB
-├ ƒ /api/revenue/products                               390 B         103 kB
-├ ƒ /api/revenue/stats                                  390 B         103 kB
-├ ƒ /api/sequences/logs                                 390 B         103 kB
-├ ƒ /api/sequences/stats                                390 B         103 kB
-├ ƒ /api/settings                                       390 B         103 kB
-├ ƒ /api/settings/reminder-templates                    390 B         103 kB
-├ ƒ /api/tasks                                          390 B         103 kB
-├ ƒ /api/tasks/[id]                                     390 B         103 kB
-├ ƒ /api/telegram/webhook                               390 B         103 kB
-├ ƒ /api/today/agenda                                   390 B         103 kB
-├ ƒ /api/today/kpis                                     390 B         103 kB
-├ ƒ /api/today/relances                                 390 B         103 kB
-├ ƒ /api/today/signal                                   390 B         103 kB
-├ ƒ /api/videos                                         390 B         103 kB
-├ ○ /assistant                                        3.94 kB         106 kB
-├ ○ /automatisations                                   3.8 kB         106 kB
-├ ƒ /booking/[slug]                                   3.32 kB         106 kB
-├ ○ /cercle                                           7.72 kB         110 kB
-├ ○ /champions                                        10.7 kB         113 kB
-├ ○ /clients                                          4.93 kB         107 kB
-├ ○ /commerce                                         4.19 kB         107 kB
-├ ○ /crm                                              16.8 kB         157 kB
-├ ○ /dashboard                                        5.34 kB         108 kB
-├ ○ /donnees                                          8.25 kB         111 kB
-├ ○ /global                                           8.24 kB         228 kB
-├ ○ /login                                            2.13 kB         168 kB
-├ ○ /map                                              5.33 kB         108 kB
-├ ○ /nurturing                                         176 kB         355 kB
-├ ○ /pipeline                                         3.91 kB         210 kB
-├ ○ /playbooks                                        3.37 kB         109 kB
-├ ƒ /playbooks/[id]                                   3.99 kB         106 kB
-├ ○ /prospection/chefs-entreprise                     7.41 kB         116 kB
-├ ○ /prospection/particuliers                         4.54 kB         107 kB
-├ ○ /prospection/tns                                   8.4 kB         117 kB
-├ ○ /revenue                                          4.77 kB         222 kB
-├ ○ /scoring                                           3.7 kB         106 kB
-├ ○ /scripts-reset                                    1.53 kB         113 kB
-├ ○ /sequences                                        9.46 kB         116 kB
-├ ○ /sequences-variants                               2.04 kB         114 kB
-├ ○ /sequences/logs                                   5.62 kB         112 kB
-├ ○ /settings                                         23.2 kB         135 kB
-├ ○ /simulator                                        4.42 kB         107 kB
-├ ○ /tasks                                            6.07 kB         134 kB
-└ ○ /today                                            18.6 kB         121 kB
-+ First Load JS shared by all                          102 kB
-  ├ chunks/1255-eae4096fb21f1304.js                     46 kB
-  ├ chunks/4bd1b696-100b9d70ed4e49c1.js               54.2 kB
-  └ other shared chunks (total)                       2.13 kB
+./src/components/calling/SessionContactCard.tsx:56:18
+Type error: Duplicate function implementation.
 
-
-ƒ Middleware                                          89.3 kB
-
-○  (Static)   prerendered as static content
-ƒ  (Dynamic)  server-rendered on demand
-
+[0m [90m 54 |[39m   }
+ [90m 55 |[39m
+[31m[1m>[22m[39m[90m 56 |[39m   [36masync[39m [36mfunction[39m addToCalendar() {
+ [90m    |[39m                  [31m[1m^[22m[39m
+ [90m 57 |[39m     [36mif[39m ([33m![39mrappelDate) [36mreturn[39m
+ [90m 58 |[39m     [36mtry[39m {
+ [90m 59 |[39m       [36mawait[39m fetch([32m'/api/today/agenda'[39m[33m,[39m {[0m
+Next.js build worker exited with code: 1 and signal: null
